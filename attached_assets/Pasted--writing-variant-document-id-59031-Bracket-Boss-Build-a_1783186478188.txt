@@ -1,0 +1,197 @@
+:::writing{variant=“document” id=“59031”}
+
+Bracket Boss
+
+Build a mobile-first web application called Bracket Boss.
+
+The purpose of the app is to allow friends to quickly create and run a tournament without creating accounts.
+
+Core Requirements
+
+There is no authentication.
+
+Anyone can create a tournament.
+
+Creating a tournament generates a unique URL.
+
+Example:
+
+/t/AB12CD
+
+Anyone with the link can join.
+
+The app should sync in real time so everyone sees updates immediately.
+
+⸻
+
+User Flow
+
+1. Home
+
+Display one button:
+
+Create Tournament
+
+When clicked:
+	•	Generate a unique tournament ID.
+	•	Create the tournament.
+	•	Redirect to the tournament lobby.
+
+⸻
+
+2. Tournament Lobby
+
+Display:
+	•	Tournament name (editable)
+	•	Join URL
+	•	Copy Link button
+	•	QR Code
+	•	Live player list
+	•	Number of players joined
+
+Players join by entering:
+	•	First Name
+	•	Last Name
+
+After joining, they immediately appear in the player list for everyone.
+
+Host controls:
+	•	Shuffle player order
+	•	Remove player
+	•	Lock registration
+	•	Start tournament
+
+⸻
+
+3. Bracket Generation
+
+When Start Tournament is clicked:
+	•	Lock player registration.
+	•	Randomly seed all players.
+	•	Generate a tournament bracket.
+
+Support:
+	•	4–64 players
+	•	Automatic byes
+
+⸻
+
+4. Tournament
+
+Display a visual tournament bracket.
+
+Every match should show:
+	•	Player One
+	•	Player Two
+	•	Optional scores
+	•	Select Winner button
+
+When a winner is selected:
+	•	Advance the winner.
+	•	Update the bracket.
+	•	Sync changes to every connected device instantly.
+
+⸻
+
+5. Championship
+
+When the tournament ends display:
+
+🥇 Champion
+
+🥈 Runner Up
+
+🥉 Third Place
+
+Tournament duration
+
+Player count
+
+Total matches played
+
+Confetti celebration.
+
+Button:
+
+Create New Tournament
+
+Creating a new tournament generates a brand-new link.
+
+⸻
+
+Features
+
+Include:
+	•	QR code
+	•	Copy invite link
+	•	Undo last match
+	•	Shuffle players
+	•	Dark mode
+	•	Responsive mobile layout
+	•	Loading indicators
+	•	Empty states
+	•	Error handling
+	•	Live synchronization
+
+⸻
+
+Data Models
+
+Tournament
+	•	id
+	•	name
+	•	status
+	•	createdAt
+	•	hostToken
+
+Player
+	•	id
+	•	firstName
+	•	lastName
+	•	joinedAt
+	•	seed
+
+Match
+	•	id
+	•	round
+	•	playerOne
+	•	playerTwo
+	•	winner
+	•	scoreOne
+	•	scoreTwo
+	•	status
+
+⸻
+
+UI
+
+Use a clean sports-inspired interface.
+
+Large touch-friendly buttons.
+
+Rounded cards.
+
+Modern typography.
+
+Fast mobile performance.
+
+⸻
+
+Technical Notes
+
+The host controls the tournament.
+
+Only the host can:
+	•	Start tournament
+	•	Remove players
+	•	Undo match
+	•	Create a new tournament
+
+Everyone else can:
+	•	Join
+	•	View the bracket
+	•	Watch updates in real time
+
+No user accounts are required.
+
+The app should feel as simple as creating a Zoom meeting. Create tournament → Share link → People join → Start tournament → Pick winners → Champion

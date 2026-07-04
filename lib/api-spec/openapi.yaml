@@ -1,22 +1,27 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Bracket Boss API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: tournaments
+    description: Tournament operations
+  - name: players
+    description: Player operations
+  - name: matches
+    description: Match operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +29,252 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /tournaments:
+    post:
+      operationId: createTournament
+      tags: [tournaments]
+      summary: Create a new tournament
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentInput"
+      responses:
+        "201":
+          description: Tournament created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentWithToken"
+
+  /tournaments/{tournamentId}:
+    get:
+      operationId: getTournament
+      tags: [tournaments]
+      summary: Get tournament details
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tournament details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentFull"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateTournament
+      tags: [tournaments]
+      summary: Update tournament (name, status, lock)
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+
+  /tournaments/{tournamentId}/start:
+    post:
+      operationId: startTournament
+      tags: [tournaments]
+      summary: Start tournament - lock registration and generate bracket
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostTokenInput"
+      responses:
+        "200":
+          description: Tournament started with bracket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentFull"
+
+  /tournaments/{tournamentId}/players:
+    post:
+      operationId: joinTournament
+      tags: [players]
+      summary: Join a tournament as a player
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerInput"
+      responses:
+        "201":
+          description: Player joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /tournaments/{tournamentId}/players/shuffle:
+    post:
+      operationId: shufflePlayers
+      tags: [players]
+      summary: Shuffle player order (host only)
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostTokenInput"
+      responses:
+        "200":
+          description: Players shuffled
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+
+  /tournaments/{tournamentId}/players/{playerId}:
+    delete:
+      operationId: removePlayer
+      tags: [players]
+      summary: Remove a player (host only)
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostTokenInput"
+      responses:
+        "200":
+          description: Player removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /tournaments/{tournamentId}/matches/{matchId}:
+    patch:
+      operationId: updateMatch
+      tags: [matches]
+      summary: Set winner or update scores for a match
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchUpdate"
+      responses:
+        "200":
+          description: Match updated, returns full tournament state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentFull"
+
+  /tournaments/{tournamentId}/matches/undo:
+    post:
+      operationId: undoLastMatch
+      tags: [matches]
+      summary: Undo the last completed match (host only)
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostTokenInput"
+      responses:
+        "200":
+          description: Match undone, returns updated tournament state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentFull"
+
+  /tournaments/{tournamentId}/summary:
+    get:
+      operationId: getTournamentSummary
+      tags: [tournaments]
+      summary: Get championship summary (champion, runner-up, stats)
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Championship summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +285,183 @@ components:
       required:
         - status
 
+    Tournament:
+      type: object
+      required: [id, name, status, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [lobby, active, completed]
+        registrationLocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    TournamentWithToken:
+      type: object
+      required: [id, name, status, createdAt, hostToken]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [lobby, active, completed]
+        registrationLocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        hostToken:
+          type: string
+
+    TournamentFull:
+      type: object
+      required: [id, name, status, createdAt, players, matches]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [lobby, active, completed]
+        registrationLocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: ["string", "null"]
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+
+    TournamentSummary:
+      type: object
+      required: [tournamentId, champion, runnerUp, totalMatches, playerCount]
+      properties:
+        tournamentId:
+          type: string
+        champion:
+          $ref: "#/components/schemas/Player"
+        runnerUp:
+          $ref: "#/components/schemas/Player"
+        thirdPlace:
+          oneOf:
+            - $ref: "#/components/schemas/Player"
+            - type: "null"
+        totalMatches:
+          type: integer
+        playerCount:
+          type: integer
+        durationMinutes:
+          type: ["integer", "null"]
+
+    Player:
+      type: object
+      required: [id, tournamentId, firstName, lastName, seed, joinedAt]
+      properties:
+        id:
+          type: string
+        tournamentId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        seed:
+          type: integer
+        joinedAt:
+          type: string
+          format: date-time
+
+    Match:
+      type: object
+      required: [id, tournamentId, round, matchNumber, status]
+      properties:
+        id:
+          type: string
+        tournamentId:
+          type: string
+        round:
+          type: integer
+        matchNumber:
+          type: integer
+        playerOneId:
+          type: ["string", "null"]
+        playerTwoId:
+          type: ["string", "null"]
+        winnerId:
+          type: ["string", "null"]
+        scoreOne:
+          type: ["integer", "null"]
+        scoreTwo:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [pending, active, completed, bye]
+        isBye:
+          type: boolean
+
+    TournamentInput:
+      type: object
+      properties:
+        name:
+          type: string
+
+    TournamentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        registrationLocked:
+          type: boolean
+        hostToken:
+          type: string
+
+    PlayerInput:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+
+    MatchUpdate:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+        winnerId:
+          type: string
+        scoreOne:
+          type: integer
+        scoreTwo:
+          type: integer
+
+    HostTokenInput:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
