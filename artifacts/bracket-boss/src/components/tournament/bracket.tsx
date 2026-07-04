@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   TournamentFull,
   Match,
@@ -6,6 +6,7 @@ import {
   useUndoLastMatch,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Undo2, Crown, Trophy, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,17 +22,31 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const undoMatch = useUndoLastMatch();
 
   const getPlayer = (id?: string | null) =>
-    id ? tournament.players.find((p) => p.id === id) ?? null : null;
+    id ? (tournament.players.find((p) => p.id === id) ?? null) : null;
 
   const playerName = (id?: string | null) => {
     const p = getPlayer(id);
     return p ? `${p.firstName} ${p.lastName.charAt(0)}.` : null;
   };
 
-  const handleSetWinner = (matchId: string, winnerId: string) => {
+  const handleSetWinner = (
+    matchId: string,
+    winnerId: string,
+    scoreOne?: number,
+    scoreTwo?: number
+  ) => {
     if (!isHost) return;
     updateMatch.mutate(
-      { tournamentId: tournament.id, matchId, data: { hostToken, winnerId } },
+      {
+        tournamentId: tournament.id,
+        matchId,
+        data: {
+          hostToken: hostToken!,
+          winnerId,
+          ...(scoreOne !== undefined ? { scoreOne } : {}),
+          ...(scoreTwo !== undefined ? { scoreTwo } : {}),
+        },
+      },
       {
         onError: () =>
           toast({ title: "Failed to record winner", variant: "destructive" }),
@@ -42,7 +57,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const handleUndo = () => {
     if (!isHost) return;
     undoMatch.mutate(
-      { tournamentId: tournament.id, data: { hostToken } },
+      { tournamentId: tournament.id, data: { hostToken: hostToken! } },
       {
         onError: () =>
           toast({ title: "Nothing to undo", variant: "destructive" }),
@@ -50,7 +65,6 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     );
   };
 
-  // ── Split matches into brackets ───────────────────────────────────────────
   const { wbRounds, lbRounds, gfMatches } = useMemo(() => {
     const wb = new Map<number, Match[]>();
     const lb = new Map<number, Match[]>();
@@ -68,7 +82,6 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
       }
     }
 
-    // Sort within rounds
     const sortRounds = (map: Map<number, Match[]>) =>
       Array.from(map.entries())
         .sort(([a], [b]) => a - b)
@@ -108,7 +121,6 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
 
   return (
     <div className="flex flex-col gap-8 w-full">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary">
@@ -131,7 +143,6 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
         )}
       </div>
 
-      {/* Winner Bracket */}
       <BracketSection
         title="Winner's Bracket"
         icon={<Trophy className="w-4 h-4 text-primary" />}
@@ -141,10 +152,9 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
         isHost={isHost}
         onSetWinner={handleSetWinner}
         isPending={updateMatch.isPending}
-        accentClass="border-primary/40 shadow-[0_0_15px_rgba(255,100,50,0.08)]"
+        accentClass="border-primary/40"
       />
 
-      {/* Loser Bracket */}
       {lbRounds.length > 0 && (
         <BracketSection
           title="Loser's Bracket"
@@ -155,12 +165,11 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
           isHost={isHost}
           onSetWinner={handleSetWinner}
           isPending={updateMatch.isPending}
-          accentClass="border-blue-500/40 shadow-[0_0_12px_rgba(59,130,246,0.08)]"
+          accentClass="border-blue-500/40"
           dimByes
         />
       )}
 
-      {/* Grand Finals */}
       {gfMatches.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -171,7 +180,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
           </div>
           <div className="flex flex-wrap gap-6">
             {gfMatches.map((m) => (
-              <div key={m.id} className="min-w-[280px] max-w-xs flex-1">
+              <div key={m.id} className="min-w-[280px] max-w-sm flex-1">
                 <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
                   {m.bracket === "grand_finals_reset" ? "If Necessary" : "Grand Finals"}
                 </p>
@@ -193,16 +202,16 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   );
 }
 
-// ── BracketSection ─────────────────────────────────────────────────────────
+// ── BracketSection ──────────────────────────────────────────────────────────
 
 interface BracketSectionProps {
   title: string;
   icon: React.ReactNode;
   rounds: { round: number; label: string; matches: Match[] }[];
-  getPlayer: (id?: string | null) => ReturnType<typeof Array.prototype.find> | null;
+  getPlayer: (id?: string | null) => any;
   playerName: (id?: string | null) => string | null;
   isHost: boolean;
-  onSetWinner: (matchId: string, winnerId: string) => void;
+  onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
   accentClass: string;
   dimByes?: boolean;
@@ -221,7 +230,6 @@ function BracketSection({
   dimByes,
 }: BracketSectionProps) {
   if (rounds.length === 0) return null;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -233,24 +241,25 @@ function BracketSection({
       <div className="overflow-x-auto bg-muted/10 border border-border/30 rounded-2xl p-4">
         <div className="flex gap-8 min-w-max pb-2">
           {rounds.map((r) => (
-            <div key={r.round} className="flex flex-col min-w-[260px]">
+            <div key={r.round} className="flex flex-col min-w-[280px]">
               <h3 className="text-center font-bold text-muted-foreground uppercase tracking-widest text-xs mb-4">
                 {r.label}
               </h3>
               <div className="flex flex-col justify-around gap-4 flex-1">
-                {r.matches.map((m) => (
-                  <MatchCard
-                    key={m.id}
-                    match={m}
-                    getPlayer={getPlayer}
-                    playerName={playerName}
-                    isHost={isHost}
-                    onSetWinner={onSetWinner}
-                    isPending={isPending}
-                    accentClass={accentClass}
-                    dimByes={dimByes}
-                  />
-                ))}
+                {r.matches.map((m) =>
+                  dimByes && m.isBye ? null : (
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      getPlayer={getPlayer}
+                      playerName={playerName}
+                      isHost={isHost}
+                      onSetWinner={onSetWinner}
+                      isPending={isPending}
+                      accentClass={accentClass}
+                    />
+                  )
+                )}
               </div>
             </div>
           ))}
@@ -260,18 +269,17 @@ function BracketSection({
   );
 }
 
-// ── MatchCard ──────────────────────────────────────────────────────────────
+// ── MatchCard ───────────────────────────────────────────────────────────────
 
 interface MatchCardProps {
   match: Match;
   getPlayer: (id?: string | null) => any;
   playerName: (id?: string | null) => string | null;
   isHost: boolean;
-  onSetWinner: (matchId: string, winnerId: string) => void;
+  onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
   accentClass?: string;
   isGrandFinal?: boolean;
-  dimByes?: boolean;
 }
 
 function MatchCard({
@@ -283,136 +291,194 @@ function MatchCard({
   isPending,
   accentClass = "border-primary/40",
   isGrandFinal,
-  dimByes,
 }: MatchCardProps) {
+  const [scoreOne, setScoreOne] = useState<string>(
+    match.scoreOne !== null && match.scoreOne !== undefined ? String(match.scoreOne) : ""
+  );
+  const [scoreTwo, setScoreTwo] = useState<string>(
+    match.scoreTwo !== null && match.scoreTwo !== undefined ? String(match.scoreTwo) : ""
+  );
+
   const p1 = getPlayer(match.playerOneId);
   const p2 = getPlayer(match.playerTwoId);
   const isActive = match.status === "active";
   const isDone = match.status === "completed";
   const isBye = match.isBye;
-  const isPending_ = match.status === "pending";
+  const isPendingStatus = match.status === "pending";
 
   const canPickWinner = isHost && isActive && p1 && p2;
 
-  const rowClass = (playerId: string | null | undefined) => {
-    if (!playerId) return "";
-    if (isDone && match.winnerId === playerId) return "bg-primary/10";
-    if (isDone && match.winnerId !== playerId) return "opacity-40 grayscale";
-    return "";
+  const parseScore = (s: string) => {
+    const n = parseInt(s, 10);
+    return isNaN(n) ? undefined : n;
   };
 
-  if (isBye && dimByes) return null;
+  const handleWin = (winnerId: string) => {
+    onSetWinner(match.id, winnerId, parseScore(scoreOne), parseScore(scoreTwo));
+  };
+
+  const rowBg = (playerId: string | null | undefined) => {
+    if (!playerId || !isDone) return "";
+    return match.winnerId === playerId
+      ? "bg-primary/10"
+      : "opacity-40 grayscale";
+  };
 
   return (
     <div
       className={`relative bg-card rounded-xl border-2 shadow-sm overflow-hidden flex flex-col transition-all
         ${isActive ? accentClass : "border-border"}
         ${isBye ? "opacity-50" : ""}
+        ${isPendingStatus && !isBye ? "opacity-50" : ""}
         ${isGrandFinal ? "ring-2 ring-yellow-500/30 border-yellow-500/40" : ""}
-        ${isPending_ && !isBye ? "opacity-50" : ""}
       `}
     >
-      {/* Player 1 row */}
-      <PlayerRow
-        name={playerName(match.playerOneId)}
-        isWinner={isDone && match.winnerId === match.playerOneId}
-        showWinBtn={canPickWinner}
-        onWin={() => match.playerOneId && onSetWinner(match.id, match.playerOneId)}
-        rowClass={rowClass(match.playerOneId)}
-        isGrandFinal={isGrandFinal}
-        isFinalWinner={isDone && match.winnerId === match.playerOneId}
-        isPending={isPending}
-        label={isGrandFinal ? "WB" : undefined}
-      />
+      {/* Score row — only for active or completed matches with scores */}
+      {(isActive || (isDone && (match.scoreOne !== null || match.scoreTwo !== null))) && (
+        <div className="flex items-center justify-center gap-2 px-3 pt-2.5 pb-1">
+          {canPickWinner ? (
+            <>
+              <ScoreInput
+                value={scoreOne}
+                onChange={setScoreOne}
+                placeholder="0"
+                disabled={isPending}
+              />
+              <span className="text-muted-foreground font-bold text-sm">–</span>
+              <ScoreInput
+                value={scoreTwo}
+                onChange={setScoreTwo}
+                placeholder="0"
+                disabled={isPending}
+              />
+            </>
+          ) : isDone && (match.scoreOne !== null || match.scoreTwo !== null) ? (
+            <span className="text-muted-foreground font-mono font-bold text-xs">
+              {match.scoreOne ?? "–"} – {match.scoreTwo ?? "–"}
+            </span>
+          ) : null}
+        </div>
+      )}
 
-      {/* Divider */}
+      {/* Player 1 */}
+      <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerOneId)}`}>
+        <PlayerName
+          name={playerName(match.playerOneId)}
+          isWinner={isDone && match.winnerId === match.playerOneId}
+          isGrandFinal={isGrandFinal}
+          label={isGrandFinal ? "WB" : undefined}
+        />
+        {canPickWinner && (
+          <WinButton onClick={() => match.playerOneId && handleWin(match.playerOneId)} disabled={isPending} />
+        )}
+        {isDone && match.winnerId === match.playerOneId && !isGrandFinal && (
+          <CheckMark />
+        )}
+        {isDone && match.winnerId === match.playerOneId && isGrandFinal && (
+          <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+        )}
+      </div>
+
       <div className="h-px bg-border" />
 
-      {/* Player 2 row */}
+      {/* Player 2 or Bye */}
       {isBye ? (
         <div className="p-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/30">
           Bye
         </div>
       ) : (
-        <PlayerRow
-          name={playerName(match.playerTwoId)}
-          isWinner={isDone && match.winnerId === match.playerTwoId}
-          showWinBtn={canPickWinner}
-          onWin={() => match.playerTwoId && onSetWinner(match.id, match.playerTwoId)}
-          rowClass={rowClass(match.playerTwoId)}
-          isGrandFinal={isGrandFinal}
-          isFinalWinner={isDone && match.winnerId === match.playerTwoId}
-          isPending={isPending}
-          label={isGrandFinal ? "LB" : undefined}
-        />
+        <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerTwoId)}`}>
+          <PlayerName
+            name={playerName(match.playerTwoId)}
+            isWinner={isDone && match.winnerId === match.playerTwoId}
+            isGrandFinal={isGrandFinal}
+            label={isGrandFinal ? "LB" : undefined}
+          />
+          {canPickWinner && (
+            <WinButton onClick={() => match.playerTwoId && handleWin(match.playerTwoId)} disabled={isPending} />
+          )}
+          {isDone && match.winnerId === match.playerTwoId && !isGrandFinal && (
+            <CheckMark />
+          )}
+          {isDone && match.winnerId === match.playerTwoId && isGrandFinal && (
+            <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-// ── PlayerRow ──────────────────────────────────────────────────────────────
+// ── Sub-components ──────────────────────────────────────────────────────────
 
-interface PlayerRowProps {
-  name: string | null;
-  isWinner: boolean;
-  showWinBtn: boolean;
-  onWin: () => void;
-  rowClass: string;
-  isGrandFinal?: boolean;
-  isFinalWinner?: boolean;
-  isPending: boolean;
-  label?: string;
+function ScoreInput({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  disabled: boolean;
+}) {
+  return (
+    <Input
+      type="number"
+      min={0}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      className="w-14 h-8 text-center font-bold text-base bg-muted/60 border-muted px-1 rounded-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    />
+  );
 }
 
-function PlayerRow({
+function PlayerName({
   name,
   isWinner,
-  showWinBtn,
-  onWin,
-  rowClass,
   isGrandFinal,
-  isFinalWinner,
-  isPending,
   label,
-}: PlayerRowProps) {
+}: {
+  name: string | null;
+  isWinner: boolean;
+  isGrandFinal?: boolean;
+  label?: string;
+}) {
   return (
-    <div className={`p-3 flex items-center justify-between transition-colors ${rowClass}`}>
-      <div className="font-bold truncate pr-2 flex items-center gap-2 min-w-0">
-        {label && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-            {label}
-          </span>
-        )}
-        {name ? (
-          <span className="truncate">{name}</span>
-        ) : (
-          <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
-        )}
-        {isFinalWinner && isGrandFinal && (
-          <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
-        )}
-      </div>
-      <div className="shrink-0 flex items-center">
-        {showWinBtn && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-7 text-xs font-bold"
-            onClick={onWin}
-            disabled={isPending}
-          >
-            Win
-          </Button>
-        )}
-        {isWinner && !isGrandFinal && (
-          <CheckIcon className="w-4 h-4 text-primary" />
-        )}
-      </div>
+    <div className="font-bold truncate flex items-center gap-2 min-w-0 flex-1">
+      {label && (
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+          {label}
+        </span>
+      )}
+      {name ? (
+        <span className={`truncate ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>
+          {name}
+        </span>
+      ) : (
+        <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
+      )}
     </div>
   );
 }
 
-function CheckIcon({ className }: { className?: string }) {
+function WinButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      className="h-7 text-xs font-bold shrink-0"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      Win
+    </Button>
+  );
+}
+
+function CheckMark() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -422,7 +488,7 @@ function CheckIcon({ className }: { className?: string }) {
       strokeWidth="3"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={className}
+      className="w-4 h-4 text-primary shrink-0"
     >
       <polyline points="20 6 9 17 4 12" />
     </svg>
