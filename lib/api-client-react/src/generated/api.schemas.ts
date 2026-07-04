@@ -62,6 +62,16 @@ export interface Player {
   joinedAt: string;
 }
 
+export type MatchBracket = typeof MatchBracket[keyof typeof MatchBracket];
+
+
+export const MatchBracket = {
+  winner: 'winner',
+  loser: 'loser',
+  grand_finals: 'grand_finals',
+  grand_finals_reset: 'grand_finals_reset',
+} as const;
+
 export type MatchStatus = typeof MatchStatus[keyof typeof MatchStatus];
 
 
@@ -77,6 +87,7 @@ export interface Match {
   tournamentId: string;
   round: number;
   matchNumber: number;
+  bracket: MatchBracket;
   /** @nullable */
   playerOneId?: string | null;
   /** @nullable */
@@ -88,7 +99,15 @@ export interface Match {
   /** @nullable */
   scoreTwo?: number | null;
   status: MatchStatus;
-  isBye?: boolean;
+  isBye: boolean;
+  /** @nullable */
+  nextWinnerMatchId?: string | null;
+  /** @nullable */
+  nextWinnerSlot?: string | null;
+  /** @nullable */
+  nextLoserMatchId?: string | null;
+  /** @nullable */
+  nextLoserSlot?: string | null;
 }
 
 export interface TournamentFull {

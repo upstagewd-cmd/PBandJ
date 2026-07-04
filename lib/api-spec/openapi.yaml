@@ -393,7 +393,7 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, round, matchNumber, status]
+      required: [id, tournamentId, round, matchNumber, bracket, status, isBye]
       properties:
         id:
           type: string
@@ -403,6 +403,9 @@ components:
           type: integer
         matchNumber:
           type: integer
+        bracket:
+          type: string
+          enum: [winner, loser, grand_finals, grand_finals_reset]
         playerOneId:
           type: ["string", "null"]
         playerTwoId:
@@ -418,6 +421,14 @@ components:
           enum: [pending, active, completed, bye]
         isBye:
           type: boolean
+        nextWinnerMatchId:
+          type: ["string", "null"]
+        nextWinnerSlot:
+          type: ["string", "null"]
+        nextLoserMatchId:
+          type: ["string", "null"]
+        nextLoserSlot:
+          type: ["string", "null"]
 
     TournamentInput:
       type: object

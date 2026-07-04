@@ -61,13 +61,18 @@ export const GetTournamentResponse = zod.object({
   "tournamentId": zod.string(),
   "round": zod.number(),
   "matchNumber": zod.number(),
+  "bracket": zod.enum(['winner', 'loser', 'grand_finals', 'grand_finals_reset']),
   "playerOneId": zod.string().nullish(),
   "playerTwoId": zod.string().nullish(),
   "winnerId": zod.string().nullish(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),
   "status": zod.enum(['pending', 'active', 'completed', 'bye']),
-  "isBye": zod.boolean().optional()
+  "isBye": zod.boolean(),
+  "nextWinnerMatchId": zod.string().nullish(),
+  "nextWinnerSlot": zod.string().nullish(),
+  "nextLoserMatchId": zod.string().nullish(),
+  "nextLoserSlot": zod.string().nullish()
 }))
 })
 
@@ -126,13 +131,18 @@ export const StartTournamentResponse = zod.object({
   "tournamentId": zod.string(),
   "round": zod.number(),
   "matchNumber": zod.number(),
+  "bracket": zod.enum(['winner', 'loser', 'grand_finals', 'grand_finals_reset']),
   "playerOneId": zod.string().nullish(),
   "playerTwoId": zod.string().nullish(),
   "winnerId": zod.string().nullish(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),
   "status": zod.enum(['pending', 'active', 'completed', 'bye']),
-  "isBye": zod.boolean().optional()
+  "isBye": zod.boolean(),
+  "nextWinnerMatchId": zod.string().nullish(),
+  "nextWinnerSlot": zod.string().nullish(),
+  "nextLoserMatchId": zod.string().nullish(),
+  "nextLoserSlot": zod.string().nullish()
 }))
 })
 
@@ -243,13 +253,18 @@ export const UpdateMatchResponse = zod.object({
   "tournamentId": zod.string(),
   "round": zod.number(),
   "matchNumber": zod.number(),
+  "bracket": zod.enum(['winner', 'loser', 'grand_finals', 'grand_finals_reset']),
   "playerOneId": zod.string().nullish(),
   "playerTwoId": zod.string().nullish(),
   "winnerId": zod.string().nullish(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),
   "status": zod.enum(['pending', 'active', 'completed', 'bye']),
-  "isBye": zod.boolean().optional()
+  "isBye": zod.boolean(),
+  "nextWinnerMatchId": zod.string().nullish(),
+  "nextWinnerSlot": zod.string().nullish(),
+  "nextLoserMatchId": zod.string().nullish(),
+  "nextLoserSlot": zod.string().nullish()
 }))
 })
 
@@ -286,13 +301,18 @@ export const UndoLastMatchResponse = zod.object({
   "tournamentId": zod.string(),
   "round": zod.number(),
   "matchNumber": zod.number(),
+  "bracket": zod.enum(['winner', 'loser', 'grand_finals', 'grand_finals_reset']),
   "playerOneId": zod.string().nullish(),
   "playerTwoId": zod.string().nullish(),
   "winnerId": zod.string().nullish(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),
   "status": zod.enum(['pending', 'active', 'completed', 'bye']),
-  "isBye": zod.boolean().optional()
+  "isBye": zod.boolean(),
+  "nextWinnerMatchId": zod.string().nullish(),
+  "nextWinnerSlot": zod.string().nullish(),
+  "nextLoserMatchId": zod.string().nullish(),
+  "nextLoserSlot": zod.string().nullish()
 }))
 })
 

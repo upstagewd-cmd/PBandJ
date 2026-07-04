@@ -9,6 +9,7 @@
 export * from './healthStatus';
 export * from './hostTokenInput';
 export * from './match';
+export * from './matchBracket';
 export * from './matchStatus';
 export * from './matchUpdate';
 export * from './player';

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { db, tournamentsTable, playersTable, matchesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -6,12 +6,10 @@ import {
   CreateTournamentBody,
   UpdateTournamentBody,
   StartTournamentBody,
-  HostTokenInput,
 } from "@workspace/api-zod";
-import { generateBracket, advanceWinner } from "../lib/bracket";
+import { generateDoubleEliminationBracket } from "../lib/bracket";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
-import { logger } from "../lib/logger";
 
 export const tournamentsRouter = Router();
 
@@ -54,7 +52,7 @@ tournamentsRouter.post("/", async (req, res) => {
 });
 
 // GET /api/tournaments/:tournamentId
-tournamentsRouter.get("/:tournamentId", async (req, res) => {
+tournamentsRouter.get("/:tournamentId", async (req: Request<{ tournamentId: string }>, res) => {
   try {
     const full = await getTournamentFull(req.params.tournamentId);
     if (!full) {
@@ -69,7 +67,7 @@ tournamentsRouter.get("/:tournamentId", async (req, res) => {
 });
 
 // PATCH /api/tournaments/:tournamentId
-tournamentsRouter.patch("/:tournamentId", async (req, res) => {
+tournamentsRouter.patch("/:tournamentId", async (req: Request<{ tournamentId: string }>, res) => {
   try {
     const body = UpdateTournamentBody.parse(req.body);
     const { tournamentId } = req.params;
@@ -115,7 +113,7 @@ tournamentsRouter.patch("/:tournamentId", async (req, res) => {
 });
 
 // POST /api/tournaments/:tournamentId/start
-tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
+tournamentsRouter.post("/:tournamentId/start", async (req: Request<{ tournamentId: string }>, res) => {
   try {
     const body = StartTournamentBody.parse(req.body);
     const { tournamentId } = req.params;
@@ -129,12 +127,10 @@ tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
       res.status(404).json({ error: "Tournament not found" });
       return;
     }
-
     if (body.hostToken !== tournament.hostToken) {
       res.status(403).json({ error: "Invalid host token" });
       return;
     }
-
     if (tournament.status !== "lobby") {
       res.status(400).json({ error: "Tournament already started" });
       return;
@@ -145,8 +141,8 @@ tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.tournamentId, tournamentId));
 
-    if (players.length < 2) {
-      res.status(400).json({ error: "Need at least 2 players to start" });
+    if (players.length < 4) {
+      res.status(400).json({ error: "Double elimination requires at least 4 players" });
       return;
     }
 
@@ -159,14 +155,14 @@ tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
         .where(eq(playersTable.id, shuffled[i].id));
     }
 
-    // Generate bracket
-    const bracketMatches = generateBracket(tournamentId, shuffled.map((p, i) => ({ ...p, seed: i + 1 })));
+    // Generate double-elimination bracket
+    const seededPlayers = shuffled.map((p, i) => ({ id: p.id, seed: i + 1 }));
+    const bracketMatches = generateDoubleEliminationBracket(tournamentId, seededPlayers);
 
     if (bracketMatches.length > 0) {
       await db.insert(matchesTable).values(bracketMatches);
     }
 
-    // Update tournament status
     await db.update(tournamentsTable).set({
       status: "active",
       registrationLocked: true,
@@ -175,7 +171,6 @@ tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-
     res.json(full);
   } catch (err) {
     req.log.error({ err }, "Failed to start tournament");
@@ -184,7 +179,7 @@ tournamentsRouter.post("/:tournamentId/start", async (req, res) => {
 });
 
 // GET /api/tournaments/:tournamentId/summary
-tournamentsRouter.get("/:tournamentId/summary", async (req, res) => {
+tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournamentId: string }>, res) => {
   try {
     const { tournamentId } = req.params;
 
@@ -206,20 +201,16 @@ tournamentsRouter.get("/:tournamentId/summary", async (req, res) => {
     const matches = await db
       .select()
       .from(matchesTable)
-      .where(eq(matchesTable.tournamentId, tournamentId))
-      .orderBy(desc(matchesTable.round), desc(matchesTable.matchNumber));
+      .where(eq(matchesTable.tournamentId, tournamentId));
 
-    const completedMatches = matches.filter((m) => m.status === "completed" || m.status === "bye");
+    // Champion: winner of the last completed final match
+    const gfReset = matches.find((m) => m.bracket === "grand_finals_reset" && m.status === "completed");
+    const gf = matches.find((m) => m.bracket === "grand_finals" && m.status === "completed");
 
-    // Find champion: winner of last match (highest round)
-    const finalMatch = matches.find((m) => {
-      const maxRound = Math.max(...matches.map((x) => x.round));
-      return m.round === maxRound;
-    });
-
+    const finalMatch = gfReset ?? gf;
     const champion = players.find((p) => p.id === finalMatch?.winnerId) ?? null;
 
-    // Runner-up: loser of the final match
+    // Runner-up: loser of the last final match
     const runnerUpId = finalMatch
       ? finalMatch.playerOneId === finalMatch.winnerId
         ? finalMatch.playerTwoId
@@ -227,29 +218,40 @@ tournamentsRouter.get("/:tournamentId/summary", async (req, res) => {
       : null;
     const runnerUp = players.find((p) => p.id === runnerUpId) ?? null;
 
-    // Third place: find semifinal losers
-    const maxRound = Math.max(...matches.map((m) => m.round));
-    const semiFinals = matches.filter((m) => m.round === maxRound - 1);
-    const semifinalLosers = semiFinals
-      .map((m) => {
-        const loserId = m.playerOneId === m.winnerId ? m.playerTwoId : m.playerOneId;
-        return players.find((p) => p.id === loserId) ?? null;
-      })
-      .filter(Boolean);
-    const thirdPlace = semifinalLosers[0] ?? null;
+    // Third place: player who lost GF in WB bracket side (lost in WB Finals or LB semi)
+    // In double elim: third is the player who lost the LB Finals (if GF reset was played),
+    // or lost in WB if the GF reset player came from there.
+    // Simplest: find the loser of the WB Finals match
+    const wbFinals = matches.find(
+      (m) => m.bracket === "winner" && matches.filter((x) => x.bracket === "winner").every((x) => x.round <= m.round)
+    );
+    const wbFinalsLoserSide = wbFinals
+      ? wbFinals.playerOneId === wbFinals.winnerId
+        ? wbFinals.playerTwoId
+        : wbFinals.playerOneId
+      : null;
+    // But the WB Finals loser dropped to LB and became the LB finalist — they're actually runner-up or champion
+    // True "third" in double elim is the player who lost LB Finals (if gfReset played) or WB Finals loser who lost LB Finals
+    const lbFinals = matches.find((m) => m.bracket === "loser" && m.status === "completed" && m.nextWinnerMatchId === gf?.id);
+    const lbFinalsLoserSide = lbFinals
+      ? lbFinals.playerOneId === lbFinals.winnerId
+        ? lbFinals.playerTwoId
+        : lbFinals.playerOneId
+      : null;
+    const thirdPlace = players.find((p) => p.id === lbFinalsLoserSide) ?? null;
+
+    const completedMatches = matches.filter((m) => m.status === "completed" && !m.isBye);
 
     const durationMinutes =
       tournament.startedAt && tournament.completedAt
-        ? Math.round(
-            (tournament.completedAt.getTime() - tournament.startedAt.getTime()) / 60000
-          )
+        ? Math.round((tournament.completedAt.getTime() - tournament.startedAt.getTime()) / 60000)
         : null;
 
     res.json({
       tournamentId,
-      champion,
-      runnerUp,
-      thirdPlace,
+      champion: champion ? { ...champion, joinedAt: champion.joinedAt.toISOString() } : null,
+      runnerUp: runnerUp ? { ...runnerUp, joinedAt: runnerUp.joinedAt.toISOString() } : null,
+      thirdPlace: thirdPlace ? { ...thirdPlace, joinedAt: thirdPlace.joinedAt.toISOString() } : null,
       totalMatches: completedMatches.length,
       playerCount: players.length,
       durationMinutes,

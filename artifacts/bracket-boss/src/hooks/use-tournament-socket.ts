@@ -15,43 +15,35 @@ export function useTournamentSocket(tournamentId: string | undefined) {
     const connect = () => {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws?tournamentId=${tournamentId}`;
-      
+
       ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => {
-        setIsConnected(true);
-      };
+      ws.onopen = () => setIsConnected(true);
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          if (data.type === "tournament_update" && data.payload) {
-            queryClient.setQueryData(getGetTournamentQueryKey(tournamentId), data.payload);
+          const msg = JSON.parse(event.data);
+          if (msg.type === "tournament_update" && msg.data) {
+            queryClient.setQueryData(getGetTournamentQueryKey(tournamentId), msg.data);
           }
-        } catch (error) {
-          console.error("Failed to parse websocket message", error);
+        } catch {
+          // ignore malformed messages
         }
       };
 
       ws.onclose = () => {
         setIsConnected(false);
-        // Reconnect after 2 seconds
         reconnectTimeout = setTimeout(connect, 2000);
       };
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error", error);
-        ws.close();
-      };
+      ws.onerror = () => ws.close();
     };
 
     connect();
 
     return () => {
       clearTimeout(reconnectTimeout);
-      if (ws) {
-        ws.close();
-      }
+      ws?.close();
     };
   }, [tournamentId, queryClient]);
 

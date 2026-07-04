@@ -5,6 +5,7 @@
  * Bracket Boss API
  * OpenAPI spec version: 0.1.0
  */
+import type { MatchBracket } from './matchBracket';
 import type { MatchStatus } from './matchStatus';
 
 export interface Match {
@@ -12,6 +13,7 @@ export interface Match {
   tournamentId: string;
   round: number;
   matchNumber: number;
+  bracket: MatchBracket;
   /** @nullable */
   playerOneId?: string | null;
   /** @nullable */
@@ -23,5 +25,13 @@ export interface Match {
   /** @nullable */
   scoreTwo?: number | null;
   status: MatchStatus;
-  isBye?: boolean;
+  isBye: boolean;
+  /** @nullable */
+  nextWinnerMatchId?: string | null;
+  /** @nullable */
+  nextWinnerSlot?: string | null;
+  /** @nullable */
+  nextLoserMatchId?: string | null;
+  /** @nullable */
+  nextLoserSlot?: string | null;
 }
