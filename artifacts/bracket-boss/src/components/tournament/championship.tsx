@@ -71,14 +71,14 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
         <div className="order-2 md:order-1 bg-card border border-border/50 rounded-3xl p-6 text-center shadow-lg transform md:-translate-y-4">
           <div className="text-4xl mb-4">🥈</div>
           <h3 className="text-muted-foreground uppercase text-xs tracking-widest font-bold mb-2">Runner Up</h3>
-          <p className="text-2xl font-bold truncate">{summary.runnerUp.firstName} {summary.runnerUp.lastName}</p>
+          <p className="text-2xl font-bold truncate">{summary.runnerUp.teamName || `${summary.runnerUp.firstName} ${summary.runnerUp.lastName}`}</p>
         </div>
 
         {/* First Place */}
         <div className="order-1 md:order-2 bg-gradient-to-b from-primary/20 to-card border-2 border-primary rounded-3xl p-8 text-center shadow-[0_0_40px_rgba(255,100,50,0.3)] z-10">
           <div className="text-6xl mb-6">🥇</div>
           <h3 className="text-primary uppercase text-sm tracking-widest font-black mb-2">1st Place</h3>
-          <p className="text-4xl font-extrabold truncate">{summary.champion.firstName} {summary.champion.lastName}</p>
+          <p className="text-4xl font-extrabold truncate">{summary.champion.teamName || `${summary.champion.firstName} ${summary.champion.lastName}`}</p>
         </div>
 
         {/* Third Place */}
@@ -86,7 +86,7 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
           <div className="order-3 bg-card border border-border/50 rounded-3xl p-6 text-center shadow-lg transform md:-translate-y-8">
             <div className="text-4xl mb-4">🥉</div>
             <h3 className="text-muted-foreground uppercase text-xs tracking-widest font-bold mb-2">Third Place</h3>
-            <p className="text-2xl font-bold truncate">{summary.thirdPlace.firstName} {summary.thirdPlace.lastName}</p>
+            <p className="text-2xl font-bold truncate">{summary.thirdPlace.teamName || `${summary.thirdPlace.firstName} ${summary.thirdPlace.lastName}`}</p>
           </div>
         ) : (
           <div className="order-3 hidden md:block"></div>

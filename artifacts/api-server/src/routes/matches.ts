@@ -153,6 +153,7 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
     if (body.winnerId) {
       match.winnerId = body.winnerId;
       match.status = "completed";
+      (match as any).completedAt = new Date();
 
       // ── Special handling for Grand Finals ────────────────────────────
       if (match.bracket === "grand_finals") {

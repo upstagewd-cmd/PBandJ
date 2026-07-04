@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Undo2, Crown, Trophy, Shield } from "lucide-react";
+import { Undo2, Crown, Trophy, Shield, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BracketProps {
@@ -24,9 +24,12 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const getPlayer = (id?: string | null) =>
     id ? (tournament.players.find((p) => p.id === id) ?? null) : null;
 
-  const playerName = (id?: string | null) => {
+  /** Display name: teamName → "First L." */
+  const displayName = (id?: string | null): string | null => {
     const p = getPlayer(id);
-    return p ? `${p.firstName} ${p.lastName.charAt(0)}.` : null;
+    if (!p) return null;
+    if (p.teamName) return p.teamName;
+    return `${p.firstName} ${p.lastName.charAt(0)}.`;
   };
 
   const handleSetWinner = (
@@ -47,10 +50,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
           ...(scoreTwo !== undefined ? { scoreTwo } : {}),
         },
       },
-      {
-        onError: () =>
-          toast({ title: "Failed to record winner", variant: "destructive" }),
-      }
+      { onError: () => toast({ title: "Failed to record winner", variant: "destructive" }) }
     );
   };
 
@@ -58,10 +58,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     if (!isHost) return;
     undoMatch.mutate(
       { tournamentId: tournament.id, data: { hostToken: hostToken! } },
-      {
-        onError: () =>
-          toast({ title: "Nothing to undo", variant: "destructive" }),
-      }
+      { onError: () => toast({ title: "Nothing to undo", variant: "destructive" }) }
     );
   };
 
@@ -97,20 +94,16 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
       wbRounds: sortRounds(wb).map((r) => ({
         ...r,
         label:
-          r.round === wbMaxRound
-            ? "WB Finals"
-            : r.round === wbMaxRound - 1
-            ? "WB Semis"
-            : `WB Round ${r.round}`,
+          r.round === wbMaxRound ? "WB Finals"
+          : r.round === wbMaxRound - 1 ? "WB Semis"
+          : `WB Round ${r.round}`,
       })),
       lbRounds: sortRounds(lb).map((r) => ({
         ...r,
         label:
-          r.round === lbMaxRound
-            ? "LB Finals"
-            : r.round === lbMaxRound - 1
-            ? "LB Semis"
-            : `LB Round ${r.round}`,
+          r.round === lbMaxRound ? "LB Finals"
+          : r.round === lbMaxRound - 1 ? "LB Semis"
+          : `LB Round ${r.round}`,
       })),
       gfMatches: gf.sort((a, b) => {
         const order = ["grand_finals", "grand_finals_reset"];
@@ -118,6 +111,27 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
       }),
     };
   }, [tournament.matches]);
+
+  // ── Match history ─────────────────────────────────────────────────────────
+  const completedMatches = useMemo(() => {
+    return [...tournament.matches]
+      .filter((m) => m.status === "completed" && !m.isBye)
+      .sort((a, b) => {
+        // Sort by completedAt desc if available, else by round + matchNumber desc
+        if (a.completedAt && b.completedAt) {
+          return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+        }
+        if (a.round !== b.round) return b.round - a.round;
+        return b.matchNumber - a.matchNumber;
+      });
+  }, [tournament.matches]);
+
+  const bracketLabel = (m: Match) => {
+    if (m.bracket === "grand_finals") return "Grand Finals";
+    if (m.bracket === "grand_finals_reset") return "GF Reset";
+    if (m.bracket === "winner") return `WB R${m.round}`;
+    return `LB R${m.round}`;
+  };
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -131,37 +145,31 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
           </p>
         </div>
         {isHost && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleUndo}
-            disabled={undoMatch.isPending}
-          >
-            <Undo2 className="w-4 h-4 mr-2" />
-            Undo Last
+          <Button variant="outline" size="sm" onClick={handleUndo} disabled={undoMatch.isPending}>
+            <Undo2 className="w-4 h-4 mr-2" /> Undo Last
           </Button>
         )}
       </div>
 
+      {/* Winner Bracket */}
       <BracketSection
         title="Winner's Bracket"
         icon={<Trophy className="w-4 h-4 text-primary" />}
         rounds={wbRounds}
-        getPlayer={getPlayer}
-        playerName={playerName}
+        displayName={displayName}
         isHost={isHost}
         onSetWinner={handleSetWinner}
         isPending={updateMatch.isPending}
         accentClass="border-primary/40"
       />
 
+      {/* Loser Bracket */}
       {lbRounds.length > 0 && (
         <BracketSection
           title="Loser's Bracket"
           icon={<Shield className="w-4 h-4 text-blue-400" />}
           rounds={lbRounds}
-          getPlayer={getPlayer}
-          playerName={playerName}
+          displayName={displayName}
           isHost={isHost}
           onSetWinner={handleSetWinner}
           isPending={updateMatch.isPending}
@@ -170,13 +178,12 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
         />
       )}
 
+      {/* Grand Finals */}
       {gfMatches.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-yellow-500" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-yellow-500">
-              Grand Finals
-            </h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-yellow-500">Grand Finals</h2>
           </div>
           <div className="flex flex-wrap gap-6">
             {gfMatches.map((m) => (
@@ -186,8 +193,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
                 </p>
                 <MatchCard
                   match={m}
-                  getPlayer={getPlayer}
-                  playerName={playerName}
+                  displayName={displayName}
                   isHost={isHost}
                   onSetWinner={handleSetWinner}
                   isPending={updateMatch.isPending}
@@ -195,6 +201,48 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
                 />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Match History */}
+      {completedMatches.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              Match History
+            </h2>
+          </div>
+          <div className="bg-muted/10 border border-border/30 rounded-2xl divide-y divide-border/30">
+            {completedMatches.map((m) => {
+              const winner = displayName(m.winnerId);
+              const loser = displayName(
+                m.playerOneId === m.winnerId ? m.playerTwoId : m.playerOneId
+              );
+              const hasScore = m.scoreOne !== null || m.scoreTwo !== null;
+              const winnerScore = m.playerOneId === m.winnerId ? m.scoreOne : m.scoreTwo;
+              const loserScore = m.playerOneId === m.winnerId ? m.scoreTwo : m.scoreOne;
+              return (
+                <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                      {bracketLabel(m)}
+                    </span>
+                    <span className="font-bold text-sm truncate">
+                      <span className="text-primary">{winner}</span>
+                      <span className="text-muted-foreground mx-1.5">beat</span>
+                      <span className="text-muted-foreground">{loser}</span>
+                    </span>
+                  </div>
+                  {hasScore && (
+                    <span className="font-mono font-bold text-sm text-muted-foreground shrink-0">
+                      {winnerScore ?? "–"}–{loserScore ?? "–"}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -208,8 +256,7 @@ interface BracketSectionProps {
   title: string;
   icon: React.ReactNode;
   rounds: { round: number; label: string; matches: Match[] }[];
-  getPlayer: (id?: string | null) => any;
-  playerName: (id?: string | null) => string | null;
+  displayName: (id?: string | null) => string | null;
   isHost: boolean;
   onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
@@ -218,25 +265,14 @@ interface BracketSectionProps {
 }
 
 function BracketSection({
-  title,
-  icon,
-  rounds,
-  getPlayer,
-  playerName,
-  isHost,
-  onSetWinner,
-  isPending,
-  accentClass,
-  dimByes,
+  title, icon, rounds, displayName, isHost, onSetWinner, isPending, accentClass, dimByes,
 }: BracketSectionProps) {
   if (rounds.length === 0) return null;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          {title}
-        </h2>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{title}</h2>
       </div>
       <div className="overflow-x-auto bg-muted/10 border border-border/30 rounded-2xl p-4">
         <div className="flex gap-8 min-w-max pb-2">
@@ -251,8 +287,7 @@ function BracketSection({
                     <MatchCard
                       key={m.id}
                       match={m}
-                      getPlayer={getPlayer}
-                      playerName={playerName}
+                      displayName={displayName}
                       isHost={isHost}
                       onSetWinner={onSetWinner}
                       isPending={isPending}
@@ -273,8 +308,7 @@ function BracketSection({
 
 interface MatchCardProps {
   match: Match;
-  getPlayer: (id?: string | null) => any;
-  playerName: (id?: string | null) => string | null;
+  displayName: (id?: string | null) => string | null;
   isHost: boolean;
   onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
@@ -283,14 +317,8 @@ interface MatchCardProps {
 }
 
 function MatchCard({
-  match,
-  getPlayer,
-  playerName,
-  isHost,
-  onSetWinner,
-  isPending,
-  accentClass = "border-primary/40",
-  isGrandFinal,
+  match, displayName, isHost, onSetWinner, isPending,
+  accentClass = "border-primary/40", isGrandFinal,
 }: MatchCardProps) {
   const [scoreOne, setScoreOne] = useState<string>(
     match.scoreOne !== null && match.scoreOne !== undefined ? String(match.scoreOne) : ""
@@ -299,29 +327,18 @@ function MatchCard({
     match.scoreTwo !== null && match.scoreTwo !== undefined ? String(match.scoreTwo) : ""
   );
 
-  const p1 = getPlayer(match.playerOneId);
-  const p2 = getPlayer(match.playerTwoId);
   const isActive = match.status === "active";
   const isDone = match.status === "completed";
   const isBye = match.isBye;
   const isPendingStatus = match.status === "pending";
 
-  const canPickWinner = isHost && isActive && p1 && p2;
+  const canPickWinner = isHost && isActive && match.playerOneId && match.playerTwoId;
 
-  const parseScore = (s: string) => {
-    const n = parseInt(s, 10);
-    return isNaN(n) ? undefined : n;
-  };
-
-  const handleWin = (winnerId: string) => {
-    onSetWinner(match.id, winnerId, parseScore(scoreOne), parseScore(scoreTwo));
-  };
+  const parseScore = (s: string) => { const n = parseInt(s, 10); return isNaN(n) ? undefined : n; };
 
   const rowBg = (playerId: string | null | undefined) => {
     if (!playerId || !isDone) return "";
-    return match.winnerId === playerId
-      ? "bg-primary/10"
-      : "opacity-40 grayscale";
+    return match.winnerId === playerId ? "bg-primary/10" : "opacity-40 grayscale";
   };
 
   return (
@@ -333,24 +350,14 @@ function MatchCard({
         ${isGrandFinal ? "ring-2 ring-yellow-500/30 border-yellow-500/40" : ""}
       `}
     >
-      {/* Score row — only for active or completed matches with scores */}
+      {/* Score row */}
       {(isActive || (isDone && (match.scoreOne !== null || match.scoreTwo !== null))) && (
         <div className="flex items-center justify-center gap-2 px-3 pt-2.5 pb-1">
           {canPickWinner ? (
             <>
-              <ScoreInput
-                value={scoreOne}
-                onChange={setScoreOne}
-                placeholder="0"
-                disabled={isPending}
-              />
+              <ScoreInput value={scoreOne} onChange={setScoreOne} disabled={isPending} />
               <span className="text-muted-foreground font-bold text-sm">–</span>
-              <ScoreInput
-                value={scoreTwo}
-                onChange={setScoreTwo}
-                placeholder="0"
-                disabled={isPending}
-              />
+              <ScoreInput value={scoreTwo} onChange={setScoreTwo} disabled={isPending} />
             </>
           ) : isDone && (match.scoreOne !== null || match.scoreTwo !== null) ? (
             <span className="text-muted-foreground font-mono font-bold text-xs">
@@ -362,46 +369,42 @@ function MatchCard({
 
       {/* Player 1 */}
       <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerOneId)}`}>
-        <PlayerName
-          name={playerName(match.playerOneId)}
+        <NameSlot
+          name={displayName(match.playerOneId)}
           isWinner={isDone && match.winnerId === match.playerOneId}
           isGrandFinal={isGrandFinal}
           label={isGrandFinal ? "WB" : undefined}
         />
         {canPickWinner && (
-          <WinButton onClick={() => match.playerOneId && handleWin(match.playerOneId)} disabled={isPending} />
+          <WinButton onClick={() => match.playerOneId && onSetWinner(match.id, match.playerOneId, parseScore(scoreOne), parseScore(scoreTwo))} disabled={isPending} />
         )}
-        {isDone && match.winnerId === match.playerOneId && !isGrandFinal && (
-          <CheckMark />
-        )}
-        {isDone && match.winnerId === match.playerOneId && isGrandFinal && (
-          <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+        {isDone && match.winnerId === match.playerOneId && (
+          isGrandFinal
+            ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+            : <CheckMark />
         )}
       </div>
 
       <div className="h-px bg-border" />
 
-      {/* Player 2 or Bye */}
+      {/* Player 2 */}
       {isBye ? (
-        <div className="p-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/30">
-          Bye
-        </div>
+        <div className="p-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/30">Bye</div>
       ) : (
         <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerTwoId)}`}>
-          <PlayerName
-            name={playerName(match.playerTwoId)}
+          <NameSlot
+            name={displayName(match.playerTwoId)}
             isWinner={isDone && match.winnerId === match.playerTwoId}
             isGrandFinal={isGrandFinal}
             label={isGrandFinal ? "LB" : undefined}
           />
           {canPickWinner && (
-            <WinButton onClick={() => match.playerTwoId && handleWin(match.playerTwoId)} disabled={isPending} />
+            <WinButton onClick={() => match.playerTwoId && onSetWinner(match.id, match.playerTwoId, parseScore(scoreOne), parseScore(scoreTwo))} disabled={isPending} />
           )}
-          {isDone && match.winnerId === match.playerTwoId && !isGrandFinal && (
-            <CheckMark />
-          )}
-          {isDone && match.winnerId === match.playerTwoId && isGrandFinal && (
-            <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+          {isDone && match.winnerId === match.playerTwoId && (
+            isGrandFinal
+              ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+              : <CheckMark />
           )}
         </div>
       )}
@@ -409,43 +412,9 @@ function MatchCard({
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Small components ────────────────────────────────────────────────────────
 
-function ScoreInput({
-  value,
-  onChange,
-  placeholder,
-  disabled,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  disabled: boolean;
-}) {
-  return (
-    <Input
-      type="number"
-      min={0}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-      className="w-14 h-8 text-center font-bold text-base bg-muted/60 border-muted px-1 rounded-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-    />
-  );
-}
-
-function PlayerName({
-  name,
-  isWinner,
-  isGrandFinal,
-  label,
-}: {
-  name: string | null;
-  isWinner: boolean;
-  isGrandFinal?: boolean;
-  label?: string;
-}) {
+function NameSlot({ name, isWinner, isGrandFinal, label }: { name: string | null; isWinner: boolean; isGrandFinal?: boolean; label?: string }) {
   return (
     <div className="font-bold truncate flex items-center gap-2 min-w-0 flex-1">
       {label && (
@@ -453,26 +422,30 @@ function PlayerName({
           {label}
         </span>
       )}
-      {name ? (
-        <span className={`truncate ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>
-          {name}
-        </span>
-      ) : (
-        <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
-      )}
+      {name
+        ? <span className={`truncate ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>{name}</span>
+        : <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
+      }
     </div>
+  );
+}
+
+function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled: boolean }) {
+  return (
+    <Input
+      type="number" min={0}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="0"
+      disabled={disabled}
+      className="w-14 h-8 text-center font-bold text-base bg-muted/60 border-muted px-1 rounded-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    />
   );
 }
 
 function WinButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
   return (
-    <Button
-      size="sm"
-      variant="secondary"
-      className="h-7 text-xs font-bold shrink-0"
-      onClick={onClick}
-      disabled={disabled}
-    >
+    <Button size="sm" variant="secondary" className="h-7 text-xs font-bold shrink-0" onClick={onClick} disabled={disabled}>
       Win
     </Button>
   );
@@ -480,16 +453,7 @@ function WinButton({ onClick, disabled }: { onClick: () => void; disabled: boole
 
 function CheckMark() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-4 h-4 text-primary shrink-0"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary shrink-0">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );

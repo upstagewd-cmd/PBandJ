@@ -58,6 +58,10 @@ export interface Player {
   tournamentId: string;
   firstName: string;
   lastName: string;
+  /** @nullable */
+  partnerName?: string | null;
+  /** @nullable */
+  teamName?: string | null;
   seed: number;
   joinedAt: string;
 }
@@ -108,6 +112,8 @@ export interface Match {
   nextLoserMatchId?: string | null;
   /** @nullable */
   nextLoserSlot?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
 }
 
 export interface TournamentFull {
@@ -135,6 +141,20 @@ export interface TournamentSummary {
   durationMinutes?: number | null;
 }
 
+export interface PlayerWithToken {
+  id: string;
+  tournamentId: string;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  partnerName?: string | null;
+  /** @nullable */
+  teamName?: string | null;
+  seed: number;
+  joinedAt: string;
+  playerToken: string;
+}
+
 export interface TournamentInput {
   name?: string;
 }
@@ -150,6 +170,13 @@ export interface PlayerInput {
   firstName: string;
   /** @minLength 1 */
   lastName: string;
+  partnerName?: string;
+  teamName?: string;
+}
+
+export interface PlayerUpdate {
+  playerToken: string;
+  teamName?: string;
 }
 
 export interface MatchUpdate {

@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PlayerInput {
-  /** @minLength 1 */
-  firstName: string;
-  /** @minLength 1 */
-  lastName: string;
-  partnerName?: string;
+export interface PlayerUpdate {
+  playerToken: string;
   teamName?: string;
 }

@@ -7,6 +7,9 @@ export const playersTable = pgTable("players", {
   tournamentId: text("tournament_id").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  partnerName: text("partner_name"),
+  teamName: text("team_name"),
+  playerToken: text("player_token"),
   seed: integer("seed").notNull().default(0),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });

@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Player {
+export interface PlayerWithToken {
   id: string;
   tournamentId: string;
   firstName: string;
@@ -17,4 +17,5 @@ export interface Player {
   teamName?: string | null;
   seed: number;
   joinedAt: Date;
+  playerToken: string;
 }

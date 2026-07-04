@@ -30,9 +30,19 @@ export async function getTournamentFull(tournamentId: string) {
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
     players: players.map((p) => ({
-      ...p,
+      id: p.id,
+      tournamentId: p.tournamentId,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      partnerName: p.partnerName ?? null,
+      teamName: p.teamName ?? null,
+      seed: p.seed,
       joinedAt: p.joinedAt.toISOString(),
+      // playerToken intentionally omitted — never broadcast to all clients
     })),
-    matches,
+    matches: matches.map((m) => ({
+      ...m,
+      completedAt: (m as any).completedAt?.toISOString?.() ?? null,
+    })),
   };
 }

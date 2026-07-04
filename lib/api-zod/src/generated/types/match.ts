@@ -34,4 +34,6 @@ export interface Match {
   nextLoserMatchId?: string | null;
   /** @nullable */
   nextLoserSlot?: string | null;
+  /** @nullable */
+  completedAt?: Date | null;
 }

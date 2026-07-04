@@ -53,6 +53,8 @@ export const GetTournamentResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
@@ -72,13 +74,14 @@ export const GetTournamentResponse = zod.object({
   "nextWinnerMatchId": zod.string().nullish(),
   "nextWinnerSlot": zod.string().nullish(),
   "nextLoserMatchId": zod.string().nullish(),
-  "nextLoserSlot": zod.string().nullish()
+  "nextLoserSlot": zod.string().nullish(),
+  "completedAt": zod.coerce.date().nullish()
 }))
 })
 
 
 /**
- * @summary Update tournament (name, status, lock)
+ * @summary Update tournament
  */
 export const UpdateTournamentParams = zod.object({
   "tournamentId": zod.coerce.string()
@@ -100,7 +103,7 @@ export const UpdateTournamentResponse = zod.object({
 
 
 /**
- * @summary Start tournament - lock registration and generate bracket
+ * @summary Start tournament
  */
 export const StartTournamentParams = zod.object({
   "tournamentId": zod.coerce.string()
@@ -123,6 +126,8 @@ export const StartTournamentResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
@@ -142,13 +147,14 @@ export const StartTournamentResponse = zod.object({
   "nextWinnerMatchId": zod.string().nullish(),
   "nextWinnerSlot": zod.string().nullish(),
   "nextLoserMatchId": zod.string().nullish(),
-  "nextLoserSlot": zod.string().nullish()
+  "nextLoserSlot": zod.string().nullish(),
+  "completedAt": zod.coerce.date().nullish()
 }))
 })
 
 
 /**
- * @summary Join a tournament as a player
+ * @summary Join a tournament
  */
 export const JoinTournamentParams = zod.object({
   "tournamentId": zod.coerce.string()
@@ -160,7 +166,9 @@ export const JoinTournamentParams = zod.object({
 
 export const JoinTournamentBody = zod.object({
   "firstName": zod.string().min(1),
-  "lastName": zod.string().min(1)
+  "lastName": zod.string().min(1),
+  "partnerName": zod.string().optional(),
+  "teamName": zod.string().optional()
 })
 
 export const JoinTournamentResponse = zod.object({
@@ -168,8 +176,11 @@ export const JoinTournamentResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
-  "joinedAt": zod.coerce.date()
+  "joinedAt": zod.coerce.date(),
+  "playerToken": zod.string()
 })
 
 
@@ -189,10 +200,37 @@ export const ShufflePlayersResponseItem = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })
 export const ShufflePlayersResponse = zod.array(ShufflePlayersResponseItem)
+
+
+/**
+ * @summary Update team name (player token required)
+ */
+export const UpdatePlayerParams = zod.object({
+  "tournamentId": zod.coerce.string(),
+  "playerId": zod.coerce.string()
+})
+
+export const UpdatePlayerBody = zod.object({
+  "playerToken": zod.string(),
+  "teamName": zod.string().optional()
+})
+
+export const UpdatePlayerResponse = zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "joinedAt": zod.coerce.date()
+})
 
 
 /**
@@ -212,13 +250,15 @@ export const RemovePlayerResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })
 
 
 /**
- * @summary Set winner or update scores for a match
+ * @summary Set winner or update scores
  */
 export const UpdateMatchParams = zod.object({
   "tournamentId": zod.coerce.string(),
@@ -245,6 +285,8 @@ export const UpdateMatchResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
@@ -264,7 +306,8 @@ export const UpdateMatchResponse = zod.object({
   "nextWinnerMatchId": zod.string().nullish(),
   "nextWinnerSlot": zod.string().nullish(),
   "nextLoserMatchId": zod.string().nullish(),
-  "nextLoserSlot": zod.string().nullish()
+  "nextLoserSlot": zod.string().nullish(),
+  "completedAt": zod.coerce.date().nullish()
 }))
 })
 
@@ -293,6 +336,8 @@ export const UndoLastMatchResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
@@ -312,13 +357,14 @@ export const UndoLastMatchResponse = zod.object({
   "nextWinnerMatchId": zod.string().nullish(),
   "nextWinnerSlot": zod.string().nullish(),
   "nextLoserMatchId": zod.string().nullish(),
-  "nextLoserSlot": zod.string().nullish()
+  "nextLoserSlot": zod.string().nullish(),
+  "completedAt": zod.coerce.date().nullish()
 }))
 })
 
 
 /**
- * @summary Get championship summary (champion, runner-up, stats)
+ * @summary Get championship summary
  */
 export const GetTournamentSummaryParams = zod.object({
   "tournamentId": zod.coerce.string()
@@ -331,6 +377,8 @@ export const GetTournamentSummaryResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 }),
@@ -339,6 +387,8 @@ export const GetTournamentSummaryResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 }),
@@ -347,6 +397,8 @@ export const GetTournamentSummaryResponse = zod.object({
   "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
+  "partnerName": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 }),zod.null()]).optional(),

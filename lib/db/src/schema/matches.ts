@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -19,6 +19,7 @@ export const matchesTable = pgTable("matches", {
   nextWinnerSlot: text("next_winner_slot"),
   nextLoserMatchId: text("next_loser_match_id"),
   nextLoserSlot: text("next_loser_slot"),
+  completedAt: timestamp("completed_at"),
 });
 
 export const insertMatchSchema = createInsertSchema(matchesTable);

@@ -14,6 +14,8 @@ export * from './matchStatus';
 export * from './matchUpdate';
 export * from './player';
 export * from './playerInput';
+export * from './playerUpdate';
+export * from './playerWithToken';
 export * from './tournament';
 export * from './tournamentFull';
 export * from './tournamentFullStatus';
