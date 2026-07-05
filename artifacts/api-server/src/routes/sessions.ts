@@ -2,7 +2,7 @@ import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody } from "@workspace/api-zod";
+import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 
@@ -33,6 +33,7 @@ function serializePlayer(p: PlayerRow) {
     firstName: p.firstName,
     lastName: p.lastName,
     teamName: p.teamName ?? null,
+    partnerId: p.partnerId ?? null,
     eloRating: p.eloRating,
     rankTitle: rank.title,
     rankEmoji: rank.emoji,
@@ -225,5 +226,83 @@ sessionsRouter.post("/:sessionId/matches", async (req: Request<{ sessionId: stri
   } catch (err) {
     req.log.error({ err }, "Failed to log session match");
     res.status(500).json({ error: "Failed to log match" });
+  }
+});
+
+// ─── PATCH /api/sessions/:sessionId/pair ─────────────────────────────────────
+
+sessionsRouter.patch("/:sessionId/pair", async (req: Request<{ sessionId: string }>, res) => {
+  try {
+    const body = PairSessionPlayersBody.parse(req.body);
+    const { sessionId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const [p1] = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.id, body.player1Id));
+    const [p2] = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.id, body.player2Id));
+    if (!p1 || !p2) { res.status(404).json({ error: "Player not found" }); return; }
+
+    // Clear existing partners of each player before re-pairing
+    if (p1.partnerId) await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.id, p1.partnerId));
+    if (p2.partnerId) await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.id, p2.partnerId));
+
+    await db.update(sessionPlayersTable).set({ partnerId: body.player2Id }).where(eq(sessionPlayersTable.id, body.player1Id));
+    await db.update(sessionPlayersTable).set({ partnerId: body.player1Id }).where(eq(sessionPlayersTable.id, body.player2Id));
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to pair players");
+    res.status(500).json({ error: "Failed to pair players" });
+  }
+});
+
+// ─── DELETE /api/sessions/:sessionId/pair ────────────────────────────────────
+
+sessionsRouter.delete("/:sessionId/pair", async (req: Request<{ sessionId: string }>, res) => {
+  try {
+    const body = UnpairSessionPlayerBody.parse(req.body);
+    const { sessionId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const [player] = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.id, body.playerId));
+    if (!player) { res.status(404).json({ error: "Player not found" }); return; }
+
+    if (player.partnerId) {
+      await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.id, player.partnerId));
+    }
+    await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.id, body.playerId));
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to unpair player");
+    res.status(500).json({ error: "Failed to unpair player" });
+  }
+});
+
+// ─── POST /api/sessions/:sessionId/reshuffle ─────────────────────────────────
+
+sessionsRouter.post("/:sessionId/reshuffle", async (req: Request<{ sessionId: string }>, res) => {
+  try {
+    const body = ReshuffleSessionBody.parse(req.body);
+    const { sessionId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.sessionId, sessionId));
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to reshuffle session");
+    res.status(500).json({ error: "Failed to reshuffle" });
   }
 });

@@ -17,6 +17,7 @@ export const sessionPlayersTable = pgTable("session_players", {
   lastName: text("last_name").notNull(),
   teamName: text("team_name"),
   eloRating: integer("elo_rating").notNull().default(1200),
+  partnerId: text("partner_id"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

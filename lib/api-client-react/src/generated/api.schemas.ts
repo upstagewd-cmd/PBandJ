@@ -353,6 +353,8 @@ export interface SessionPlayer {
   lastName: string;
   /** @nullable */
   teamName?: string | null;
+  /** @nullable */
+  partnerId?: string | null;
   eloRating: number;
   rankTitle: string;
   rankEmoji: string;
@@ -403,6 +405,21 @@ export interface SessionMatchInput {
   winnerTeam: number;
   scoreOne?: number;
   scoreTwo?: number;
+}
+
+export interface PairPlayersBody {
+  hostToken: string;
+  player1Id: string;
+  player2Id: string;
+}
+
+export interface UnpairPlayerBody {
+  hostToken: string;
+  playerId: string;
+}
+
+export interface ReshuffleBody {
+  hostToken: string;
 }
 
 export interface RequestUploadUrlBody {

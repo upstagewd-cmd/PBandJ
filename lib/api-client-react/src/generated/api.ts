@@ -27,6 +27,7 @@ import type {
   MatchUpdate,
   OpenPlayMatchInput,
   OpenPlayState,
+  PairPlayersBody,
   Player,
   PlayerInput,
   PlayerStats,
@@ -35,6 +36,7 @@ import type {
   ProfileStats,
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
+  ReshuffleBody,
   SessionFull,
   SessionInput,
   SessionMatchInput,
@@ -48,6 +50,7 @@ import type {
   TournamentSummary,
   TournamentUpdate,
   TournamentWithToken,
+  UnpairPlayerBody,
   UpdateTeamBody
 } from './api.schemas';
 
@@ -1684,6 +1687,201 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getLogSessionMatchMutationOptions(options));
+    }
+
+export const getPairSessionPlayersUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/pair`
+}
+
+export const pairSessionPlayers = async (sessionId: string,
+    pairPlayersBody: PairPlayersBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getPairSessionPlayersUrl(sessionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pairPlayersBody)
+  }
+);}
+
+
+
+
+export const getPairSessionPlayersMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pairSessionPlayers>>, TError,{sessionId: string;data: BodyType<PairPlayersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof pairSessionPlayers>>, TError,{sessionId: string;data: BodyType<PairPlayersBody>}, TContext> => {
+
+const mutationKey = ['pairSessionPlayers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pairSessionPlayers>>, {sessionId: string;data: BodyType<PairPlayersBody>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  pairSessionPlayers(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PairSessionPlayersMutationResult = NonNullable<Awaited<ReturnType<typeof pairSessionPlayers>>>
+    export type PairSessionPlayersMutationBody = BodyType<PairPlayersBody>
+    export type PairSessionPlayersMutationError = ErrorType<unknown>
+
+    export const usePairSessionPlayers = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pairSessionPlayers>>, TError,{sessionId: string;data: BodyType<PairPlayersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof pairSessionPlayers>>,
+        TError,
+        {sessionId: string;data: BodyType<PairPlayersBody>},
+        TContext
+      > => {
+      return useMutation(getPairSessionPlayersMutationOptions(options));
+    }
+
+export const getUnpairSessionPlayerUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/pair`
+}
+
+export const unpairSessionPlayer = async (sessionId: string,
+    unpairPlayerBody: UnpairPlayerBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getUnpairSessionPlayerUrl(sessionId),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(unpairPlayerBody)
+  }
+);}
+
+
+
+
+export const getUnpairSessionPlayerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpairSessionPlayer>>, TError,{sessionId: string;data: BodyType<UnpairPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unpairSessionPlayer>>, TError,{sessionId: string;data: BodyType<UnpairPlayerBody>}, TContext> => {
+
+const mutationKey = ['unpairSessionPlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unpairSessionPlayer>>, {sessionId: string;data: BodyType<UnpairPlayerBody>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  unpairSessionPlayer(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnpairSessionPlayerMutationResult = NonNullable<Awaited<ReturnType<typeof unpairSessionPlayer>>>
+    export type UnpairSessionPlayerMutationBody = BodyType<UnpairPlayerBody>
+    export type UnpairSessionPlayerMutationError = ErrorType<unknown>
+
+    export const useUnpairSessionPlayer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpairSessionPlayer>>, TError,{sessionId: string;data: BodyType<UnpairPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unpairSessionPlayer>>,
+        TError,
+        {sessionId: string;data: BodyType<UnpairPlayerBody>},
+        TContext
+      > => {
+      return useMutation(getUnpairSessionPlayerMutationOptions(options));
+    }
+
+export const getReshuffleSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/reshuffle`
+}
+
+export const reshuffleSession = async (sessionId: string,
+    reshuffleBody: ReshuffleBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getReshuffleSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reshuffleBody)
+  }
+);}
+
+
+
+
+export const getReshuffleSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reshuffleSession>>, TError,{sessionId: string;data: BodyType<ReshuffleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reshuffleSession>>, TError,{sessionId: string;data: BodyType<ReshuffleBody>}, TContext> => {
+
+const mutationKey = ['reshuffleSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reshuffleSession>>, {sessionId: string;data: BodyType<ReshuffleBody>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  reshuffleSession(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReshuffleSessionMutationResult = NonNullable<Awaited<ReturnType<typeof reshuffleSession>>>
+    export type ReshuffleSessionMutationBody = BodyType<ReshuffleBody>
+    export type ReshuffleSessionMutationError = ErrorType<unknown>
+
+    export const useReshuffleSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reshuffleSession>>, TError,{sessionId: string;data: BodyType<ReshuffleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reshuffleSession>>,
+        TError,
+        {sessionId: string;data: BodyType<ReshuffleBody>},
+        TContext
+      > => {
+      return useMutation(getReshuffleSessionMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

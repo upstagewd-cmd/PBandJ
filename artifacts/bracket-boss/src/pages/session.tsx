@@ -6,6 +6,9 @@ import {
   useAddSessionPlayer,
   useLogSessionMatch,
   useUpdateSession,
+  usePairSessionPlayers,
+  useUnpairSessionPlayer,
+  useReshuffleSession,
   SessionFull,
   SessionPlayer,
 } from "@workspace/api-client-react";
@@ -25,6 +28,7 @@ import {
   Check,
   User,
   Pencil,
+  Shuffle,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory } from "@/lib/history";
@@ -207,6 +211,161 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
   );
 }
 
+// ─── Pair helpers ─────────────────────────────────────────────────────────────
+
+function derivePairs(players: SessionPlayer[]): [SessionPlayer, SessionPlayer][] {
+  const pairs: [SessionPlayer, SessionPlayer][] = [];
+  const seen = new Set<string>();
+  for (const p of players) {
+    if (seen.has(p.id) || !p.partnerId) continue;
+    const partner = players.find((x) => x.id === p.partnerId);
+    if (partner) {
+      pairs.push([p, partner]);
+      seen.add(p.id);
+      seen.add(partner.id);
+    }
+  }
+  return pairs;
+}
+
+// ─── Pairing Manager ──────────────────────────────────────────────────────────
+
+function PairingManager({
+  sessionId,
+  players,
+  hostToken,
+  onChanged,
+}: {
+  sessionId: string;
+  players: SessionPlayer[];
+  hostToken: string;
+  onChanged: () => void;
+}) {
+  const [selecting, setSelecting] = useState<string | null>(null);
+  const pair = usePairSessionPlayers();
+  const unpair = useUnpairSessionPlayer();
+  const reshuffle = useReshuffleSession();
+  const { toast } = useToast();
+
+  const pairs = derivePairs(players);
+  const freeAgents = players.filter((p) => !p.partnerId);
+  const pName = (p: SessionPlayer) => p.teamName || `${p.firstName} ${p.lastName}`;
+
+  const handleTap = (playerId: string) => {
+    if (selecting === null) {
+      setSelecting(playerId);
+      return;
+    }
+    if (selecting === playerId) {
+      setSelecting(null);
+      return;
+    }
+    pair.mutate(
+      { sessionId, data: { hostToken, player1Id: selecting, player2Id: playerId } },
+      {
+        onSuccess: () => { setSelecting(null); onChanged(); },
+        onError: () => toast({ title: "Failed to pair players", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleUnpair = (playerId: string) => {
+    unpair.mutate(
+      { sessionId, data: { hostToken, playerId } },
+      {
+        onSuccess: onChanged,
+        onError: () => toast({ title: "Failed to unpair", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleReshuffle = () => {
+    setSelecting(null);
+    reshuffle.mutate(
+      { sessionId, data: { hostToken } },
+      {
+        onSuccess: onChanged,
+        onError: () => toast({ title: "Failed to reshuffle", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <Users className="w-4 h-4" /> Pairings
+        </h3>
+        {pairs.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1.5"
+            onClick={handleReshuffle}
+            disabled={reshuffle.isPending}
+          >
+            {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
+            Reshuffle
+          </Button>
+        )}
+      </div>
+
+      {/* Current pairs */}
+      {pairs.length > 0 && (
+        <div className="space-y-2">
+          {pairs.map(([p1, p2], i) => (
+            <div key={p1.id} className="flex items-center gap-2 bg-muted/30 rounded-xl px-3 py-2.5">
+              <span className="text-xs font-bold text-muted-foreground w-5 shrink-0 text-center">#{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">
+                  {pName(p1)} <span className="text-muted-foreground font-normal">&amp;</span> {pName(p2)}
+                </p>
+              </div>
+              <button
+                onClick={() => handleUnpair(p1.id)}
+                disabled={unpair.isPending}
+                className="text-muted-foreground hover:text-red-400 transition-colors shrink-0 p-1"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Free agents */}
+      {freeAgents.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            {selecting ? "Now tap a second player to complete the pair" : "Tap two players to pair them"}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {freeAgents.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handleTap(p.id)}
+                disabled={pair.isPending}
+                className={`text-left rounded-xl px-3 py-2.5 border transition-all ${
+                  selecting === p.id
+                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                    : "border-border bg-muted/20 hover:border-primary/50 active:bg-muted/40"
+                }`}
+              >
+                <p className="font-bold text-sm truncate">{pName(p)}</p>
+                <p className="text-[10px] text-muted-foreground">{p.eloRating} ELO</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {pairs.length === 0 && freeAgents.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-2">No players yet</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Match Logger ─────────────────────────────────────────────────────────────
 
 function MatchLogger({
@@ -221,6 +380,8 @@ function MatchLogger({
   onLogged: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [t1Key, setT1Key] = useState<string | null>(null);
+  const [t2Key, setT2Key] = useState<string | null>(null);
   const [t1Ids, setT1Ids] = useState<string[]>([]);
   const [t2Ids, setT2Ids] = useState<string[]>([]);
   const [scoreOne, setScoreOne] = useState("");
@@ -228,59 +389,180 @@ function MatchLogger({
   const logMatch = useLogSessionMatch();
   const { toast } = useToast();
 
-  const selectedIds = new Set([...t1Ids, ...t2Ids]);
+  const pairs = derivePairs(players);
+  const hasPairs = pairs.length >= 2;
 
-  const toggle = (id: string, team: 1 | 2) => {
-    const [ids, setIds] = team === 1 ? [t1Ids, setT1Ids] : [t2Ids, setT2Ids];
-    if (ids.includes(id)) {
-      setIds(ids.filter((x) => x !== id));
-    } else if (ids.length < 2) {
-      setIds([...ids, id]);
-    }
+  const reset = () => {
+    setOpen(false);
+    setT1Key(null); setT2Key(null);
+    setT1Ids([]); setT2Ids([]);
+    setScoreOne(""); setScoreTwo("");
+  };
+
+  const togglePair = (key: string) => {
+    if (t1Key === key) { setT1Key(null); return; }
+    if (t2Key === key) { setT2Key(null); return; }
+    if (!t1Key) { setT1Key(key); }
+    else if (!t2Key) { setT2Key(key); }
   };
 
   const handleLog = (winnerTeam: 1 | 2) => {
-    if (t1Ids.length === 0 || t2Ids.length === 0) return;
-    logMatch.mutate(
-      {
-        sessionId,
-        data: {
-          hostToken,
-          team1P1Id: t1Ids[0],
-          team1P2Id: t1Ids[1],
-          team2P1Id: t2Ids[0],
-          team2P2Id: t2Ids[1],
-          winnerTeam,
-          scoreOne: scoreOne ? parseInt(scoreOne) : undefined,
-          scoreTwo: scoreTwo ? parseInt(scoreTwo) : undefined,
+    if (hasPairs) {
+      if (!t1Key || !t2Key) return;
+      const p1 = pairs.find(([a]) => a.id === t1Key)!;
+      const p2 = pairs.find(([a]) => a.id === t2Key)!;
+      logMatch.mutate(
+        {
+          sessionId,
+          data: {
+            hostToken,
+            team1P1Id: p1[0].id,
+            team1P2Id: p1[1].id,
+            team2P1Id: p2[0].id,
+            team2P2Id: p2[1].id,
+            winnerTeam,
+            scoreOne: scoreOne ? parseInt(scoreOne) : undefined,
+            scoreTwo: scoreTwo ? parseInt(scoreTwo) : undefined,
+          },
         },
-      },
-      {
-        onSuccess: () => {
-          setT1Ids([]); setT2Ids([]); setScoreOne(""); setScoreTwo(""); setOpen(false);
-          onLogged();
-          toast({ title: "Match logged! Ratings updated." });
+        {
+          onSuccess: () => { reset(); onLogged(); toast({ title: "Match logged! Ratings updated." }); },
+          onError: () => toast({ title: "Failed to log match", variant: "destructive" }),
+        }
+      );
+    } else {
+      if (t1Ids.length === 0 || t2Ids.length === 0) return;
+      logMatch.mutate(
+        {
+          sessionId,
+          data: {
+            hostToken,
+            team1P1Id: t1Ids[0],
+            team1P2Id: t1Ids[1],
+            team2P1Id: t2Ids[0],
+            team2P2Id: t2Ids[1],
+            winnerTeam,
+            scoreOne: scoreOne ? parseInt(scoreOne) : undefined,
+            scoreTwo: scoreTwo ? parseInt(scoreTwo) : undefined,
+          },
         },
-        onError: () => toast({ title: "Failed to log match", variant: "destructive" }),
-      }
-    );
+        {
+          onSuccess: () => { reset(); onLogged(); toast({ title: "Match logged! Ratings updated." }); },
+          onError: () => toast({ title: "Failed to log match", variant: "destructive" }),
+        }
+      );
+    }
   };
-
-  const reset = () => { setOpen(false); setT1Ids([]); setT2Ids([]); setScoreOne(""); setScoreTwo(""); };
 
   if (!open) {
     return (
-      <Button
-        onClick={() => setOpen(true)}
-        disabled={players.length < 2}
-        className="w-full font-bold gap-2"
-      >
+      <Button onClick={() => setOpen(true)} disabled={players.length < 2} className="w-full font-bold gap-2">
         <Plus className="w-4 h-4" /> Log Match
       </Button>
     );
   }
 
   const pName = (p: SessionPlayer) => p.teamName || `${p.firstName} ${p.lastName}`;
+
+  // ── PAIRS MODE ──────────────────────────────────────────────────────────────
+  if (hasPairs) {
+    const selectedT1 = t1Key ? pairs.find(([a]) => a.id === t1Key) : null;
+    const selectedT2 = t2Key ? pairs.find(([a]) => a.id === t2Key) : null;
+
+    return (
+      <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-sm">Log Match</h4>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">Tap a pair for Team 1, then tap another for Team 2</p>
+
+        <div className="space-y-2">
+          {pairs.map(([p1, p2]) => {
+            const isT1 = t1Key === p1.id;
+            const isT2 = t2Key === p1.id;
+            const bothChosen = !!(t1Key && t2Key);
+            return (
+              <button
+                key={p1.id}
+                onClick={() => togglePair(p1.id)}
+                className={`w-full text-left rounded-xl px-3 py-2.5 border transition-all ${
+                  isT1
+                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                    : isT2
+                    ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500"
+                    : bothChosen
+                    ? "opacity-40 border-border"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-sm">
+                    {pName(p1)} <span className="text-muted-foreground font-normal">&amp;</span> {pName(p2)}
+                  </p>
+                  {isT1 && <span className="text-xs font-bold text-primary shrink-0 ml-2">Team 1</span>}
+                  {isT2 && <span className="text-xs font-bold text-blue-400 shrink-0 ml-2">Team 2</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {(t1Key || t2Key) && (
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Team 1</p>
+              {selectedT1 ? (
+                <>
+                  <p className="font-bold text-sm truncate">{pName(selectedT1[0])}</p>
+                  <p className="font-bold text-sm truncate">{pName(selectedT1[1])}</p>
+                </>
+              ) : <p className="text-muted-foreground italic text-xs">Not selected</p>}
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-1">Team 2</p>
+              {selectedT2 ? (
+                <>
+                  <p className="font-bold text-sm truncate">{pName(selectedT2[0])}</p>
+                  <p className="font-bold text-sm truncate">{pName(selectedT2[1])}</p>
+                </>
+              ) : <p className="text-muted-foreground italic text-xs">Not selected</p>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-3">
+          <input type="number" min={0} value={scoreOne} onChange={(e) => setScoreOne(e.target.value)} placeholder="T1"
+            className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-primary" />
+          <span className="text-muted-foreground font-bold text-lg">–</span>
+          <input type="number" min={0} value={scoreTwo} onChange={(e) => setScoreTwo(e.target.value)} placeholder="T2"
+            className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-blue-400" />
+        </div>
+
+        {t1Key && t2Key && (
+          <div className="grid grid-cols-2 gap-3">
+            <Button onClick={() => handleLog(1)} disabled={logMatch.isPending} className="font-bold">
+              {logMatch.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trophy className="w-4 h-4 mr-1.5" /> Team 1 Won</>}
+            </Button>
+            <Button onClick={() => handleLog(2)} disabled={logMatch.isPending} variant="outline" className="font-bold border-blue-500/50 text-blue-400 hover:bg-blue-500/10">
+              {logMatch.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trophy className="w-4 h-4 mr-1.5" /> Team 2 Won</>}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── MANUAL MODE (no pairs) ──────────────────────────────────────────────────
+  const selectedIds = new Set([...t1Ids, ...t2Ids]);
+  const toggle = (id: string, team: 1 | 2) => {
+    const [ids, setIds] = team === 1 ? [t1Ids, setT1Ids] : [t2Ids, setT2Ids];
+    if (ids.includes(id)) { setIds(ids.filter((x) => x !== id)); }
+    else if (ids.length < 2) { setIds([...ids, id]); }
+  };
 
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
@@ -291,84 +573,49 @@ function MatchLogger({
         </Button>
       </div>
 
-      {/* Player selection */}
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">Select players for each team (up to 2 per team)</p>
         <div className="space-y-1.5">
           {players.map((p) => (
-            <div
-              key={p.id}
-              className={`flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors ${
-                selectedIds.has(p.id) ? "bg-muted/60" : "bg-muted/20"
-              }`}
-            >
+            <div key={p.id} className={`flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors ${selectedIds.has(p.id) ? "bg-muted/60" : "bg-muted/20"}`}>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-sm truncate">{pName(p)}</p>
                 <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle} · {p.eloRating} ELO</p>
               </div>
               <div className="flex gap-1.5 shrink-0">
-                <button
-                  onClick={() => toggle(p.id, 1)}
-                  disabled={!t1Ids.includes(p.id) && (selectedIds.has(p.id) || t1Ids.length >= 2)}
-                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${
-                    t1Ids.includes(p.id)
-                      ? "bg-primary text-white border-primary"
-                      : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
-                  }`}
-                >T1</button>
-                <button
-                  onClick={() => toggle(p.id, 2)}
-                  disabled={!t2Ids.includes(p.id) && (selectedIds.has(p.id) || t2Ids.length >= 2)}
-                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${
-                    t2Ids.includes(p.id)
-                      ? "bg-blue-500 text-white border-blue-500"
-                      : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
-                  }`}
-                >T2</button>
+                <button onClick={() => toggle(p.id, 1)} disabled={!t1Ids.includes(p.id) && (selectedIds.has(p.id) || t1Ids.length >= 2)}
+                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${t1Ids.includes(p.id) ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"}`}>T1</button>
+                <button onClick={() => toggle(p.id, 2)} disabled={!t2Ids.includes(p.id) && (selectedIds.has(p.id) || t2Ids.length >= 2)}
+                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${t2Ids.includes(p.id) ? "bg-blue-500 text-white border-blue-500" : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"}`}>T2</button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Team preview + score */}
       {(t1Ids.length > 0 || t2Ids.length > 0) && (
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Team 1</p>
-            {t1Ids.length === 0
-              ? <p className="text-muted-foreground italic text-xs">None selected</p>
-              : t1Ids.map((id) => { const p = players.find((x) => x.id === id); return p ? <p key={id} className="font-bold truncate text-sm">{pName(p)}</p> : null; })
-            }
+            {t1Ids.length === 0 ? <p className="text-muted-foreground italic text-xs">None selected</p>
+              : t1Ids.map((id) => { const p = players.find((x) => x.id === id); return p ? <p key={id} className="font-bold truncate text-sm">{pName(p)}</p> : null; })}
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-1">Team 2</p>
-            {t2Ids.length === 0
-              ? <p className="text-muted-foreground italic text-xs">None selected</p>
-              : t2Ids.map((id) => { const p = players.find((x) => x.id === id); return p ? <p key={id} className="font-bold truncate text-sm">{pName(p)}</p> : null; })
-            }
+            {t2Ids.length === 0 ? <p className="text-muted-foreground italic text-xs">None selected</p>
+              : t2Ids.map((id) => { const p = players.find((x) => x.id === id); return p ? <p key={id} className="font-bold truncate text-sm">{pName(p)}</p> : null; })}
           </div>
         </div>
       )}
 
-      {/* Score inputs */}
       <div className="flex items-center justify-center gap-3">
-        <input
-          type="number" min={0} value={scoreOne}
-          onChange={(e) => setScoreOne(e.target.value)}
-          placeholder="T1"
-          className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-primary"
-        />
+        <input type="number" min={0} value={scoreOne} onChange={(e) => setScoreOne(e.target.value)} placeholder="T1"
+          className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-primary" />
         <span className="text-muted-foreground font-bold text-lg">–</span>
-        <input
-          type="number" min={0} value={scoreTwo}
-          onChange={(e) => setScoreTwo(e.target.value)}
-          placeholder="T2"
-          className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-blue-400"
-        />
+        <input type="number" min={0} value={scoreTwo} onChange={(e) => setScoreTwo(e.target.value)} placeholder="T2"
+          className="w-20 h-10 text-center rounded-xl border border-border bg-muted/50 text-sm font-bold focus:outline-none focus:border-blue-400" />
       </div>
 
-      {/* Win buttons */}
       {t1Ids.length > 0 && t2Ids.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           <Button onClick={() => handleLog(1)} disabled={logMatch.isPending} className="font-bold">
@@ -567,6 +814,16 @@ export default function SessionPage() {
 
         {/* Join form — always visible (anyone can add themselves) */}
         <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
+
+        {/* Pairing manager — host only, needs at least 2 players */}
+        {isHost && session.players.length >= 2 && (
+          <PairingManager
+            sessionId={sessionId}
+            players={session.players}
+            hostToken={hostToken!}
+            onChanged={() => refetch()}
+          />
+        )}
 
         {/* Match logger — host only, needs at least 2 players */}
         {isHost && session.players.length >= 2 && (
