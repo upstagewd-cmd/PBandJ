@@ -1,10 +1,80 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Show, useUser, useClerk } from "@clerk/react";
 import { useCreateTournament, useCreateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trophy, Activity, LogOut, User } from "lucide-react";
+import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock } from "lucide-react";
+import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
+
+function RecentGames() {
+  const [, setLocation] = useLocation();
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    setEntries(getHistory());
+  }, []);
+
+  if (entries.length === 0) return null;
+
+  const statusLabel = (e: HistoryEntry) => {
+    if (e.type === "tournament") {
+      if (e.status === "completed") return "Finished";
+      if (e.status === "active") return "In Progress";
+      return "Lobby";
+    }
+    return e.status === "completed" ? "Finished" : "Active";
+  };
+
+  const statusColor = (e: HistoryEntry) =>
+    e.status === "completed"
+      ? "text-muted-foreground/60"
+      : e.status === "active"
+      ? "text-green-500"
+      : "text-orange-400";
+
+  return (
+    <div className="w-full space-y-3">
+      <div className="flex items-center gap-2">
+        <Clock className="w-3.5 h-3.5 text-muted-foreground/50" />
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
+          Recent Games
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {entries.slice(0, 5).map((entry) => (
+          <button
+            key={entry.id}
+            onClick={() => setLocation(entry.type === "tournament" ? `/t/${entry.id}` : `/s/${entry.id}`)}
+            className="w-full flex items-center justify-between gap-3 bg-card/50 hover:bg-card border border-border/30 hover:border-border/60 rounded-xl px-4 py-3 transition-all group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                {entry.type === "tournament" ? (
+                  <Trophy className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <Activity className="w-3.5 h-3.5 text-orange-400" />
+                )}
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="text-sm font-bold text-foreground truncate">{entry.name}</p>
+                <p className={`text-xs font-semibold ${statusColor(entry)}`}>
+                  {statusLabel(entry)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs text-muted-foreground/50 hidden sm:block">
+                {formatVisitedAt(entry.visitedAt)}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -16,7 +86,7 @@ export default function Home() {
 
   const handleCreateTournament = () => {
     createTournament.mutate(
-      { data: { name: "New Tournament" } },
+      { data: { name: defaultGameName() } },
       {
         onSuccess: (data) => {
           localStorage.setItem(`hostToken_${data.id}`, data.hostToken);
@@ -31,7 +101,7 @@ export default function Home() {
 
   const handleCreateSession = () => {
     createSession.mutate(
-      { data: { name: "Open Play" } },
+      { data: { name: defaultGameName() } },
       {
         onSuccess: (data) => {
           localStorage.setItem(`sessionToken_${data.id}`, data.hostToken);
@@ -45,7 +115,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center space-y-8 relative overflow-hidden">
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Account bar */}
@@ -160,6 +230,9 @@ export default function Home() {
             to track your stats &amp; ELO across tournaments
           </p>
         </Show>
+
+        {/* Recent Games */}
+        <RecentGames />
       </div>
     </div>
   );

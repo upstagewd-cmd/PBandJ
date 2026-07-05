@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
-import { useEffect } from "react";
 import {
   useGetSession,
   getGetSessionQueryKey,
   useAddSessionPlayer,
   useLogSessionMatch,
+  useUpdateSession,
   SessionFull,
   SessionPlayer,
 } from "@workspace/api-client-react";
@@ -24,22 +24,100 @@ import {
   Copy,
   Check,
   User,
+  Pencil,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { upsertHistory } from "@/lib/history";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function SessionHeader({ session, isHost }: { session: SessionFull; isHost: boolean }) {
+function EditableSessionName({
+  session,
+  hostToken,
+}: {
+  session: SessionFull;
+  hostToken: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(session.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const updateSession = useUpdateSession();
+
+  useEffect(() => { setValue(session.name); }, [session.name]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const save = () => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === session.name) { setEditing(false); return; }
+    updateSession.mutate(
+      { sessionId: session.id, data: { name: trimmed, hostToken } },
+      { onSettled: () => setEditing(false) }
+    );
+  };
+
+  const cancel = () => { setValue(session.name); setEditing(false); };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5 max-w-[200px] sm:max-w-xs">
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+          className="h-8 text-sm font-bold px-2 rounded-lg border-primary/40 focus-visible:ring-primary/30"
+        />
+        <button onClick={save} disabled={updateSession.isPending} className="text-primary hover:text-primary/80 transition-colors">
+          <Check className="w-4 h-4" />
+        </button>
+        <button onClick={cancel} className="text-muted-foreground hover:text-foreground transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group flex items-center gap-1.5 max-w-[140px] sm:max-w-xs"
+    >
+      <span className="text-sm font-bold truncate text-foreground/80 group-hover:text-foreground transition-colors">
+        {session.name}
+      </span>
+      <Pencil className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-colors" />
+    </button>
+  );
+}
+
+function SessionHeader({
+  session,
+  isHost,
+  hostToken,
+}: {
+  session: SessionFull;
+  isHost: boolean;
+  hostToken: string | null;
+}) {
   const [, setLocation] = useLocation();
   return (
     <header className="h-16 border-b border-border/40 flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur z-50 sticky top-0">
-      <div
-        className="font-extrabold italic tracking-tight text-xl cursor-pointer"
-        onClick={() => setLocation("/")}
-      >
-        PB<span className="text-primary">&amp;J</span>
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className="font-extrabold italic tracking-tight text-xl cursor-pointer shrink-0"
+          onClick={() => setLocation("/")}
+        >
+          PB<span className="text-primary">&amp;J</span>
+        </div>
+        {isHost && hostToken ? (
+          <EditableSessionName session={session} hostToken={hostToken} />
+        ) : (
+          <span className="text-sm font-bold text-foreground/70 truncate max-w-[140px] sm:max-w-xs">
+            {session.name}
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <Show when="signed-in">
           <UserBadge />
         </Show>
@@ -476,9 +554,21 @@ export default function SessionPage() {
 
   const isHost = !!hostToken;
 
+  // Track visit history
+  useEffect(() => {
+    if (session) {
+      upsertHistory({
+        id: session.id,
+        type: "session",
+        name: session.name,
+        status: session.status,
+      });
+    }
+  }, [session?.id, session?.name, session?.status]);
+
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
-      <SessionHeader session={session} isHost={isHost} />
+      <SessionHeader session={session} isHost={isHost} hostToken={hostToken} />
 
       <main className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-6 py-6 space-y-6">
         {/* Title */}

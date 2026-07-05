@@ -283,6 +283,11 @@ export interface SessionInput {
   name?: string;
 }
 
+export interface SessionUpdate {
+  name?: string;
+  hostToken: string;
+}
+
 export type SessionWithTokenStatus = typeof SessionWithTokenStatus[keyof typeof SessionWithTokenStatus];
 
 

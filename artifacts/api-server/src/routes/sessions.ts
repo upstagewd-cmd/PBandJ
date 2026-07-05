@@ -2,7 +2,7 @@ import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody } from "@workspace/api-zod";
+import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 
@@ -118,6 +118,29 @@ sessionsRouter.get("/:sessionId", async (req: Request<{ sessionId: string }>, re
   } catch (err) {
     req.log.error({ err }, "Failed to get session");
     res.status(500).json({ error: "Failed to get session" });
+  }
+});
+
+// ─── PATCH /api/sessions/:sessionId ──────────────────────────────────────────
+
+sessionsRouter.patch("/:sessionId", async (req: Request<{ sessionId: string }>, res) => {
+  try {
+    const body = UpdateSessionBody.parse(req.body);
+    const { sessionId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    if (body.name !== undefined) {
+      await db.update(sessionsTable).set({ name: body.name.trim() }).where(eq(sessionsTable.id, sessionId));
+    }
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update session");
+    res.status(500).json({ error: "Failed to update session" });
   }
 });
 

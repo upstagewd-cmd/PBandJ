@@ -1,13 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { Show, useUser } from "@clerk/react";
-import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
+import {
+  useGetTournament,
+  getGetTournamentQueryKey,
+  useUpdateTournament,
+} from "@workspace/api-client-react";
 import { useTournamentSocket } from "@/hooks/use-tournament-socket";
 import { TournamentLobby } from "@/components/tournament/lobby";
 import { TournamentBracket } from "@/components/tournament/bracket";
 import { TournamentChampionship } from "@/components/tournament/championship";
-import { Loader2, WifiOff, User } from "lucide-react";
+import { Loader2, WifiOff, User, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { upsertHistory } from "@/lib/history";
 
 function UserBadge() {
   const { user } = useUser();
@@ -31,13 +37,81 @@ function UserBadge() {
   );
 }
 
+function EditableName({
+  name,
+  tournamentId,
+  hostToken,
+}: {
+  name: string;
+  tournamentId: string;
+  hostToken: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const updateTournament = useUpdateTournament();
+
+  useEffect(() => {
+    setValue(name);
+  }, [name]);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const save = () => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === name) { setEditing(false); return; }
+    updateTournament.mutate(
+      { tournamentId, data: { name: trimmed, hostToken } },
+      { onSettled: () => setEditing(false) }
+    );
+  };
+
+  const cancel = () => {
+    setValue(name);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5 max-w-[220px] sm:max-w-xs">
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+          className="h-8 text-sm font-bold px-2 rounded-lg border-primary/40 focus-visible:ring-primary/30"
+        />
+        <button onClick={save} disabled={updateTournament.isPending} className="text-primary hover:text-primary/80 transition-colors">
+          <Check className="w-4 h-4" />
+        </button>
+        <button onClick={cancel} className="text-muted-foreground hover:text-foreground transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group flex items-center gap-1.5 max-w-[160px] sm:max-w-xs"
+    >
+      <span className="text-sm font-bold truncate text-foreground/80 group-hover:text-foreground transition-colors">
+        {name}
+      </span>
+      <Pencil className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-colors" />
+    </button>
+  );
+}
+
 export default function TournamentPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const tournamentId = params.tournamentId!;
 
-  // Resolve host token: URL param takes priority, then localStorage
   const urlParams = new URLSearchParams(search);
   const tokenFromUrl = urlParams.get("token");
 
@@ -60,6 +134,17 @@ export default function TournamentPage() {
       queryKey: getGetTournamentQueryKey(tournamentId),
     },
   });
+
+  useEffect(() => {
+    if (tournament) {
+      upsertHistory({
+        id: tournament.id,
+        type: "tournament",
+        name: tournament.name,
+        status: tournament.status,
+      });
+    }
+  }, [tournament?.id, tournament?.name, tournament?.status]);
 
   const { isConnected } = useTournamentSocket(tournamentId);
 
@@ -94,13 +179,26 @@ export default function TournamentPage() {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
       <header className="h-16 border-b border-border/40 flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur z-50 sticky top-0">
-        <div
-          className="font-extrabold italic tracking-tight text-xl cursor-pointer"
-          onClick={() => setLocation("/")}
-        >
-          PB<span className="text-primary">&amp;J</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="font-extrabold italic tracking-tight text-xl cursor-pointer shrink-0"
+            onClick={() => setLocation("/")}
+          >
+            PB<span className="text-primary">&amp;J</span>
+          </div>
+          {hostToken ? (
+            <EditableName
+              name={tournament.name}
+              tournamentId={tournamentId}
+              hostToken={hostToken}
+            />
+          ) : (
+            <span className="text-sm font-bold text-foreground/70 truncate max-w-[140px] sm:max-w-xs">
+              {tournament.name}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Show when="signed-in">
             <UserBadge />
           </Show>
