@@ -41,10 +41,13 @@ export default function Home() {
         
         <div className="space-y-2">
           <h1 className="text-5xl font-extrabold tracking-tight italic">
-            BRACKET <span className="text-primary">BOSS</span>
+            PB<span className="text-primary">&amp;J</span>
           </h1>
           <p className="text-muted-foreground text-lg font-medium">
-            The fastest way to run IRL tournaments.
+            Faith. Fellowship. Friendly Competition.
+          </p>
+          <p className="text-muted-foreground/60 text-sm">
+            A Fellowship of Christian Competitors
           </p>
         </div>
 

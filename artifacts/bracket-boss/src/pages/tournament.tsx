@@ -75,7 +75,7 @@ export default function TournamentPage() {
           className="font-extrabold italic tracking-tight text-xl cursor-pointer"
           onClick={() => setLocation("/")}
         >
-          BRACKET <span className="text-primary">BOSS</span>
+          PB<span className="text-primary">&amp;J</span>
         </div>
         <div className="flex items-center gap-2">
           {hostToken && (

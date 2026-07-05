@@ -1,0 +1,79 @@
+Here’s a clean Base44 update snippet you can paste to make sure it correctly renames the app and doesn’t miss branding in any generated UI, headers, metadata, or navigation.
+
+⸻
+
+🟩 BASE44 BRANDING UPDATE (PB&J FINAL)
+
+🔄 APPLICATION NAME UPDATE
+
+Update the application branding everywhere in the system:
+
+NEW APP NAME:
+
+PB&J
+
+FULL NAME EXPANSION (REFERENCE ONLY):
+
+Pickleball & Jesus
+
+⸻
+
+🏷️ TAGLINE UPDATE (PRIMARY SUBTITLE)
+
+PRIMARY TAGLINE (use in header / landing / login screens):
+
+“Faith. Fellowship. Friendly Competition.”
+
+⸻
+
+🧭 SECONDARY BRAND LINE (optional subtitle under logo / about page)
+
+Replace any previous subtitle or “company descriptor” with:
+
+“A Fellowship of Christian Competitors”
+
+⸻
+
+🚫 REMOVE ALL PREVIOUS BRANDING
+
+Delete or replace any of the following if present:
+	•	Any mention of “double elimination branding”
+	•	Any placeholder app names used during build
+	•	Any generic sports app titles
+	•	Any previous subtitle like “men of FCC brand” or similar wording
+
+⸻
+
+🎯 WHERE THIS MUST BE APPLIED
+
+Ensure updated branding appears in:
+	•	App header / top navigation
+	•	Landing page / home screen
+	•	Tournament creation page
+	•	Login / guest entry screen
+	•	Browser tab title (favicon label if applicable)
+	•	Admin dashboard header
+	•	Any email or system-generated labels (if present)
+
+⸻
+
+🧠 BRAND TONE GUIDANCE
+	•	Keep “PB&J” as the primary short name everywhere
+	•	Only expand to “Pickleball & Jesus” in small supporting text
+	•	Subtitle should feel modern and community-driven, NOT institutional or corporate
+	•	Do NOT overemphasize religious language in UI beyond tagline/subtitle
+
+⸻
+
+✅ FINAL OUTPUT RULE
+
+All UI references should now consistently show:
+
+PB&J
+“Faith. Fellowship. Friendly Competition.”
+“A Fellowship of Christian Competitors”:—
+
+If you want, I can next help you define:
+	•	￼ a logo direction prompt for Base44 or a designer
+	•	or ￼ a landing page layout so this branding actually lands emotionally
+	•	or ￼ tighten the tagline to feel more “athletic brand” vs “church group” depending on your vibe preference
