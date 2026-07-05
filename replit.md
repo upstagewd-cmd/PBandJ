@@ -1,4 +1,4 @@
-# Bracket Boss
+# PB&J
 
 A mobile-first tournament bracket app — create a tournament, share a link, friends join, pick winners in real time. No accounts required.
 

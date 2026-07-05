@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Bracket Boss"
+title = "PB&J"
 version = "1.0.0"
 id = "artifacts/bracket-boss"
 router = "path"
