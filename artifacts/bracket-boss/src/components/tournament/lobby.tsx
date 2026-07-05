@@ -533,9 +533,38 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
 
   const handleSwapSlot = (slot: "player1Id" | "player2Id", newPlayerId: string) => {
     if (!isHost) return;
+
+    // Who is being displaced from this slot
+    const displacedPlayerId = slot === "player1Id" ? team.player1Id : team.player2Id;
+
+    // Find the source team + slot of the incoming player
+    const sourceTeam = (tournament.teams as Team[] | undefined)?.find(
+      (t) => t.player1Id === newPlayerId || t.player2Id === newPlayerId
+    );
+    const sourceSlot: "player1Id" | "player2Id" | null = sourceTeam
+      ? sourceTeam.player1Id === newPlayerId ? "player1Id" : "player2Id"
+      : null;
+
+    // Step 1: put incoming player into this team's slot
     updateTeam.mutate(
       { tournamentId: tournament.id, teamId: team.id, data: { hostToken: hostToken!, [slot]: newPlayerId } },
-      { onSettled: refetch, onError: () => toast({ title: "Swap failed", variant: "destructive" }) }
+      {
+        onSuccess: () => {
+          // Step 2: put the displaced player into the source slot
+          if (displacedPlayerId && sourceTeam && sourceSlot) {
+            updateTeam.mutate(
+              { tournamentId: tournament.id, teamId: sourceTeam.id, data: { hostToken: hostToken!, [sourceSlot]: displacedPlayerId } },
+              { onSettled: refetch, onError: () => toast({ title: "Swap failed (step 2)", variant: "destructive" }) }
+            );
+          } else {
+            refetch();
+          }
+        },
+        onError: () => {
+          refetch();
+          toast({ title: "Swap failed", variant: "destructive" });
+        },
+      }
     );
   };
 
