@@ -7,6 +7,7 @@ import { openPlayRouter } from "./open-play";
 import { playerStatsRouter } from "./player-stats";
 import { profileRouter } from "./profile";
 import storageRouter from "./storage";
+import { adminRouter } from "./admin/index.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/tournaments/:tournamentId/matches", matchesRouter);
 router.use("/tournaments/:tournamentId/open-play", openPlayRouter);
 router.use("/players", playerStatsRouter);
 router.use("/profile", profileRouter);
+router.use("/admin", adminRouter);
 
 export default router;

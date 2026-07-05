@@ -1,0 +1,217 @@
+Here’s a clean Base44 prompt specifically for the Admin Page that matches your architecture (passcode access, match overrides, rating control, rank editing, profile fixes). This is designed so Base44 builds a simple but powerful control center, not an overbuilt enterprise dashboard.
+
+⸻
+
+🧑‍💼 BASE44 ADMIN PAGE PROMPT (PB&J)
+
+:::writing{variant=“document” id=“pbj_admin_page”}
+
+⚠️ ADMIN SYSTEM (PASSCODE ACCESS ONLY)
+
+Create a dedicated Admin Page for PB&J accessible ONLY via:
+
+/admin?code=XXXX
+
+No login system is required.
+
+If the code is incorrect, deny access.
+
+⸻
+
+🧭 ADMIN PAGE PURPOSE
+
+The admin page is a control center to manage and correct all system data:
+	•	Players
+	•	Matches
+	•	Ratings
+	•	Rankings
+	•	Open Play history
+	•	Tournaments
+
+Admin is the “source of truth override system.”
+
+⸻
+
+🧑‍💻 ADMIN PAGE STRUCTURE
+
+Create a single Admin Dashboard with tabs:
+
+1. 👤 Players Tab
+
+List all players (guest + registered)
+
+Admin actions per player:
+	•	Edit first/last name
+	•	Update or upload profile picture
+	•	Change skill level (Beginner / Intermediate / Advanced)
+	•	Manually adjust hidden rating
+	•	Merge duplicate players (VERY IMPORTANT)
+	•	View full match history
+	•	Delete or deactivate player (soft delete preferred)
+
+⸻
+
+2. 🏓 Matches Tab
+
+Show ALL matches:
+	•	Tournament matches
+	•	Open play matches
+
+Each match must display:
+	•	Team 1 (players + avatars)
+	•	Team 2 (players + avatars)
+	•	Winner
+	•	Score
+	•	Match type (tournament / open_play)
+	•	Timestamp
+
+Admin actions:
+	•	Edit winner
+	•	Edit score
+	•	Change players on either team
+	•	Delete match
+	•	Reassign match type (open_play ↔ tournament)
+	•	Recalculate results after edit
+
+⸻
+
+3. 🏆 Ratings Tab
+
+Admin control over hidden rating system:
+
+For each player:
+	•	Current rating
+	•	Skill tier seed
+	•	Manual override rating input
+
+Admin tools:
+	•	Adjust rating up/down
+	•	Reset rating to skill baseline
+	•	Bulk recalculate all ratings from match history
+
+⸻
+
+4. 🥇 Rankings Tab
+
+Manage public rank titles.
+
+Each rank tier includes:
+	•	Name (e.g. “Lion Heart”)
+	•	Min rating
+	•	Max rating
+	•	Display order
+	•	Icon (optional)
+
+Admin actions:
+	•	Edit rank names
+	•	Change rating thresholds
+	•	Add new ranks
+	•	Remove ranks
+	•	Preview which players fall into each rank
+
+⸻
+
+5. 🏅 Badges Tab
+
+View and manage badge system:
+
+Badge fields:
+	•	Name
+	•	Description
+	•	Rule type:
+	•	wins
+	•	matches
+	•	tournaments
+	•	streaks
+	•	partners
+	•	Threshold value
+
+Admin actions:
+	•	Edit badge rules
+	•	Enable/disable badges
+	•	Manually grant badge to player
+	•	Remove badge from player
+
+⸻
+
+6. 🏓 Tournaments Tab
+
+Manage active and completed tournaments.
+
+Admin actions:
+	•	View tournament brackets
+	•	Force advance players
+	•	Change match results
+	•	End tournament early
+	•	Rebuild bracket if corrupted
+
+⸻
+
+7. ⚙️ System Settings Tab
+
+Global system configuration:
+
+Settings include:
+	•	Rating system configuration (ELO parameters if editable)
+	•	Skill tier starting values:
+	•	Beginner = 1000
+	•	Intermediate = 1500
+	•	Advanced = 2000
+	•	Badge system toggle
+	•	Rank system toggle
+	•	Open play rules (view-only, no automation)
+
+⸻
+
+🧠 CRITICAL ADMIN RULES
+	1.	Admin edits ALWAYS override system calculations
+	2.	Any change to matches must trigger:
+	•	rating recalculation
+	•	rank update
+	•	badge re-evaluation
+	3.	System must remain consistent after edits
+
+⸻
+
+🧍 UI REQUIREMENTS
+	•	Mobile-friendly admin dashboard (usable on phone)
+	•	Clean tab-based navigation
+	•	Search bars for players and matches
+	•	Quick edit modals (no deep navigation)
+	•	Profile pictures shown everywhere possible
+	•	Fast inline editing where possible
+
+⸻
+
+🚫 DO NOT INCLUDE
+
+Do NOT build:
+	•	Full authentication system
+	•	Role-based permission hierarchies
+	•	Analytics dashboards
+	•	AI insights
+	•	Scheduling systems
+	•	Multi-admin approval flows
+
+Keep it SIMPLE and DIRECT.
+
+⸻
+
+🧭 SUCCESS DEFINITION
+
+Admin page should feel like:
+
+“I can fix anything in 10 seconds without breaking the system.”
+
+It is a repair + override tool, not a reporting tool.
+
+:::
+
+⸻
+
+If you want next step, I can:
+	•	￼ design the player merge flow (this is critical for guest → logged-in identity cleanup)
+	•	or ￼ define the rating recalculation algorithm so admin edits don’t break history
+	•	or ￼ map the exact UI wireframe so Base44 doesn’t overbuild screens
+
+You’re now basically at MVP-ready architecture.
