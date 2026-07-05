@@ -11,7 +11,9 @@ import {
   useGenerateTeams,
   useResetTeams,
   useUpdateTeam,
+  getGetTournamentQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +77,8 @@ function getMyPlayerToken(tournamentId: string, playerId: string): string | null
 export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   const { toast } = useToast();
   const isHost = !!hostToken;
+  const queryClient = useQueryClient();
+  const refetch = () => queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournament.id) });
 
   const playerUrl = `${window.location.origin}/t/${tournament.id}`;
   const hostUrl = hostToken
@@ -109,6 +113,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
       updateTournament.mutate(
         { tournamentId: tournament.id, data: { name: tournamentName, hostToken: hostToken! } },
         {
+          onSettled: refetch,
           onError: () => {
             setTournamentName(tournament.name);
             toast({ title: "Failed to update name", variant: "destructive" });
@@ -130,6 +135,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         },
       },
       {
+        onSettled: refetch,
         onSuccess: (data: any) => {
           if (data?.playerToken) {
             localStorage.setItem(`playerToken_${tournament.id}_${data.id}`, data.playerToken);
@@ -152,6 +158,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
     generateTeams.mutate(
       { tournamentId: tournament.id, data: { hostToken: hostToken!, mode } },
       {
+        onSettled: refetch,
         onSuccess: () => toast({ title: `Teams generated (${mode})!` }),
         onError: () => toast({ title: "Failed to generate teams", variant: "destructive" }),
       }
@@ -162,6 +169,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
     resetTeams.mutate(
       { tournamentId: tournament.id, data: { hostToken: hostToken! } },
       {
+        onSettled: refetch,
         onError: () => toast({ title: "Failed to reset teams", variant: "destructive" }),
       }
     );
@@ -262,11 +270,10 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                       isHost={isHost}
                       hostToken={hostToken}
                       onRemove={() =>
-                        removePlayer.mutate({
-                          tournamentId: tournament.id,
-                          playerId: p.id,
-                          data: { hostToken: hostToken! },
-                        })
+                        removePlayer.mutate(
+                          { tournamentId: tournament.id, playerId: p.id, data: { hostToken: hostToken! } },
+                          { onSettled: refetch }
+                        )
                       }
                     />
                   );
@@ -370,10 +377,10 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 <Button
                   variant="outline" className="h-12 rounded-xl font-bold"
                   onClick={() =>
-                    updateTournament.mutate({
-                      tournamentId: tournament.id,
-                      data: { registrationLocked: !tournament.registrationLocked, hostToken: hostToken! },
-                    })
+                    updateTournament.mutate(
+                      { tournamentId: tournament.id, data: { registrationLocked: !tournament.registrationLocked, hostToken: hostToken! } },
+                      { onSettled: refetch }
+                    )
                   }
                 >
                   {tournament.registrationLocked
@@ -511,6 +518,8 @@ interface TeamCardProps {
 function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
   const isHost = !!hostToken;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const refetch = () => queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournament.id) });
   const updateTeam = useUpdateTeam();
 
   const getPlayer = (id: string | null | undefined) =>
@@ -526,7 +535,7 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
     if (!isHost) return;
     updateTeam.mutate(
       { tournamentId: tournament.id, teamId: team.id, data: { hostToken: hostToken!, [slot]: newPlayerId } },
-      { onError: () => toast({ title: "Swap failed", variant: "destructive" }) }
+      { onSettled: refetch, onError: () => toast({ title: "Swap failed", variant: "destructive" }) }
     );
   };
 
@@ -614,6 +623,8 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
   const [uploading, setUploading] = useState(false);
   const updatePlayer = useUpdatePlayer();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const refetch = () => queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournamentId) });
 
   const canEdit = !!myToken || isHost;
 
@@ -627,6 +638,7 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
     updatePlayer.mutate(
       { tournamentId, playerId: player.id, data: { ...auth, teamName: draft } },
       {
+        onSettled: refetch,
         onError: () => {
           toast({ title: "Couldn't save nickname", variant: "destructive" });
           setDraft(player.teamName ?? "");
@@ -655,7 +667,7 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
       if (!uploadRes.ok) throw new Error("Upload failed");
       updatePlayer.mutate(
         { tournamentId, playerId: player.id, data: { playerToken: myToken, avatarUrl: objectPath } },
-        { onError: () => toast({ title: "Couldn't save avatar", variant: "destructive" }) }
+        { onSettled: refetch, onError: () => toast({ title: "Couldn't save avatar", variant: "destructive" }) }
       );
     } catch {
       toast({ title: "Avatar upload failed", variant: "destructive" });
