@@ -71,7 +71,11 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
         <div className="order-2 md:order-1 bg-card border border-border/50 rounded-3xl p-6 text-center shadow-lg transform md:-translate-y-4">
           <div className="text-4xl mb-4">🥈</div>
           <h3 className="text-muted-foreground uppercase text-xs tracking-widest font-bold mb-2">Runner Up</h3>
-          <p className="text-2xl font-bold truncate">{summary.runnerUp.teamName || `${summary.runnerUp.firstName} ${summary.runnerUp.lastName}`}</p>
+          <p className="text-2xl font-bold truncate">
+            {summary.runnerUp
+              ? summary.runnerUp.teamName || `${summary.runnerUp.firstName} ${summary.runnerUp.lastName}`
+              : "—"}
+          </p>
         </div>
 
         {/* First Place */}

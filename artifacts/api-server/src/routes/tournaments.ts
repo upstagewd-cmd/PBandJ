@@ -193,55 +193,51 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
       return;
     }
 
-    const players = await db
-      .select()
-      .from(playersTable)
-      .where(eq(playersTable.tournamentId, tournamentId));
+    const [players, matches, teams] = await Promise.all([
+      db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId)),
+      db.select().from(matchesTable).where(eq(matchesTable.tournamentId, tournamentId)),
+      db.select().from(teamsTable).where(eq(teamsTable.tournamentId, tournamentId)),
+    ]);
 
-    const matches = await db
-      .select()
-      .from(matchesTable)
-      .where(eq(matchesTable.tournamentId, tournamentId));
-
-    // Champion: winner of the last completed final match
+    // Final match: for single-elim the final is the highest-round winner match that completed.
+    // For double-elim it would be grand_finals / grand_finals_reset — keep both paths.
     const gfReset = matches.find((m) => m.bracket === "grand_finals_reset" && m.status === "completed");
     const gf = matches.find((m) => m.bracket === "grand_finals" && m.status === "completed");
+    const winnerMatches = matches.filter((m) => m.bracket === "winner");
+    const maxWinnerRound = winnerMatches.reduce((max, m) => Math.max(max, m.round), 0);
+    const seFinal = winnerMatches.find((m) => m.round === maxWinnerRound && m.status === "completed");
+    const finalMatch = gfReset ?? gf ?? seFinal ?? null;
 
-    const finalMatch = gfReset ?? gf;
-    const champion = players.find((p) => p.id === finalMatch?.winnerId) ?? null;
+    // Resolve a team ID to a display-friendly object the frontend can render
+    const teamDisplay = (teamId: string | null | undefined) => {
+      if (!teamId) return null;
+      const team = teams.find((t) => t.id === teamId);
+      if (!team) return null;
+      const p1 = players.find((p) => p.id === team.player1Id);
+      const p2 = players.find((p) => p.id === team.player2Id);
+      const displayName =
+        team.teamName ||
+        (p1 && p2 ? `${p1.firstName} & ${p2.firstName}` : p1?.firstName ?? "Team");
+      return {
+        id: team.id,
+        teamName: displayName,
+        firstName: p1?.firstName ?? "",
+        lastName: p1?.lastName ?? "",
+        joinedAt: p1?.joinedAt?.toISOString() ?? new Date().toISOString(),
+      };
+    };
 
-    // Runner-up: loser of the last final match
-    const runnerUpId = finalMatch
+    const championTeamId = finalMatch?.winnerId ?? null;
+    const runnerUpTeamId = finalMatch
       ? finalMatch.playerOneId === finalMatch.winnerId
         ? finalMatch.playerTwoId
         : finalMatch.playerOneId
       : null;
-    const runnerUp = players.find((p) => p.id === runnerUpId) ?? null;
 
-    // Third place: player who lost GF in WB bracket side (lost in WB Finals or LB semi)
-    // In double elim: third is the player who lost the LB Finals (if GF reset was played),
-    // or lost in WB if the GF reset player came from there.
-    // Simplest: find the loser of the WB Finals match
-    const wbFinals = matches.find(
-      (m) => m.bracket === "winner" && matches.filter((x) => x.bracket === "winner").every((x) => x.round <= m.round)
-    );
-    const wbFinalsLoserSide = wbFinals
-      ? wbFinals.playerOneId === wbFinals.winnerId
-        ? wbFinals.playerTwoId
-        : wbFinals.playerOneId
-      : null;
-    // But the WB Finals loser dropped to LB and became the LB finalist — they're actually runner-up or champion
-    // True "third" in double elim is the player who lost LB Finals (if gfReset played) or WB Finals loser who lost LB Finals
-    const lbFinals = matches.find((m) => m.bracket === "loser" && m.status === "completed" && m.nextWinnerMatchId === gf?.id);
-    const lbFinalsLoserSide = lbFinals
-      ? lbFinals.playerOneId === lbFinals.winnerId
-        ? lbFinals.playerTwoId
-        : lbFinals.playerOneId
-      : null;
-    const thirdPlace = players.find((p) => p.id === lbFinalsLoserSide) ?? null;
+    const champion = teamDisplay(championTeamId);
+    const runnerUp = teamDisplay(runnerUpTeamId);
 
     const completedMatches = matches.filter((m) => m.status === "completed" && !m.isBye);
-
     const durationMinutes =
       tournament.startedAt && tournament.completedAt
         ? Math.round((tournament.completedAt.getTime() - tournament.startedAt.getTime()) / 60000)
@@ -249,9 +245,9 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
 
     res.json({
       tournamentId,
-      champion: champion ? { ...champion, joinedAt: champion.joinedAt.toISOString() } : null,
-      runnerUp: runnerUp ? { ...runnerUp, joinedAt: runnerUp.joinedAt.toISOString() } : null,
-      thirdPlace: thirdPlace ? { ...thirdPlace, joinedAt: thirdPlace.joinedAt.toISOString() } : null,
+      champion,
+      runnerUp,
+      thirdPlace: null,
       totalMatches: completedMatches.length,
       playerCount: players.length,
       durationMinutes,
