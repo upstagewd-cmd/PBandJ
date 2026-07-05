@@ -31,93 +31,73 @@ import { upsertHistory } from "@/lib/history";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function EditableSessionName({
+function EditableSessionTitle({
   session,
   hostToken,
+  isHost,
 }: {
   session: SessionFull;
-  hostToken: string;
+  hostToken: string | null;
+  isHost: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(session.name);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateSession = useUpdateSession();
 
-  useEffect(() => { setValue(session.name); }, [session.name]);
+  useEffect(() => { if (!editing) setValue(session.name); }, [session.name, editing]);
   useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
 
   const save = () => {
+    setEditing(false);
     const trimmed = value.trim();
-    if (!trimmed || trimmed === session.name) { setEditing(false); return; }
-    updateSession.mutate(
-      { sessionId: session.id, data: { name: trimmed, hostToken } },
-      { onSettled: () => setEditing(false) }
-    );
+    if (trimmed && trimmed !== session.name && hostToken) {
+      updateSession.mutate(
+        { sessionId: session.id, data: { name: trimmed, hostToken } },
+        { onError: () => setValue(session.name) }
+      );
+    }
   };
 
-  const cancel = () => { setValue(session.name); setEditing(false); };
+  if (!isHost || !hostToken) {
+    return <h1 className="text-2xl font-extrabold tracking-tight text-primary">{session.name}</h1>;
+  }
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1.5 max-w-[200px] sm:max-w-xs">
-        <Input
-          ref={inputRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-          className="h-8 text-sm font-bold px-2 rounded-lg border-primary/40 focus-visible:ring-primary/30"
-        />
-        <button onClick={save} disabled={updateSession.isPending} className="text-primary hover:text-primary/80 transition-colors">
-          <Check className="w-4 h-4" />
-        </button>
-        <button onClick={cancel} className="text-muted-foreground hover:text-foreground transition-colors">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      <input
+        ref={inputRef}
+        className="text-2xl font-extrabold tracking-tight bg-transparent text-primary border-none outline-none focus:ring-0 w-full"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") inputRef.current?.blur();
+          if (e.key === "Escape") { setValue(session.name); setEditing(false); }
+        }}
+      />
     );
   }
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className="group flex items-center gap-1.5 max-w-[140px] sm:max-w-xs"
-    >
-      <span className="text-sm font-bold truncate text-foreground/80 group-hover:text-foreground transition-colors">
-        {session.name}
-      </span>
-      <Pencil className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-colors" />
+    <button onClick={() => setEditing(true)} className="flex items-center gap-2 group">
+      <h1 className="text-2xl font-extrabold tracking-tight text-primary">{session.name}</h1>
+      <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
     </button>
   );
 }
 
-function SessionHeader({
-  session,
-  isHost,
-  hostToken,
-}: {
-  session: SessionFull;
-  isHost: boolean;
-  hostToken: string | null;
-}) {
+function SessionHeader({ isHost }: { isHost: boolean }) {
   const [, setLocation] = useLocation();
   return (
-    <header className="h-16 border-b border-border/40 flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur z-50 sticky top-0">
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="font-extrabold italic tracking-tight text-xl cursor-pointer shrink-0"
-          onClick={() => setLocation("/")}
-        >
-          PB<span className="text-primary">&amp;J</span>
-        </div>
-        {isHost && hostToken ? (
-          <EditableSessionName session={session} hostToken={hostToken} />
-        ) : (
-          <span className="text-sm font-bold text-foreground/70 truncate max-w-[140px] sm:max-w-xs">
-            {session.name}
-          </span>
-        )}
+    <header className="h-14 border-b border-border/40 flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur z-50 sticky top-0">
+      <div
+        className="font-extrabold italic tracking-tight text-xl cursor-pointer"
+        onClick={() => setLocation("/")}
+      >
+        PB<span className="text-primary">&amp;J</span>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2">
         <Show when="signed-in">
           <UserBadge />
         </Show>
@@ -568,14 +548,14 @@ export default function SessionPage() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
-      <SessionHeader session={session} isHost={isHost} hostToken={hostToken} />
+      <SessionHeader isHost={isHost} />
 
       <main className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-6 py-6 space-y-6">
         {/* Title */}
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Activity className="w-5 h-5 text-orange-400" />
-            <h1 className="text-2xl font-extrabold tracking-tight text-primary">{session.name}</h1>
+            <EditableSessionTitle session={session} hostToken={hostToken} isHost={isHost} />
           </div>
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
             Open Play · {session.players.length} {session.players.length === 1 ? "player" : "players"}

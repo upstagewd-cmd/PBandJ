@@ -1,14 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   TournamentFull,
   Match,
   useUpdateMatch,
   useUndoLastMatch,
+  useUpdateTournament,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
-import { Undo2, Crown, Trophy, Clock, Activity } from "lucide-react";
+import { Undo2, Crown, Trophy, Clock, Activity, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OpenPlaySection } from "./open-play";
 import { useLocation } from "wouter";
@@ -104,14 +105,60 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     return `R${m.round}`;
   };
 
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(tournament.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const updateTournament = useUpdateTournament();
+
+  useEffect(() => {
+    if (!editingName) setNameValue(tournament.name);
+  }, [tournament.name, editingName]);
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.focus();
+  }, [editingName]);
+
+  const handleNameBlur = () => {
+    setEditingName(false);
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== tournament.name && hostToken) {
+      updateTournament.mutate(
+        { tournamentId: tournament.id, data: { name: trimmed, hostToken } },
+        { onError: () => setNameValue(tournament.name) }
+      );
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary">
-            {tournament.name}
-          </h1>
+          {isHost && hostToken ? (
+            <div className="group flex items-center gap-2">
+              {editingName ? (
+                <input
+                  ref={nameInputRef}
+                  className="text-2xl md:text-3xl font-extrabold tracking-tight bg-transparent text-primary border-none outline-none focus:ring-0 w-full max-w-xs"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onBlur={handleNameBlur}
+                  onKeyDown={(e) => { if (e.key === "Enter") nameInputRef.current?.blur(); if (e.key === "Escape") { setNameValue(tournament.name); setEditingName(false); } }}
+                />
+              ) : (
+                <button onClick={() => setEditingName(true)} className="flex items-center gap-2 group">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary">
+                    {tournament.name}
+                  </h1>
+                  <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary">
+              {tournament.name}
+            </h1>
+          )}
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
             Active
           </p>
