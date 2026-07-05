@@ -2,10 +2,17 @@ import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useUser, useClerk, Show } from "@clerk/react";
 import { useGetMyProfile } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
+
+const SKILL_LEVELS = [
+  { value: "beginner", label: "Beginner", emoji: "🟢", desc: "New to pickleball" },
+  { value: "intermediate", label: "Intermediate", emoji: "🔵", desc: "Comfortable with doubles" },
+  { value: "advanced", label: "Advanced", emoji: "🔴", desc: "Experienced competitor" },
+] as const;
 
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
@@ -14,10 +21,30 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [savingSkill, setSavingSkill] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"] },
   });
+
+  const setSkillLevel = async (level: string) => {
+    setSavingSkill(true);
+    try {
+      const res = await fetch("/api/profile/me/skill", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skillLevel: level }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      queryClient.invalidateQueries({ queryKey: ["myProfile"] });
+      toast({ title: "Skill level saved!" });
+    } catch {
+      toast({ title: "Couldn't save skill level", variant: "destructive" });
+    } finally {
+      setSavingSkill(false);
+    }
+  };
 
   const displayName =
     user?.fullName ??
@@ -151,6 +178,38 @@ export default function ProfilePage() {
               Tap your photo to change it
             </p>
           </div>
+
+          {/* Skill Level */}
+          {!isLoading && profile && (
+            <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Skill Level</p>
+              <div className="grid grid-cols-3 gap-2">
+                {SKILL_LEVELS.map((s) => {
+                  const current = (profile as any).skillLevel;
+                  const selected = current === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => setSkillLevel(s.value)}
+                      disabled={savingSkill || selected}
+                      className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
+                        selected
+                          ? "border-primary bg-primary/10"
+                          : "border-border/50 bg-muted/30 hover:border-border"
+                      }`}
+                    >
+                      <span className="text-xl">{s.emoji}</span>
+                      <span className="text-xs font-bold">{s.label}</span>
+                      <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!(profile as any).skillLevel && (
+                <p className="text-xs text-muted-foreground text-center">Select your skill level to seed your starting rating</p>
+              )}
+            </div>
+          )}
 
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground animate-pulse font-bold">

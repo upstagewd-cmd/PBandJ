@@ -1,8 +1,8 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { getAuth } from "@clerk/express";
-import { db, tournamentsTable, playersTable, openPlayPoolTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, tournamentsTable, playersTable, openPlayPoolTable, userProfilesTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 import {
   JoinTournamentBody,
   ShufflePlayersBody,
@@ -56,6 +56,26 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     const auth = getAuth(req);
     const clerkUserId = auth?.userId ?? null;
 
+    // Determine starting ELO: carry over existing rating for returning Clerk users,
+    // otherwise seed from self-reported skill level
+    const SKILL_ELO: Record<string, number> = { beginner: 1000, intermediate: 1500, advanced: 2000 };
+    let startingElo = body.skillLevel ? (SKILL_ELO[body.skillLevel] ?? 1200) : 1200;
+
+    if (clerkUserId) {
+      const previous = await db
+        .select({ eloRating: playersTable.eloRating })
+        .from(playersTable)
+        .where(eq(playersTable.clerkUserId, clerkUserId))
+        .orderBy(desc(playersTable.joinedAt))
+        .limit(5);
+      if (previous.length > 0) {
+        // Use average of their recent ELO ratings to smooth variance
+        startingElo = Math.round(
+          previous.reduce((sum, p) => sum + (p.eloRating ?? 1200), 0) / previous.length
+        );
+      }
+    }
+
     const playerRow = {
       id,
       tournamentId,
@@ -66,7 +86,8 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       playerToken,
       avatarUrl: null as string | null,
       clerkUserId,
-      eloRating: 1200 as number,
+      skillLevel: body.skillLevel ?? null,
+      eloRating: startingElo,
       seed: existingPlayers.length + 1,
     };
 

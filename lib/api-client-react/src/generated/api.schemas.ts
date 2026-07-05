@@ -245,6 +245,15 @@ export interface TournamentUpdate {
   hostToken?: string;
 }
 
+export type PlayerInputSkillLevel = typeof PlayerInputSkillLevel[keyof typeof PlayerInputSkillLevel];
+
+
+export const PlayerInputSkillLevel = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
 export interface PlayerInput {
   /** @minLength 1 */
   firstName: string;
@@ -252,6 +261,7 @@ export interface PlayerInput {
   lastName: string;
   partnerName?: string;
   teamName?: string;
+  skillLevel?: PlayerInputSkillLevel;
 }
 
 export interface PlayerUpdate {

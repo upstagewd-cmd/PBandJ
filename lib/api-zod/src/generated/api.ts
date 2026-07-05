@@ -157,7 +157,8 @@ export const JoinTournamentBody = zod.object({
   "firstName": zod.string().min(1),
   "lastName": zod.string().min(1),
   "partnerName": zod.string().optional(),
-  "teamName": zod.string().optional()
+  "teamName": zod.string().optional(),
+  "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced']).optional()
 })
 
 export const JoinTournamentResponse = zod.object({

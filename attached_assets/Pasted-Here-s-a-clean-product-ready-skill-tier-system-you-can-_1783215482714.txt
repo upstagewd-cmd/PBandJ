@@ -1,0 +1,157 @@
+Here’s a clean, product-ready skill tier system you can plug directly into Base44. This is designed to be simple for users, but still meaningful for matchmaking and your hidden rating system.
+
+⸻
+
+🧠 SKILL LEVEL SYSTEM (PB&J)
+
+These are self-selected starting tiers that seed the hidden rating system. They are NOT permanent skill labels — performance will naturally adjust via rating over time.
+
+⸻
+
+🟢 BEGINNER
+
+Starting Rating:
+
+1000
+
+Description:
+
+Players who are new to pickleball or still developing consistent control, positioning, and strategy.
+
+Typical characteristics:
+	•	Inconsistent serves and returns
+	•	Still learning court positioning (especially kitchen rules)
+	•	Rallies are often short
+	•	Relies more on reaction than strategy
+	•	Limited experience with structured doubles play
+
+What this means in the system:
+	•	Treated as a developing baseline player
+	•	When paired, system tries to balance them with stronger partners
+	•	Gains rating faster from wins vs stronger opponents (to help normalization)
+
+⸻
+
+🔵 INTERMEDIATE
+
+Starting Rating:
+
+1500
+
+Description:
+
+Players who are comfortable with doubles play and understand core strategy, spacing, and shot selection.
+
+Typical characteristics:
+	•	Consistent serve and return
+	•	Understands kitchen strategy and dinking
+	•	Can sustain rallies and build points
+	•	Basic team communication and positioning
+	•	Can occasionally pressure advanced players
+
+What this means in the system:
+	•	Default “balanced competitive” level
+	•	Most matches should aim to center around this tier
+	•	Used heavily in matchmaking balancing logic
+
+⸻
+
+🔴 ADVANCED
+
+Starting Rating:
+
+2000
+
+Description:
+
+Experienced, high-skill players with strong control, anticipation, and competitive consistency.
+
+Typical characteristics:
+	•	Strong serve + aggressive return game
+	•	Comfortable with fast hands at the net
+	•	Consistently strategic shot selection
+	•	Strong court awareness and positioning
+	•	Can control tempo of the game
+
+What this means in the system:
+	•	System avoids pairing Advanced + Advanced when possible (to reduce blowouts)
+	•	Advanced players lose/gain rating more slowly against lower tiers (to stabilize system)
+	•	Primary “anchor players” for balancing games fairly
+
+⸻
+
+🧠 HOW THESE TIERS WORK IN YOUR SYSTEM
+
+1. They are ONLY starting points
+
+Every player quickly diverges based on performance.
+
+⸻
+
+2. Hidden Rating takes over immediately
+
+After ~5–10 matches:
+	•	Beginner can become Intermediate-equivalent
+	•	Intermediate can become Advanced-equivalent
+	•	Advanced can drop if overestimated
+
+⸻
+
+3. Used for initial matchmaking only
+
+Before rating stabilizes:
+	•	Beginner + Advanced pairing is preferred for balance
+	•	Intermediate acts as the “bridge tier”
+
+⸻
+
+⚙️ MATCHMAKING LOGIC (SIMPLE RULE)
+
+When forming teams:
+
+Step 1:
+
+Convert skill → rating seed:
+	•	Beginner = 1000
+	•	Intermediate = 1500
+	•	Advanced = 2000
+
+Step 2:
+
+Use hidden rating if available (more than ~5 matches)
+
+Step 3:
+
+Balance teams by:
+	•	Minimizing total team rating difference
+	•	Avoiding extreme same-tier stacking when possible
+
+⸻
+
+🧭 DESIGN INTENT
+
+This system is NOT meant to label players permanently.
+
+Instead it:
+
+“Gets you started in the right neighborhood, then lets your play define your real level.”
+
+⸻
+
+🚫 IMPORTANT RULE
+
+Do NOT show skill tiers as:
+	•	fixed ranking system
+	•	achievement labels
+	•	competitive divisions
+
+They are ONLY:
+	•	onboarding classification
+	•	matchmaking seed
+
+⸻
+
+If you want next step, I can help you define:
+	•	￼ the exact Elo formula tuned for doubles (this will dramatically improve fairness)
+	•	or ￼ a “skill drift rule” so beginners don’t get crushed early but still evolve naturally
+	•	or ￼ how to prevent rating inflation in small groups (this is a real issue in meetup apps)

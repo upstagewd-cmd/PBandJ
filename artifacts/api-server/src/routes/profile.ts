@@ -1,10 +1,10 @@
 import { Router } from "express";
+import { randomUUID } from "crypto";
 import { getAuth } from "@clerk/express";
-import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
+import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
-
 export const profileRouter = Router();
 
 profileRouter.get("/me", async (req, res) => {
@@ -21,11 +21,19 @@ profileRouter.get("/me", async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.clerkUserId, clerkUserId));
 
+    // Fetch stored skill preference
+    const [userProfile] = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+    const skillLevel = userProfile?.skillLevel ?? null;
+
     if (players.length === 0) {
       res.json({
         eloRating: 1200,
         rankTitle: "New Seed",
         rankEmoji: "🌱",
+        skillLevel,
         totalWins: 0,
         totalLosses: 0,
         matchesPlayed: 0,
@@ -148,6 +156,7 @@ profileRouter.get("/me", async (req, res) => {
       eloRating,
       rankTitle: rank.title,
       rankEmoji: rank.emoji,
+      skillLevel,
       totalWins,
       totalLosses,
       matchesPlayed: completedMatches.length,
@@ -160,5 +169,43 @@ profileRouter.get("/me", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to get profile");
     res.status(500).json({ error: "Failed to get profile" });
+  }
+});
+
+profileRouter.put("/me/skill", async (req, res) => {
+  try {
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    if (!clerkUserId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const skillLevel = req.body?.skillLevel as string | undefined;
+    if (!skillLevel || !["beginner", "intermediate", "advanced"].includes(skillLevel)) {
+      res.status(400).json({ error: "skillLevel must be beginner, intermediate, or advanced" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+
+    if (existing) {
+      await db
+        .update(userProfilesTable)
+        .set({ skillLevel, updatedAt: new Date() })
+        .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+    } else {
+      await db.insert(userProfilesTable).values({
+        id: randomUUID(),
+        clerkUserId,
+        skillLevel,
+        updatedAt: new Date(),
+      });
+    }
+
+    res.json({ skillLevel });
+  } catch (err) {
+    req.log.error({ err }, "Failed to set skill level");
+    res.status(500).json({ error: "Failed to set skill level" });
   }
 });

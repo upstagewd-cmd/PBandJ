@@ -40,11 +40,18 @@ interface LobbyProps {
   hostToken: string | null;
 }
 
+const SKILL_LEVELS = [
+  { value: "beginner", label: "Beginner", emoji: "🟢", desc: "New to pickleball" },
+  { value: "intermediate", label: "Intermediate", emoji: "🔵", desc: "Comfortable with doubles" },
+  { value: "advanced", label: "Advanced", emoji: "🔴", desc: "Experienced competitor" },
+] as const;
+
 const joinSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   partnerName: z.string().optional(),
   teamName: z.string().optional(),
+  skillLevel: z.enum(["beginner", "intermediate", "advanced"]),
 });
 
 function useCopyButton() {
@@ -84,7 +91,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
   const joinForm = useForm<z.infer<typeof joinSchema>>({
     resolver: zodResolver(joinSchema),
-    defaultValues: { firstName: "", lastName: "", partnerName: "", teamName: "" },
+    defaultValues: { firstName: "", lastName: "", partnerName: "", teamName: "", skillLevel: "intermediate" },
   });
 
   useEffect(() => {
@@ -135,6 +142,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           lastName: values.lastName,
           partnerName: values.partnerName || undefined,
           teamName: values.teamName || undefined,
+          skillLevel: values.skillLevel,
         },
       },
       {
@@ -321,13 +329,33 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                           Team Name <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
                         </Label>
                         <FormControl>
-                          <Input placeholder={autoTeamName ?? "The Dream Team"} className="h-11 bg-muted/50 border-none" {...field} />
+                          <Input placeholder="The Dream Team" className="h-11 bg-muted/50 border-none" {...field} />
                         </FormControl>
-                        {autoTeamName && !watchedTeam?.trim() && (
-                          <p className="text-xs text-muted-foreground">
-                            Will use: <span className="font-bold text-foreground">{autoTeamName}</span>
-                          </p>
-                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    <FormField control={joinForm.control} name="skillLevel" render={({ field }) => (
+                      <FormItem>
+                        <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Skill Level</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {SKILL_LEVELS.map((s) => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              onClick={() => field.onChange(s.value)}
+                              className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
+                                field.value === s.value
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border/50 bg-muted/30 hover:border-border"
+                              }`}
+                            >
+                              <span className="text-xl">{s.emoji}</span>
+                              <span className="text-xs font-bold">{s.label}</span>
+                              <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
+                            </button>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )} />
