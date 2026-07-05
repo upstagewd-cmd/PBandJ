@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 
 const SKILL_LEVELS = [
   { value: "beginner", label: "Beginner", emoji: "🟢", desc: "New to pickleball" },
@@ -319,13 +320,14 @@ export default function ProfilePage() {
                     {profile.partnerStats.map((p) => {
                       const parts = p.name.trim().split(/\s+/);
                       const firstName = parts[0] ?? p.name;
-                      const lastInitial = parts.length > 1 ? `${parts[parts.length - 1][0]}.` : "";
-                      const initials = parts.map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                      const lastName = parts.slice(1).join(" ");
+                      const lastInitial = lastName ? `${lastName[0]}.` : "";
                       return (
                         <div key={p.playerId} className="flex items-center gap-3 px-4 py-3">
-                          <div className="shrink-0 w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
-                            {initials}
-                          </div>
+                          <PlayerAvatar
+                            player={{ firstName, lastName, avatarUrl: p.avatarUrl }}
+                            size="md"
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold truncate">{firstName}{lastInitial ? ` ${lastInitial}` : ""}</p>
                             <p className="text-xs text-muted-foreground">

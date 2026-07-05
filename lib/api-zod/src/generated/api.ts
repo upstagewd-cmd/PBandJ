@@ -356,6 +356,7 @@ export const GetMyProfileResponse = zod.object({
   "partnerStats": zod.array(zod.object({
   "playerId": zod.string(),
   "name": zod.string(),
+  "avatarUrl": zod.string().nullish(),
   "wins": zod.number(),
   "losses": zod.number(),
   "winPct": zod.number(),

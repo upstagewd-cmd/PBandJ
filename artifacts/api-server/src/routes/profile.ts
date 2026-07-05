@@ -179,7 +179,7 @@ profileRouter.get("/me", async (req, res) => {
       }));
 
     // ── Compute partner stats ──
-    const partnerStatMap = new Map<string, { playerId: string; name: string; wins: number; losses: number; matches: number }>();
+    const partnerStatMap = new Map<string, { playerId: string; name: string; avatarUrl: string | null; wins: number; losses: number; matches: number }>();
 
     // Helper to resolve display name
     const displayName = (p: typeof playersTable.$inferSelect | undefined) =>
@@ -226,6 +226,7 @@ profileRouter.get("/me", async (req, res) => {
             partnerStatMap.set(partnerId, {
               playerId: partnerId,
               name: partnerName,
+              avatarUrl: partner?.avatarUrl ?? null,
               wins: won ? 1 : 0,
               losses: won ? 0 : 1,
               matches: 1,
@@ -253,6 +254,7 @@ profileRouter.get("/me", async (req, res) => {
       .map((p) => ({
         playerId: p.playerId,
         name: p.name,
+        avatarUrl: p.avatarUrl ?? null,
         wins: p.wins,
         losses: p.losses,
         matches: p.matches,

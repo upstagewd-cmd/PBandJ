@@ -221,6 +221,7 @@ export interface MatchHistoryEntry {
 export interface PartnerStat {
   playerId: string;
   name: string;
+  avatarUrl?: string | null;
   wins: number;
   losses: number;
   winPct: number;
