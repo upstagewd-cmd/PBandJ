@@ -359,6 +359,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpenPlayState"
 
+  /sessions:
+    post:
+      operationId: createSession
+      tags: [sessions]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionWithToken"
+
+  /sessions/{sessionId}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFull"
+
+  /sessions/{sessionId}/players:
+    post:
+      operationId: addSessionPlayer
+      tags: [sessions]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddSessionPlayerBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFull"
+
+  /sessions/{sessionId}/matches:
+    post:
+      operationId: logSessionMatch
+      tags: [sessions]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionMatchInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFull"
+
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -774,6 +858,132 @@ components:
       properties:
         hostToken:
           type: string
+
+    SessionInput:
+      type: object
+      properties:
+        name:
+          type: string
+
+    SessionWithToken:
+      type: object
+      required: [id, name, status, createdAt, hostToken]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        createdAt:
+          type: string
+          format: date-time
+        hostToken:
+          type: string
+
+    SessionPlayer:
+      type: object
+      required: [id, sessionId, firstName, lastName, eloRating, rankTitle, rankEmoji, joinedAt]
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        teamName:
+          type: ["string", "null"]
+        eloRating:
+          type: integer
+        rankTitle:
+          type: string
+        rankEmoji:
+          type: string
+        joinedAt:
+          type: string
+          format: date-time
+
+    SessionMatchRecord:
+      type: object
+      required: [id, winnerTeam, playedAt, team1Players, team2Players]
+      properties:
+        id:
+          type: string
+        winnerTeam:
+          type: integer
+        scoreOne:
+          type: ["integer", "null"]
+        scoreTwo:
+          type: ["integer", "null"]
+        team1Players:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionPlayer"
+        team2Players:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionPlayer"
+        playedAt:
+          type: string
+          format: date-time
+
+    SessionFull:
+      type: object
+      required: [id, name, status, createdAt, players, recentMatches]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        createdAt:
+          type: string
+          format: date-time
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionPlayer"
+        recentMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionMatchRecord"
+
+    AddSessionPlayerBody:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        teamName:
+          type: string
+
+    SessionMatchInput:
+      type: object
+      required: [hostToken, team1P1Id, team2P1Id, winnerTeam]
+      properties:
+        hostToken:
+          type: string
+        team1P1Id:
+          type: string
+        team1P2Id:
+          type: string
+        team2P1Id:
+          type: string
+        team2P2Id:
+          type: string
+        winnerTeam:
+          type: integer
+        scoreOne:
+          type: integer
+        scoreTwo:
+          type: integer
 
     RequestUploadUrlBody:
       type: object

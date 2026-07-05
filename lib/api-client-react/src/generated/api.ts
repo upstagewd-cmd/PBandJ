@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AddSessionPlayerBody,
   HealthStatus,
   HostTokenInput,
   MatchUpdate,
@@ -33,6 +34,10 @@ import type {
   ProfileStats,
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
+  SessionFull,
+  SessionInput,
+  SessionMatchInput,
+  SessionWithToken,
   Tournament,
   TournamentFull,
   TournamentInput,
@@ -1147,6 +1152,271 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getLogOpenPlayMatchMutationOptions(options));
+    }
+
+export const getCreateSessionUrl = () => {
+
+
+
+
+  return `/api/sessions`
+}
+
+export const createSession = async (sessionInput?: SessionInput, options?: RequestInit): Promise<SessionWithToken> => {
+
+  return customFetch<SessionWithToken>(getCreateSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sessionInput)
+  }
+);}
+
+
+
+
+export const getCreateSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSession>>, TError,{data?: BodyType<SessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSession>>, TError,{data?: BodyType<SessionInput>}, TContext> => {
+
+const mutationKey = ['createSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSession>>, {data?: BodyType<SessionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createSession>>>
+    export type CreateSessionMutationBody = BodyType<SessionInput> | undefined
+    export type CreateSessionMutationError = ErrorType<unknown>
+
+    export const useCreateSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSession>>, TError,{data?: BodyType<SessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSession>>,
+        TError,
+        {data?: BodyType<SessionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSessionMutationOptions(options));
+    }
+
+export const getGetSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}`
+}
+
+export const getSession = async (sessionId: string, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getGetSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSessionQueryKey = (sessionId: string,) => {
+    return [
+    `/api/sessions/${sessionId}`
+    ] as const;
+    }
+
+
+export const getGetSessionQueryOptions = <TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorType<unknown>>(sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSessionQueryKey(sessionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSession>>> = ({ signal }) => getSession(sessionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getSession>>>
+export type GetSessionQueryError = ErrorType<unknown>
+
+
+
+export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorType<unknown>>(
+ sessionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSessionQueryOptions(sessionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddSessionPlayerUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/players`
+}
+
+export const addSessionPlayer = async (sessionId: string,
+    addSessionPlayerBody: AddSessionPlayerBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getAddSessionPlayerUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(addSessionPlayerBody)
+  }
+);}
+
+
+
+
+export const getAddSessionPlayerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addSessionPlayer>>, TError,{sessionId: string;data: BodyType<AddSessionPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addSessionPlayer>>, TError,{sessionId: string;data: BodyType<AddSessionPlayerBody>}, TContext> => {
+
+const mutationKey = ['addSessionPlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addSessionPlayer>>, {sessionId: string;data: BodyType<AddSessionPlayerBody>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  addSessionPlayer(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddSessionPlayerMutationResult = NonNullable<Awaited<ReturnType<typeof addSessionPlayer>>>
+    export type AddSessionPlayerMutationBody = BodyType<AddSessionPlayerBody>
+    export type AddSessionPlayerMutationError = ErrorType<unknown>
+
+    export const useAddSessionPlayer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addSessionPlayer>>, TError,{sessionId: string;data: BodyType<AddSessionPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addSessionPlayer>>,
+        TError,
+        {sessionId: string;data: BodyType<AddSessionPlayerBody>},
+        TContext
+      > => {
+      return useMutation(getAddSessionPlayerMutationOptions(options));
+    }
+
+export const getLogSessionMatchUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/matches`
+}
+
+export const logSessionMatch = async (sessionId: string,
+    sessionMatchInput: SessionMatchInput, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getLogSessionMatchUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sessionMatchInput)
+  }
+);}
+
+
+
+
+export const getLogSessionMatchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logSessionMatch>>, TError,{sessionId: string;data: BodyType<SessionMatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logSessionMatch>>, TError,{sessionId: string;data: BodyType<SessionMatchInput>}, TContext> => {
+
+const mutationKey = ['logSessionMatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logSessionMatch>>, {sessionId: string;data: BodyType<SessionMatchInput>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  logSessionMatch(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogSessionMatchMutationResult = NonNullable<Awaited<ReturnType<typeof logSessionMatch>>>
+    export type LogSessionMatchMutationBody = BodyType<SessionMatchInput>
+    export type LogSessionMatchMutationError = ErrorType<unknown>
+
+    export const useLogSessionMatch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logSessionMatch>>, TError,{sessionId: string;data: BodyType<SessionMatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logSessionMatch>>,
+        TError,
+        {sessionId: string;data: BodyType<SessionMatchInput>},
+        TContext
+      > => {
+      return useMutation(getLogSessionMatchMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

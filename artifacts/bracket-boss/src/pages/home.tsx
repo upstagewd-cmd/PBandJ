@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Show, useUser, useClerk } from "@clerk/react";
-import { useCreateTournament } from "@workspace/api-client-react";
+import { useCreateTournament, useCreateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trophy, LogOut, User } from "lucide-react";
+import { Loader2, Trophy, Activity, LogOut, User } from "lucide-react";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createTournament = useCreateTournament();
+  const createSession = useCreateSession();
   const { user } = useUser();
   const { signOut } = useClerk();
 
-  const handleCreate = () => {
+  const handleCreateTournament = () => {
     createTournament.mutate(
       { data: { name: "New Tournament" } },
       {
@@ -22,11 +23,22 @@ export default function Home() {
           setLocation(`/t/${data.id}`);
         },
         onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to create tournament. Please try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Error", description: "Failed to create tournament. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleCreateSession = () => {
+    createSession.mutate(
+      { data: { name: "Open Play" } },
+      {
+        onSuccess: (data) => {
+          localStorage.setItem(`sessionToken_${data.id}`, data.hostToken);
+          setLocation(`/s/${data.id}`);
+        },
+        onError: () => {
+          toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
         },
       }
     );
@@ -101,16 +113,39 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Primary: Create Tournament */}
         <Button
           size="lg"
           className="w-full h-16 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,100,50,0.3)] hover:shadow-[0_0_30px_rgba(255,100,50,0.4)]"
-          onClick={handleCreate}
-          disabled={createTournament.isPending}
+          onClick={handleCreateTournament}
+          disabled={createTournament.isPending || createSession.isPending}
         >
           {createTournament.isPending ? (
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
           ) : (
-            "CREATE TOURNAMENT"
+            <><Trophy className="mr-2.5 h-5 w-5" /> CREATE TOURNAMENT</>
+          )}
+        </Button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-border/40" />
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">or</span>
+          <div className="flex-1 h-px bg-border/40" />
+        </div>
+
+        {/* Secondary: Open Play */}
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full h-14 text-base font-bold rounded-2xl transition-transform active:scale-95 border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50"
+          onClick={handleCreateSession}
+          disabled={createTournament.isPending || createSession.isPending}
+        >
+          {createSession.isPending ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <><Activity className="mr-2.5 h-5 w-5" /> START OPEN PLAY</>
           )}
         </Button>
 

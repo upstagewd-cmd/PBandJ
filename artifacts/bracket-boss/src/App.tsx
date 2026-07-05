@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TournamentPage from "@/pages/tournament";
+import SessionPage from "@/pages/session";
 import PlayerStatsPage from "@/pages/player-stats";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
@@ -144,6 +145,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
+      <Route path="/s/:sessionId" component={SessionPage} />
       <Route path="/player/:playerId" component={PlayerStatsPage} />
       <Route component={NotFound} />
     </Switch>

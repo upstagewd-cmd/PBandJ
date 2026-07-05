@@ -607,6 +607,192 @@ export const LogOpenPlayMatchResponse = zod.object({
 })
 
 
+export const CreateSessionBody = zod.object({
+  "name": zod.string().optional()
+})
+
+export const CreateSessionResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "hostToken": zod.string()
+})
+
+
+export const GetSessionParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const GetSessionResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "recentMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "team1Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "team2Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "playedAt": zod.coerce.date()
+}))
+})
+
+
+export const AddSessionPlayerParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const AddSessionPlayerBody = zod.object({
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().optional()
+})
+
+export const AddSessionPlayerResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "recentMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "team1Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "team2Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "playedAt": zod.coerce.date()
+}))
+})
+
+
+export const LogSessionMatchParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const LogSessionMatchBody = zod.object({
+  "hostToken": zod.string(),
+  "team1P1Id": zod.string(),
+  "team1P2Id": zod.string().optional(),
+  "team2P1Id": zod.string(),
+  "team2P2Id": zod.string().optional(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().optional(),
+  "scoreTwo": zod.number().optional()
+})
+
+export const LogSessionMatchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "recentMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "team1Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "team2Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "playedAt": zod.coerce.date()
+}))
+})
+
+
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string(),
   "size": zod.number(),

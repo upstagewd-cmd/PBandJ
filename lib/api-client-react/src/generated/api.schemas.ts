@@ -279,6 +279,85 @@ export interface HostTokenInput {
   hostToken: string;
 }
 
+export interface SessionInput {
+  name?: string;
+}
+
+export type SessionWithTokenStatus = typeof SessionWithTokenStatus[keyof typeof SessionWithTokenStatus];
+
+
+export const SessionWithTokenStatus = {
+  active: 'active',
+  completed: 'completed',
+} as const;
+
+export interface SessionWithToken {
+  id: string;
+  name: string;
+  status: SessionWithTokenStatus;
+  createdAt: string;
+  hostToken: string;
+}
+
+export interface SessionPlayer {
+  id: string;
+  sessionId: string;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  teamName?: string | null;
+  eloRating: number;
+  rankTitle: string;
+  rankEmoji: string;
+  joinedAt: string;
+}
+
+export interface SessionMatchRecord {
+  id: string;
+  winnerTeam: number;
+  /** @nullable */
+  scoreOne?: number | null;
+  /** @nullable */
+  scoreTwo?: number | null;
+  team1Players: SessionPlayer[];
+  team2Players: SessionPlayer[];
+  playedAt: string;
+}
+
+export type SessionFullStatus = typeof SessionFullStatus[keyof typeof SessionFullStatus];
+
+
+export const SessionFullStatus = {
+  active: 'active',
+  completed: 'completed',
+} as const;
+
+export interface SessionFull {
+  id: string;
+  name: string;
+  status: SessionFullStatus;
+  createdAt: string;
+  players: SessionPlayer[];
+  recentMatches: SessionMatchRecord[];
+}
+
+export interface AddSessionPlayerBody {
+  firstName: string;
+  lastName: string;
+  teamName?: string;
+}
+
+export interface SessionMatchInput {
+  hostToken: string;
+  team1P1Id: string;
+  team1P2Id?: string;
+  team2P1Id: string;
+  team2P2Id?: string;
+  winnerTeam: number;
+  scoreOne?: number;
+  scoreTwo?: number;
+}
+
 export interface RequestUploadUrlBody {
   name: string;
   size: number;
