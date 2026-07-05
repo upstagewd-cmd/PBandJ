@@ -73,15 +73,22 @@ export function MatchesTab({ code }: { code: string }) {
     }
   };
 
-  const deleteMatch = async (id: string, type: "bracket" | "open_play") => {
-    if (!confirm("Delete this match? This cannot be undone.")) return;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; type: "bracket" | "open_play" } | null>(null);
+
+  const deleteMatch = (id: string, type: "bracket" | "open_play") => {
+    setPendingDelete({ id, type });
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
-      await adminDelete(code, `/matches/${id}?type=${type}`);
+      await adminDelete(code, `/matches/${pendingDelete.id}?type=${pendingDelete.type}`);
       toast({ title: "Match deleted" });
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingDelete(null);
   };
 
   if (loading) return <p className="text-muted-foreground p-4">Loading matches…</p>;
@@ -92,6 +99,16 @@ export function MatchesTab({ code }: { code: string }) {
 
   return (
     <div className="space-y-4">
+      {pendingDelete && (
+        <div className="bg-red-500/10 border border-red-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-red-400">Delete this match? This cannot be undone.</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmDelete} variant="destructive">Delete</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input placeholder="Search by tournament…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />

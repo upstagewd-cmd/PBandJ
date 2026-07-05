@@ -65,15 +65,20 @@ export function BadgesTab({ code }: { code: string }) {
     }
   };
 
-  const deleteBadge = async (id: string, name: string) => {
-    if (!confirm(`Delete badge "${name}"?`)) return;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const deleteBadge = (id: string, name: string) => setPendingDelete({ id, name });
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
-      await adminDelete(code, `/badges/${id}`);
+      await adminDelete(code, `/badges/${pendingDelete.id}`);
       toast({ title: "Badge deleted" });
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingDelete(null);
   };
 
   const grantBadge = async (badgeId: string) => {
@@ -103,6 +108,15 @@ export function BadgesTab({ code }: { code: string }) {
 
   return (
     <div className="space-y-4">
+      {pendingDelete && (
+        <div className="bg-red-500/10 border border-red-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-red-400">Delete badge "{pendingDelete.name}"?</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmDelete} variant="destructive">Delete</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{badges.length} badges defined</p>
         <Button size="sm" variant="outline" onClick={() => setAdding(true)}>

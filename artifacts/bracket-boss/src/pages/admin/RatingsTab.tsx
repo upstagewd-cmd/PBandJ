@@ -48,19 +48,26 @@ export function RatingsTab({ code }: { code: string }) {
     }
   };
 
-  const resetElo = async (id: string, name: string) => {
-    if (!confirm(`Reset ${name}'s rating to 1200?`)) return;
+  const [pendingReset, setPendingReset] = useState<{ id: string; name: string } | null>(null);
+  const [pendingRecalc, setPendingRecalc] = useState(false);
+
+  const resetElo = (id: string, name: string) => setPendingReset({ id, name });
+
+  const confirmReset = async () => {
+    if (!pendingReset) return;
     try {
-      await adminPost(code, `/ratings/reset/${id}`, {});
+      await adminPost(code, `/ratings/reset/${pendingReset.id}`, {});
       toast({ title: "Rating reset to 1200" });
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingReset(null);
   };
 
   const recalculate = async () => {
-    if (!confirm("Recalculate ALL player ratings from full match history? Current ratings will be overwritten.")) return;
+    if (!pendingRecalc) { setPendingRecalc(true); return; }
+    setPendingRecalc(false);
     setRecalculating(true);
     try {
       const result = await adminPost<{ ok: boolean; updated: number }>(code, "/ratings/recalculate", {});
@@ -76,6 +83,27 @@ export function RatingsTab({ code }: { code: string }) {
 
   return (
     <div className="space-y-4">
+      {pendingReset && (
+        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-orange-400">Reset {pendingReset.name}'s rating to 1200?</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmReset} className="bg-orange-500 hover:bg-orange-600 text-white">Reset</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingReset(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {pendingRecalc && (
+        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-orange-400">Recalculate ALL ratings from match history? Current ratings will be overwritten.</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={recalculate} disabled={recalculating} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <RefreshCw className={`w-3 h-3 mr-1 ${recalculating ? "animate-spin" : ""}`} /> Confirm
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingRecalc(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

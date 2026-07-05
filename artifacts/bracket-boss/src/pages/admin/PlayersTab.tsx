@@ -34,6 +34,8 @@ export function PlayersTab({ code }: { code: string }) {
   const [editForm, setEditForm] = useState<Partial<Player>>({});
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeA, setMergeA] = useState<string | null>(null);
+  const [pendingMerge, setPendingMerge] = useState<{ keepId: string; mergeId: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -81,15 +83,16 @@ export function PlayersTab({ code }: { code: string }) {
     setSaving(false);
   };
 
-  const deletePlayer = async (id: string, name: string) => {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
-      await adminDelete(code, `/players/${id}`);
+      await adminDelete(code, `/players/${pendingDelete.id}`);
       toast({ title: "Player deleted" });
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingDelete(null);
   };
 
   const handleMergeClick = (id: string) => {
@@ -98,13 +101,21 @@ export function PlayersTab({ code }: { code: string }) {
     const a = players.find((p) => p.id === mergeA);
     const b = players.find((p) => p.id === id);
     if (!a || !b) return;
-    if (!confirm(`Merge "${b.firstName} ${b.lastName}" INTO "${a.firstName} ${a.lastName}"?\n\nAll matches and badges from the merged player will move to the kept player, and the merged player will be deleted.`)) {
-      setMergeMode(false); setMergeA(null); return;
+    setPendingMerge({ keepId: mergeA!, mergeId: id });
+    setMergeMode(false);
+    setMergeA(null);
+  };
+
+  const confirmMerge = async () => {
+    if (!pendingMerge) return;
+    try {
+      await adminPost(code, "/players/merge", pendingMerge);
+      toast({ title: "Players merged" });
+      await load();
+    } catch (e) {
+      toast({ title: "Error", description: String(e), variant: "destructive" });
     }
-    adminPost(code, "/players/merge", { keepId: mergeA, mergeId: id })
-      .then(() => { toast({ title: "Players merged" }); load(); })
-      .catch((e) => toast({ title: "Error", description: String(e), variant: "destructive" }))
-      .finally(() => { setMergeMode(false); setMergeA(null); });
+    setPendingMerge(null);
   };
 
   const skillLabel = (level: string | null) => {
@@ -112,21 +123,64 @@ export function PlayersTab({ code }: { code: string }) {
     return found ? `${found.emoji} ${found.label}` : "—";
   };
 
+  const cancelAll = () => {
+    setMergeMode(false);
+    setMergeA(null);
+    setPendingMerge(null);
+    setPendingDelete(null);
+  };
+
   if (loading) return <p className="text-muted-foreground p-4">Loading players…</p>;
+
+  const keepPlayer = pendingMerge ? players.find((p) => p.id === pendingMerge.keepId) : null;
+  const mergePlayer = pendingMerge ? players.find((p) => p.id === pendingMerge.mergeId) : null;
 
   return (
     <div className="space-y-4">
+      {/* Inline merge confirmation */}
+      {pendingMerge && keepPlayer && mergePlayer && (
+        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-orange-400">Confirm Merge</p>
+          <p className="text-sm text-muted-foreground">
+            Merge <span className="font-bold text-foreground">{mergePlayer.firstName} {mergePlayer.lastName}</span> into{" "}
+            <span className="font-bold text-foreground">{keepPlayer.firstName} {keepPlayer.lastName}</span>?
+            All matches and badges will transfer. The merged player will be deleted.
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmMerge} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Check className="w-3 h-3 mr-1" /> Confirm Merge
+            </Button>
+            <Button size="sm" variant="ghost" onClick={cancelAll}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Inline delete confirmation */}
+      {pendingDelete && (
+        <div className="bg-red-500/10 border border-red-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-red-400">Delete Player</p>
+          <p className="text-sm text-muted-foreground">
+            Delete <span className="font-bold text-foreground">{pendingDelete.name}</span>? This cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmDelete} variant="destructive">
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search players…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        {mergeMode && (
-          <Button variant="outline" size="sm" onClick={() => { setMergeMode(false); setMergeA(null); }}>
-            <X className="w-4 h-4 mr-1" /> Cancel Merge
+        {mergeMode ? (
+          <Button variant="outline" size="sm" onClick={cancelAll}>
+            <X className="w-4 h-4 mr-1" /> Cancel
           </Button>
-        )}
-        {!mergeMode && (
+        ) : (
           <Button variant="outline" size="sm" onClick={() => setMergeMode(true)}>
             <GitMerge className="w-4 h-4 mr-1" /> Merge
           </Button>
@@ -135,7 +189,7 @@ export function PlayersTab({ code }: { code: string }) {
 
       {mergeMode && (
         <p className="text-sm text-orange-400 font-medium">
-          {mergeA ? "Now tap the duplicate player to merge into the selected one." : "Tap the player to KEEP."}
+          {mergeA ? "Now tap a second player — they will be merged INTO the first." : "Tap the player to KEEP."}
         </p>
       )}
 
@@ -200,7 +254,7 @@ export function PlayersTab({ code }: { code: string }) {
                     ) : (
                       <>
                         <Button size="sm" variant="ghost" onClick={() => startEdit(p)}><Pencil className="w-3 h-3" /></Button>
-                        <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => deletePlayer(p.id, `${p.firstName} ${p.lastName}`)}>
+                        <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => setPendingDelete({ id: p.id, name: `${p.firstName} ${p.lastName}` })}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </>

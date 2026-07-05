@@ -52,21 +52,36 @@ export function RanksTab({ code }: { code: string }) {
     }
   };
 
-  const deleteRank = async (id: string, title: string) => {
-    if (!confirm(`Delete rank "${title}"?`)) return;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const deleteRank = (id: string, title: string) => setPendingDelete({ id, title });
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
-      await adminDelete(code, `/ranks/${id}`);
+      await adminDelete(code, `/ranks/${pendingDelete.id}`);
       toast({ title: "Rank deleted" });
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingDelete(null);
   };
 
   if (loading) return <p className="text-muted-foreground p-4">Loading ranks…</p>;
 
   return (
     <div className="space-y-4">
+      {pendingDelete && (
+        <div className="bg-red-500/10 border border-red-500/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-red-400">Delete rank "{pendingDelete.title}"?</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmDelete} variant="destructive">Delete</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{ranks.length} rank tiers · tap ELO to edit</p>
         <Button size="sm" variant="outline" onClick={() => setAdding(true)}>

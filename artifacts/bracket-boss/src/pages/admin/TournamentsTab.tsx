@@ -50,32 +50,46 @@ export function TournamentsTab({ code }: { code: string }) {
     }
   };
 
-  const forceEnd = async (id: string, name: string) => {
-    if (!confirm(`Force-complete "${name}"?`)) return;
-    try {
-      await adminPatch(code, `/tournaments/${id}`, { status: "completed" });
-      toast({ title: "Tournament completed" });
-      await load();
-    } catch (e) {
-      toast({ title: "Error", description: String(e), variant: "destructive" });
-    }
-  };
+  const [pendingAction, setPendingAction] = useState<{ id: string; name: string; type: "complete" | "delete" } | null>(null);
 
-  const deleteTournament = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}" and ALL its players and matches? This cannot be undone.`)) return;
+  const forceEnd = (id: string, name: string) => setPendingAction({ id, name, type: "complete" });
+  const deleteTournament = (id: string, name: string) => setPendingAction({ id, name, type: "delete" });
+
+  const confirmAction = async () => {
+    if (!pendingAction) return;
     try {
-      await adminDelete(code, `/tournaments/${id}`);
-      toast({ title: "Tournament deleted" });
+      if (pendingAction.type === "complete") {
+        await adminPatch(code, `/tournaments/${pendingAction.id}`, { status: "completed" });
+        toast({ title: "Tournament completed" });
+      } else {
+        await adminDelete(code, `/tournaments/${pendingAction.id}`);
+        toast({ title: "Tournament deleted" });
+      }
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
     }
+    setPendingAction(null);
   };
 
   if (loading) return <p className="text-muted-foreground p-4">Loading tournaments…</p>;
 
   return (
     <div className="space-y-4">
+      {pendingAction && (
+        <div className={`border rounded-xl p-4 space-y-3 ${pendingAction.type === "delete" ? "bg-red-500/10 border-red-500/40" : "bg-orange-500/10 border-orange-500/40"}`}>
+          <p className={`text-sm font-bold ${pendingAction.type === "delete" ? "text-red-400" : "text-orange-400"}`}>
+            {pendingAction.type === "delete"
+              ? `Delete "${pendingAction.name}" and ALL its data? This cannot be undone.`
+              : `Force-complete "${pendingAction.name}"?`}
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={confirmAction} variant={pendingAction.type === "delete" ? "destructive" : "default"}>Confirm</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingAction(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input placeholder="Search tournaments…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
