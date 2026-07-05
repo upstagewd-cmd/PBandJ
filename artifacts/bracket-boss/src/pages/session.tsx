@@ -510,6 +510,18 @@ export default function SessionPage() {
     },
   });
 
+  // Track visit history — must be before early returns to keep hooks order stable
+  useEffect(() => {
+    if (session) {
+      upsertHistory({
+        id: session.id,
+        type: "session",
+        name: session.name,
+        status: session.status,
+      });
+    }
+  }, [session?.id, session?.name, session?.status]);
+
   if (isLoading) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center space-y-4">
@@ -533,18 +545,6 @@ export default function SessionPage() {
   }
 
   const isHost = !!hostToken;
-
-  // Track visit history
-  useEffect(() => {
-    if (session) {
-      upsertHistory({
-        id: session.id,
-        type: "session",
-        name: session.name,
-        status: session.status,
-      });
-    }
-  }, [session?.id, session?.name, session?.status]);
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
