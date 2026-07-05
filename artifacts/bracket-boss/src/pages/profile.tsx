@@ -316,27 +316,36 @@ export default function ProfilePage() {
                     <Users className="w-4 h-4" /> Best Partners
                   </h2>
                   <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/30 overflow-hidden">
-                    {profile.partnerStats.map((p) => (
-                      <div key={p.playerId} className="flex items-center justify-between gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold truncate">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {p.wins}W · {p.losses}L · {p.matches} match{p.matches !== 1 ? "es" : ""}
-                          </p>
+                    {profile.partnerStats.map((p) => {
+                      const parts = p.name.trim().split(/\s+/);
+                      const firstName = parts[0] ?? p.name;
+                      const lastInitial = parts.length > 1 ? `${parts[parts.length - 1][0]}.` : "";
+                      const initials = parts.map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                      return (
+                        <div key={p.playerId} className="flex items-center gap-3 px-4 py-3">
+                          <div className="shrink-0 w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                            {initials}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold truncate">{firstName}{lastInitial ? ` ${lastInitial}` : ""}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.wins}W · {p.losses}L · {p.matches} match{p.matches !== 1 ? "es" : ""}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 text-xs font-extrabold px-2 py-1 rounded-lg ${
+                              p.winPct >= 60
+                                ? "bg-green-500/20 text-green-400"
+                                : p.winPct >= 40
+                                ? "bg-yellow-500/20 text-yellow-400"
+                                : "bg-red-500/20 text-red-400"
+                            }`}
+                          >
+                            {p.winPct}%
+                          </span>
                         </div>
-                        <span
-                          className={`shrink-0 text-xs font-extrabold px-2 py-1 rounded-lg ${
-                            p.winPct >= 60
-                              ? "bg-green-500/20 text-green-400"
-                              : p.winPct >= 40
-                              ? "bg-yellow-500/20 text-yellow-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}
-                        >
-                          {p.winPct}%
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
