@@ -181,9 +181,9 @@ profileRouter.get("/me", async (req, res) => {
     // ── Compute partner stats ──
     const partnerStatMap = new Map<string, { playerId: string; name: string; avatarUrl: string | null; wins: number; losses: number; matches: number }>();
 
-    // Helper to resolve display name
+    // Helper to resolve display name — always use real name for partner stats
     const displayName = (p: typeof playersTable.$inferSelect | undefined) =>
-      p ? (p.teamName ?? `${p.firstName} ${p.lastName}`) : "Unknown";
+      p ? `${p.firstName} ${p.lastName}` : "Unknown";
 
     const recentMatches = recentCompleted.map((m) => {
       const won = winnerIds.has(m.winnerId ?? "");
