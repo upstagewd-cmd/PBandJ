@@ -78,9 +78,6 @@ export type MatchBracket = typeof MatchBracket[keyof typeof MatchBracket];
 
 export const MatchBracket = {
   winner: 'winner',
-  loser: 'loser',
-  grand_finals: 'grand_finals',
-  grand_finals_reset: 'grand_finals_reset',
 } as const;
 
 export type MatchStatus = typeof MatchStatus[keyof typeof MatchStatus];

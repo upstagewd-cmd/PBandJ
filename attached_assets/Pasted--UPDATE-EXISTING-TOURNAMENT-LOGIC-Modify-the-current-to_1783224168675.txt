@@ -1,0 +1,144 @@
+# UPDATE EXISTING TOURNAMENT LOGIC
+
+Modify the current tournament implementation. This is a change request to the existing app.
+
+## REMOVE DOUBLE ELIMINATION
+
+Completely remove all double elimination functionality.
+
+Delete:
+- Losers bracket
+- Consolation bracket
+- Second-chance bracket
+- Any logic that advances losing teams into another tournament bracket
+
+There should only be one bracket in the application.
+
+---
+
+# SINGLE ELIMINATION ONLY
+
+The tournament should now be:
+
+- Single elimination
+- Winners advance
+- Losers are eliminated from the championship bracket immediately
+
+Once a team loses, they should never appear in another tournament bracket.
+
+---
+
+# CREATE AN OPEN PLAY SECTION
+
+Instead of a losers bracket, create a new section directly below the tournament bracket called:
+
+## 🏓 Open Play
+
+This is not a tournament.
+
+This is not a bracket.
+
+This is simply a live area where players can continue playing casual games after they have been eliminated.
+
+---
+
+# WHO APPEARS IN OPEN PLAY
+
+As soon as a team loses a tournament match:
+
+1. Remove them from the tournament bracket.
+2. Automatically add them to the Open Play section.
+
+Open Play should display available teams with:
+- Player names
+- Profile pictures (if available)
+
+---
+
+# OPEN PLAY MATCHES
+
+Users should be able to manually record games played in Open Play.
+
+When selecting Record Match, allow users to choose:
+
+- Team 1
+- Team 2
+- Winning Team
+- Optional Score (example: 11–8)
+
+When the match is saved:
+
+- Update each player's win/loss record
+- Update player ratings
+- Update player statistics
+- Update badges if applicable
+- Save the match to each player's history
+
+---
+
+# IMPORTANT
+
+Open Play should NOT:
+
+- Generate brackets
+- Eliminate teams
+- Determine a champion
+- Automatically schedule games
+- Automatically pair teams
+- Assign courts
+
+Players decide who they want to play in real life.
+
+The app simply records the results.
+
+---
+
+# OPEN PLAY SHOULD ALWAYS REMAIN AVAILABLE
+
+The Open Play section should remain visible throughout the tournament.
+
+As more teams are eliminated, they are added to the Open Play list automatically.
+
+By the time the championship match is being played, every eliminated team should already be available in Open Play and able to continue playing casual games.
+
+---
+
+# USER EXPERIENCE GOAL
+
+The page should have two clear sections:
+
+## 🏆 Championship Tournament
+
+Single elimination bracket only.
+
+This section determines the tournament winner.
+
+---
+
+## 🏓 Open Play
+
+Casual games for everyone eliminated from the tournament.
+
+Users manually log games and scores.
+
+These games count toward:
+- Player win/loss records
+- Hidden player ratings
+- Rankings
+- Badges
+- Match history
+
+Open Play never affects the tournament bracket or championship.
+
+---
+
+# SUCCESS CRITERIA
+
+The experience should feel like a real pickleball meetup:
+
+- Everyone starts in the tournament.
+- Teams that lose immediately move into Open Play.
+- Nobody sits around waiting.
+- Everyone continues playing.
+- The tournament continues until one champion remains.
+- Open Play continues independently until people decide to stop playing.

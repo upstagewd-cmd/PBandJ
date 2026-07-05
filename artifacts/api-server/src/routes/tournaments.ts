@@ -7,7 +7,7 @@ import {
   UpdateTournamentBody,
   StartTournamentBody,
 } from "@workspace/api-zod";
-import { generateDoubleEliminationBracket } from "../lib/bracket";
+import { generateSingleEliminationBracket } from "../lib/bracket";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 
@@ -155,9 +155,9 @@ tournamentsRouter.post("/:tournamentId/start", async (req: Request<{ tournamentI
         .where(eq(playersTable.id, shuffled[i].id));
     }
 
-    // Generate double-elimination bracket
+    // Generate single-elimination bracket
     const seededPlayers = shuffled.map((p, i) => ({ id: p.id, seed: i + 1 }));
-    const bracketMatches = generateDoubleEliminationBracket(tournamentId, seededPlayers);
+    const bracketMatches = generateSingleEliminationBracket(tournamentId, seededPlayers);
 
     if (bracketMatches.length > 0) {
       await db.insert(matchesTable).values(bracketMatches);

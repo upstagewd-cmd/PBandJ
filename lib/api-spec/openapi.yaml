@@ -623,7 +623,7 @@ components:
           type: integer
         bracket:
           type: string
-          enum: [winner, loser, grand_finals, grand_finals_reset]
+          enum: [winner]
         playerOneId:
           type: ["string", "null"]
         playerTwoId:
