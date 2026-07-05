@@ -43,6 +43,11 @@ export function formatVisitedAt(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export function removeHistory(id: string) {
+  const entries = getHistory().filter((e) => e.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
 export function defaultGameName(): string {
   const now = new Date();
   return now.toLocaleDateString(undefined, {

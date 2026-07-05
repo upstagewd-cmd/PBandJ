@@ -9,7 +9,7 @@ import { TournamentChampionship } from "@/components/tournament/championship";
 import { Loader2, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { upsertHistory } from "@/lib/history";
+import { upsertHistory, removeHistory } from "@/lib/history";
 
 function UserBadge() {
   const { user } = useUser();
@@ -90,6 +90,7 @@ export default function TournamentPage() {
   }
 
   if (isError || !tournament) {
+    if (tournamentId) removeHistory(tournamentId);
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center">

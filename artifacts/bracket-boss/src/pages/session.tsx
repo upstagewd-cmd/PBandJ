@@ -32,7 +32,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { upsertHistory } from "@/lib/history";
+import { upsertHistory, removeHistory } from "@/lib/history";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -855,6 +855,7 @@ export default function SessionPage() {
   }
 
   if (isError || !session) {
+    if (sessionId) removeHistory(sessionId);
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center space-y-6">
         <span className="text-5xl">🤔</span>
