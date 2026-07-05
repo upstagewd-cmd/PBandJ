@@ -407,21 +407,24 @@ interface PlayerRowProps {
   onRemove: () => void;
 }
 
-function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: PlayerRowProps) {
+function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, onRemove }: PlayerRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
   const [uploading, setUploading] = useState(false);
   const updatePlayer = useUpdatePlayer();
   const { toast } = useToast();
 
-  const canEdit = !!myToken;
+  const canEdit = !!myToken || isHost;
 
   const saveTeamName = () => {
-    if (!myToken) return;
+    if (!canEdit) return;
     setEditing(false);
     if (draft === (player.teamName ?? "")) return;
+    const auth = myToken
+      ? { playerToken: myToken }
+      : { hostToken: hostToken ?? "" };
     updatePlayer.mutate(
-      { tournamentId, playerId: player.id, data: { playerToken: myToken, teamName: draft } },
+      { tournamentId, playerId: player.id, data: { ...auth, teamName: draft } },
       {
         onError: () => {
           toast({ title: "Couldn't save team name", variant: "destructive" });

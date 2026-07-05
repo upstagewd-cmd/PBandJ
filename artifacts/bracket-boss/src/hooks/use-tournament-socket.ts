@@ -18,7 +18,11 @@ export function useTournamentSocket(tournamentId: string | undefined) {
 
       ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => setIsConnected(true);
+      ws.onopen = () => {
+        setIsConnected(true);
+        // Refetch on every (re)connect so the UI is never stale
+        queryClient.refetchQueries({ queryKey: getGetTournamentQueryKey(tournamentId) });
+      };
 
       ws.onmessage = (event) => {
         try {

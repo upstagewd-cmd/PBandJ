@@ -742,9 +742,10 @@ components:
 
     PlayerUpdate:
       type: object
-      required: [playerToken]
       properties:
         playerToken:
+          type: string
+        hostToken:
           type: string
         teamName:
           type: string

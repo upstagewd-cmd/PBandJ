@@ -127,7 +127,10 @@ export function RanksTab({ code }: { code: string }) {
                 <span className="text-2xl">{r.emoji}</span>
                 <div className="flex-1">
                   <p className="font-bold">{r.title}</p>
-                  <p className="text-xs text-muted-foreground">Min ELO: {r.minElo} · {r.playerCount} player{r.playerCount !== 1 ? "s" : ""} · Order #{r.displayOrder}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm font-bold text-primary">{r.minElo}+ pts</span>
+                    <span className="text-xs text-muted-foreground">· {r.playerCount} player{r.playerCount !== 1 ? "s" : ""}</span>
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="ghost" onClick={() => { setEditId(r.id); setEditForm({}); }}>

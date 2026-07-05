@@ -51,20 +51,7 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     const id = randomUUID();
     const playerToken = randomUUID();
 
-    // Auto-generate team name if not provided
-    let teamName = body.teamName ?? null;
-    if (!teamName) {
-      const p1Last = body.lastName.charAt(0).toUpperCase() + ".";
-      const p1Name = `${body.firstName} ${p1Last}`;
-      if (body.partnerName && body.partnerName.trim()) {
-        const parts = body.partnerName.trim().split(/\s+/);
-        const partnerFirst = parts[0];
-        const partnerLast = parts.length > 1 ? parts[parts.length - 1].charAt(0).toUpperCase() + "." : "";
-        teamName = partnerLast ? `${p1Name} + ${partnerFirst} ${partnerLast}` : `${p1Name} + ${partnerFirst}`;
-      } else {
-        teamName = `${body.firstName} ${body.lastName}`;
-      }
-    }
+    const teamName = body.teamName || null;
 
     const auth = getAuth(req);
     const clerkUserId = auth?.userId ?? null;
@@ -106,7 +93,16 @@ playersRouter.patch("/:playerId", async (req: Request<{ tournamentId: string; pl
 
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
     if (!player) { res.status(404).json({ error: "Player not found" }); return; }
-    if (player.playerToken !== body.playerToken) { res.status(403).json({ error: "Invalid player token" }); return; }
+
+    // Accept either the player's own token or the host token
+    if (body.playerToken) {
+      if (player.playerToken !== body.playerToken) { res.status(403).json({ error: "Invalid player token" }); return; }
+    } else if (body.hostToken) {
+      const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
+      if (!tournament || tournament.hostToken !== body.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+    } else {
+      res.status(403).json({ error: "playerToken or hostToken required" }); return;
+    }
 
     const updates: Partial<typeof player> = {};
     if (body.teamName !== undefined) updates.teamName = body.teamName || null;

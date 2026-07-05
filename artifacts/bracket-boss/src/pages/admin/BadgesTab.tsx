@@ -164,8 +164,8 @@ export function BadgesTab({ code }: { code: string }) {
                   <span className="text-2xl">{b.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold">{b.name}</p>
-                    <p className="text-xs text-muted-foreground">{b.description}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Rule: {b.ruleType} ≥ {b.threshold} · {b.grants.length} granted</p>
+                    {b.description && <p className="text-sm text-foreground/80 mt-0.5">{b.description}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">Rule: {b.ruleType} ≥ {b.threshold} · {b.grants.length} granted</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <button onClick={() => toggle(b)} className="text-muted-foreground hover:text-foreground">
