@@ -7,24 +7,30 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Undo2, Crown, Trophy, Shield, Clock } from "lucide-react";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { Undo2, Crown, Trophy, Shield, Clock, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OpenPlaySection } from "./open-play";
+import { useLocation } from "wouter";
 
 interface BracketProps {
   tournament: TournamentFull;
   hostToken: string | null;
 }
 
+type TabId = "bracket" | "openplay";
+
 export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const isHost = !!hostToken;
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<TabId>("bracket");
   const updateMatch = useUpdateMatch();
   const undoMatch = useUndoLastMatch();
 
   const getPlayer = (id?: string | null) =>
     id ? (tournament.players.find((p) => p.id === id) ?? null) : null;
 
-  /** Display name: teamName → "First L." */
   const displayName = (id?: string | null): string | null => {
     const p = getPlayer(id);
     if (!p) return null;
@@ -112,12 +118,10 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     };
   }, [tournament.matches]);
 
-  // ── Match history ─────────────────────────────────────────────────────────
   const completedMatches = useMemo(() => {
     return [...tournament.matches]
       .filter((m) => m.status === "completed" && !m.isBye)
       .sort((a, b) => {
-        // Sort by completedAt desc if available, else by round + matchNumber desc
         if (a.completedAt && b.completedAt) {
           return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
         }
@@ -133,8 +137,14 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     return `LB R${m.round}`;
   };
 
+  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
+    { id: "bracket", label: "Bracket", icon: <Trophy className="w-3.5 h-3.5" /> },
+    { id: "openplay", label: "Open Play", icon: <Users className="w-3.5 h-3.5" /> },
+  ];
+
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-6 w-full">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary">
@@ -144,128 +154,160 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
             Double Elimination · Active
           </p>
         </div>
-        {isHost && (
+        {isHost && activeTab === "bracket" && (
           <Button variant="outline" size="sm" onClick={handleUndo} disabled={undoMatch.isPending}>
             <Undo2 className="w-4 h-4 mr-2" /> Undo Last
           </Button>
         )}
       </div>
 
-      {/* Winner Bracket */}
-      <BracketSection
-        title="Winner's Bracket"
-        icon={<Trophy className="w-4 h-4 text-primary" />}
-        rounds={wbRounds}
-        displayName={displayName}
-        isHost={isHost}
-        onSetWinner={handleSetWinner}
-        isPending={updateMatch.isPending}
-        accentClass="border-primary/40"
-      />
+      {/* Tabs */}
+      <div className="flex gap-1 bg-muted/40 p-1 rounded-xl w-fit">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === tab.id
+                ? "bg-card shadow text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Loser Bracket */}
-      {lbRounds.length > 0 && (
-        <BracketSection
-          title="Loser's Bracket"
-          icon={<Shield className="w-4 h-4 text-blue-400" />}
-          rounds={lbRounds}
-          displayName={displayName}
-          isHost={isHost}
-          onSetWinner={handleSetWinner}
-          isPending={updateMatch.isPending}
-          accentClass="border-blue-500/40"
-          dimByes
-        />
-      )}
+      {/* Bracket Tab */}
+      {activeTab === "bracket" && (
+        <>
+          <BracketSection
+            title="Winner's Bracket"
+            icon={<Trophy className="w-4 h-4 text-primary" />}
+            rounds={wbRounds}
+            tournament={tournament}
+            displayName={displayName}
+            isHost={isHost}
+            onSetWinner={handleSetWinner}
+            isPending={updateMatch.isPending}
+            accentClass="border-primary/40"
+            onPlayerClick={(id) => setLocation(`/player/${id}`)}
+          />
 
-      {/* Grand Finals */}
-      {gfMatches.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-yellow-500" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-yellow-500">Grand Finals</h2>
-          </div>
-          <div className="flex flex-wrap gap-6">
-            {gfMatches.map((m) => (
-              <div key={m.id} className="min-w-[280px] max-w-sm flex-1">
-                <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
-                  {m.bracket === "grand_finals_reset" ? "If Necessary" : "Grand Finals"}
-                </p>
-                <MatchCard
-                  match={m}
-                  displayName={displayName}
-                  isHost={isHost}
-                  onSetWinner={handleSetWinner}
-                  isPending={updateMatch.isPending}
-                  isGrandFinal
-                />
+          {lbRounds.length > 0 && (
+            <BracketSection
+              title="Loser's Bracket"
+              icon={<Shield className="w-4 h-4 text-blue-400" />}
+              rounds={lbRounds}
+              tournament={tournament}
+              displayName={displayName}
+              isHost={isHost}
+              onSetWinner={handleSetWinner}
+              isPending={updateMatch.isPending}
+              accentClass="border-blue-500/40"
+              dimByes
+              onPlayerClick={(id) => setLocation(`/player/${id}`)}
+            />
+          )}
+
+          {gfMatches.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-yellow-500" />
+                <h2 className="text-sm font-bold uppercase tracking-widest text-yellow-500">Grand Finals</h2>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="flex flex-wrap gap-6">
+                {gfMatches.map((m) => (
+                  <div key={m.id} className="min-w-[280px] max-w-sm flex-1">
+                    <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      {m.bracket === "grand_finals_reset" ? "If Necessary" : "Grand Finals"}
+                    </p>
+                    <MatchCard
+                      match={m}
+                      tournament={tournament}
+                      displayName={displayName}
+                      isHost={isHost}
+                      onSetWinner={handleSetWinner}
+                      isPending={updateMatch.isPending}
+                      isGrandFinal
+                      onPlayerClick={(id) => setLocation(`/player/${id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {completedMatches.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  Match History
+                </h2>
+              </div>
+              <div className="bg-muted/10 border border-border/30 rounded-2xl divide-y divide-border/30">
+                {completedMatches.map((m) => {
+                  const winner = displayName(m.winnerId);
+                  const loser = displayName(
+                    m.playerOneId === m.winnerId ? m.playerTwoId : m.playerOneId
+                  );
+                  const hasScore = m.scoreOne !== null || m.scoreTwo !== null;
+                  const winnerScore = m.playerOneId === m.winnerId ? m.scoreOne : m.scoreTwo;
+                  const loserScore = m.playerOneId === m.winnerId ? m.scoreTwo : m.scoreOne;
+                  return (
+                    <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                          {bracketLabel(m)}
+                        </span>
+                        <span className="font-bold text-sm truncate">
+                          <span className="text-primary">{winner}</span>
+                          <span className="text-muted-foreground mx-1.5">beat</span>
+                          <span className="text-muted-foreground">{loser}</span>
+                        </span>
+                      </div>
+                      {hasScore && (
+                        <span className="font-mono font-bold text-sm text-muted-foreground shrink-0">
+                          {winnerScore ?? "–"}–{loserScore ?? "–"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Match History */}
-      {completedMatches.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-              Match History
-            </h2>
-          </div>
-          <div className="bg-muted/10 border border-border/30 rounded-2xl divide-y divide-border/30">
-            {completedMatches.map((m) => {
-              const winner = displayName(m.winnerId);
-              const loser = displayName(
-                m.playerOneId === m.winnerId ? m.playerTwoId : m.playerOneId
-              );
-              const hasScore = m.scoreOne !== null || m.scoreTwo !== null;
-              const winnerScore = m.playerOneId === m.winnerId ? m.scoreOne : m.scoreTwo;
-              const loserScore = m.playerOneId === m.winnerId ? m.scoreTwo : m.scoreOne;
-              return (
-                <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-4">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-                      {bracketLabel(m)}
-                    </span>
-                    <span className="font-bold text-sm truncate">
-                      <span className="text-primary">{winner}</span>
-                      <span className="text-muted-foreground mx-1.5">beat</span>
-                      <span className="text-muted-foreground">{loser}</span>
-                    </span>
-                  </div>
-                  {hasScore && (
-                    <span className="font-mono font-bold text-sm text-muted-foreground shrink-0">
-                      {winnerScore ?? "–"}–{loserScore ?? "–"}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* Open Play Tab */}
+      {activeTab === "openplay" && (
+        <OpenPlaySection tournamentId={tournament.id} hostToken={hostToken} />
       )}
     </div>
   );
 }
 
-// ── BracketSection ──────────────────────────────────────────────────────────
+// ── BracketSection ────────────────────────────────────────────────────────────
 
 interface BracketSectionProps {
   title: string;
   icon: React.ReactNode;
   rounds: { round: number; label: string; matches: Match[] }[];
+  tournament: TournamentFull;
   displayName: (id?: string | null) => string | null;
   isHost: boolean;
   onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
   accentClass: string;
   dimByes?: boolean;
+  onPlayerClick: (id: string) => void;
 }
 
 function BracketSection({
-  title, icon, rounds, displayName, isHost, onSetWinner, isPending, accentClass, dimByes,
+  title, icon, rounds, tournament, displayName, isHost, onSetWinner, isPending, accentClass, dimByes, onPlayerClick,
 }: BracketSectionProps) {
   if (rounds.length === 0) return null;
   return (
@@ -287,11 +329,13 @@ function BracketSection({
                     <MatchCard
                       key={m.id}
                       match={m}
+                      tournament={tournament}
                       displayName={displayName}
                       isHost={isHost}
                       onSetWinner={onSetWinner}
                       isPending={isPending}
                       accentClass={accentClass}
+                      onPlayerClick={onPlayerClick}
                     />
                   )
                 )}
@@ -304,21 +348,23 @@ function BracketSection({
   );
 }
 
-// ── MatchCard ───────────────────────────────────────────────────────────────
+// ── MatchCard ─────────────────────────────────────────────────────────────────
 
 interface MatchCardProps {
   match: Match;
+  tournament: TournamentFull;
   displayName: (id?: string | null) => string | null;
   isHost: boolean;
   onSetWinner: (matchId: string, winnerId: string, s1?: number, s2?: number) => void;
   isPending: boolean;
   accentClass?: string;
   isGrandFinal?: boolean;
+  onPlayerClick: (id: string) => void;
 }
 
 function MatchCard({
-  match, displayName, isHost, onSetWinner, isPending,
-  accentClass = "border-primary/40", isGrandFinal,
+  match, tournament, displayName, isHost, onSetWinner, isPending,
+  accentClass = "border-primary/40", isGrandFinal, onPlayerClick,
 }: MatchCardProps) {
   const [scoreOne, setScoreOne] = useState<string>(
     match.scoreOne !== null && match.scoreOne !== undefined ? String(match.scoreOne) : ""
@@ -333,13 +379,15 @@ function MatchCard({
   const isPendingStatus = match.status === "pending";
 
   const canPickWinner = isHost && isActive && match.playerOneId && match.playerTwoId;
-
   const parseScore = (s: string) => { const n = parseInt(s, 10); return isNaN(n) ? undefined : n; };
 
   const rowBg = (playerId: string | null | undefined) => {
     if (!playerId || !isDone) return "";
     return match.winnerId === playerId ? "bg-primary/10" : "opacity-40 grayscale";
   };
+
+  const getPlayer = (id?: string | null) =>
+    id ? tournament.players.find((p) => p.id === id) ?? null : null;
 
   return (
     <div
@@ -369,19 +417,22 @@ function MatchCard({
 
       {/* Player 1 */}
       <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerOneId)}`}>
-        <NameSlot
+        <PlayerSlot
+          player={getPlayer(match.playerOneId)}
           name={displayName(match.playerOneId)}
           isWinner={isDone && match.winnerId === match.playerOneId}
           isGrandFinal={isGrandFinal}
           label={isGrandFinal ? "WB" : undefined}
+          onPlayerClick={onPlayerClick}
         />
         {canPickWinner && (
-          <WinButton onClick={() => match.playerOneId && onSetWinner(match.id, match.playerOneId, parseScore(scoreOne), parseScore(scoreTwo))} disabled={isPending} />
+          <WinButton
+            onClick={() => match.playerOneId && onSetWinner(match.id, match.playerOneId, parseScore(scoreOne), parseScore(scoreTwo))}
+            disabled={isPending}
+          />
         )}
         {isDone && match.winnerId === match.playerOneId && (
-          isGrandFinal
-            ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
-            : <CheckMark />
+          isGrandFinal ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" /> : <CheckMark />
         )}
       </div>
 
@@ -392,19 +443,22 @@ function MatchCard({
         <div className="p-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/30">Bye</div>
       ) : (
         <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerTwoId)}`}>
-          <NameSlot
+          <PlayerSlot
+            player={getPlayer(match.playerTwoId)}
             name={displayName(match.playerTwoId)}
             isWinner={isDone && match.winnerId === match.playerTwoId}
             isGrandFinal={isGrandFinal}
             label={isGrandFinal ? "LB" : undefined}
+            onPlayerClick={onPlayerClick}
           />
           {canPickWinner && (
-            <WinButton onClick={() => match.playerTwoId && onSetWinner(match.id, match.playerTwoId, parseScore(scoreOne), parseScore(scoreTwo))} disabled={isPending} />
+            <WinButton
+              onClick={() => match.playerTwoId && onSetWinner(match.id, match.playerTwoId, parseScore(scoreOne), parseScore(scoreTwo))}
+              disabled={isPending}
+            />
           )}
           {isDone && match.winnerId === match.playerTwoId && (
-            isGrandFinal
-              ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
-              : <CheckMark />
+            isGrandFinal ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" /> : <CheckMark />
           )}
         </div>
       )}
@@ -412,20 +466,38 @@ function MatchCard({
   );
 }
 
-// ── Small components ────────────────────────────────────────────────────────
+// ── Small components ──────────────────────────────────────────────────────────
 
-function NameSlot({ name, isWinner, isGrandFinal, label }: { name: string | null; isWinner: boolean; isGrandFinal?: boolean; label?: string }) {
+function PlayerSlot({
+  player, name, isWinner, isGrandFinal, label, onPlayerClick,
+}: {
+  player: TournamentFull["players"][0] | null;
+  name: string | null;
+  isWinner: boolean;
+  isGrandFinal?: boolean;
+  label?: string;
+  onPlayerClick: (id: string) => void;
+}) {
   return (
-    <div className="font-bold truncate flex items-center gap-2 min-w-0 flex-1">
+    <div className="font-bold flex items-center gap-2 min-w-0 flex-1">
       {label && (
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
           {label}
         </span>
       )}
-      {name
-        ? <span className={`truncate ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>{name}</span>
-        : <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
-      }
+      {player ? (
+        <button
+          onClick={() => onPlayerClick(player.id)}
+          className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity text-left"
+        >
+          <PlayerAvatar player={player} size="sm" />
+          <span className={`truncate text-sm ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>
+            {name}
+          </span>
+        </button>
+      ) : (
+        <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
+      )}
     </div>
   );
 }

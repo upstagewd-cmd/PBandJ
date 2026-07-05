@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TournamentPage from "@/pages/tournament";
+import PlayerStatsPage from "@/pages/player-stats";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
+      <Route path="/player/:playerId" component={PlayerStatsPage} />
       <Route component={NotFound} />
     </Switch>
   );

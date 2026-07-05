@@ -30,7 +30,7 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
   const { toast } = useToast();
 
   const { data, isLoading, refetch } = useGetOpenPlayPool(tournamentId, {
-    query: { refetchInterval: 8000 },
+    query: { refetchInterval: 8000, queryKey: ["openPlayPool", tournamentId] },
   });
 
   const logMatch = useLogOpenPlayMatch();
