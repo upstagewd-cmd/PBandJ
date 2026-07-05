@@ -4,7 +4,7 @@ import { Show, useUser, useClerk } from "@clerk/react";
 import { useCreateTournament, useCreateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock } from "lucide-react";
+import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield } from "lucide-react";
 import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
 
 function RecentGames() {
@@ -233,6 +233,17 @@ export default function Home() {
 
         {/* Recent Games */}
         <RecentGames />
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <button
+          onClick={() => setLocation("/admin")}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+        >
+          <Shield className="w-3 h-3" />
+          Admin
+        </button>
       </div>
     </div>
   );
