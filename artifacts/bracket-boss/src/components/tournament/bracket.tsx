@@ -151,7 +151,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
             {tournament.name}
           </h1>
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
-            Double Elimination · Active
+            Active
           </p>
         </div>
         {isHost && activeTab === "bracket" && (

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
-import { eq, or } from "drizzle-orm";
+import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
+import { eq, or, and } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 
 export const profileRouter = Router();
@@ -32,6 +33,7 @@ profileRouter.get("/me", async (req, res) => {
         tournamentWins: 0,
         tournamentsPlayed: 0,
         recentMatches: [],
+        badges: [],
       });
       return;
     }
@@ -63,13 +65,10 @@ profileRouter.get("/me", async (req, res) => {
     const totalLosses = completedMatches.length - totalWins;
     const winPct = completedMatches.length > 0 ? Math.round((totalWins / completedMatches.length) * 100) : 0;
 
-    // Use highest ELO across all player records
     const eloRating = Math.max(...players.map((p) => p.eloRating ?? 1200));
     const rank = getRank(eloRating);
-
     const tournamentsPlayed = new Set(players.map((p) => p.tournamentId)).size;
 
-    // Recent matches (last 20)
     const recentCompleted = completedMatches
       .filter((m) => m.completedAt)
       .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
@@ -81,7 +80,7 @@ profileRouter.get("/me", async (req, res) => {
       return myId === m.playerOneId ? m.playerTwoId : m.playerOneId;
     }).filter(Boolean) as string[];
 
-    const [tournaments, opponentPlayers] = await Promise.all([
+    const [tournaments, opponentPlayers, allBadgeRows] = await Promise.all([
       tournamentIds.length
         ? db.select().from(tournamentsTable).where(
             tournamentIds.length === 1
@@ -96,7 +95,32 @@ profileRouter.get("/me", async (req, res) => {
               : or(...opponentIds.map((id) => eq(playersTable.id, id)))
           )
         : Promise.resolve([]),
+      db
+        .select({ badge: badgesTable, playerId: playerBadgesTable.playerId })
+        .from(playerBadgesTable)
+        .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
+        .where(
+          and(
+            or(...playerIds.map((pid) => eq(playerBadgesTable.playerId, pid))),
+            eq(badgesTable.enabled, true)
+          )
+        ),
     ]);
+
+    // Deduplicate badges by badge id across all player records
+    const seenBadgeIds = new Set<string>();
+    const badges = allBadgeRows
+      .filter((r) => {
+        if (seenBadgeIds.has(r.badge.id)) return false;
+        seenBadgeIds.add(r.badge.id);
+        return true;
+      })
+      .map((r) => ({
+        id: r.badge.id,
+        name: r.badge.name,
+        icon: r.badge.icon,
+        description: r.badge.description,
+      }));
 
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
     const oppMap = new Map(opponentPlayers.map((p) => [p.id, p]));
@@ -131,6 +155,7 @@ profileRouter.get("/me", async (req, res) => {
       tournamentWins,
       tournamentsPlayed,
       recentMatches,
+      badges,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get profile");

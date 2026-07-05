@@ -133,6 +133,20 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
+            {!isLoading && profile && (profile as any).badges?.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
+                <div className="flex flex-wrap gap-2">
+                  {((profile as any).badges as Array<{ id: string; name: string; icon: string; description: string }>).map((b) => (
+                    <div key={b.id} title={b.description}
+                      className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+                      <span className="text-base leading-none">{b.icon}</span>
+                      <span className="text-xs font-bold text-primary">{b.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground/60 text-center">
               Tap your photo to change it
             </p>

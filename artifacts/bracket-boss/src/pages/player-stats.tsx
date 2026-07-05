@@ -27,6 +27,7 @@ export default function PlayerStatsPage() {
   }
 
   const { player, wins, losses, matchesPlayed, winPct, tournamentWins, recentMatches } = stats;
+  const badges = (stats as any).badges as Array<{ id: string; name: string; icon: string; description: string }> ?? [];
 
   const rankTitle = (player as any).rankTitle ?? "New Seed";
   const rankEmoji = (player as any).rankEmoji ?? "🌱";
@@ -34,7 +35,6 @@ export default function PlayerStatsPage() {
 
   return (
     <div className="min-h-[100dvh] w-full px-4 py-8 max-w-2xl mx-auto space-y-8">
-      {/* Back */}
       <Button variant="ghost" size="sm" onClick={() => history.back()} className="gap-2">
         <ArrowLeft className="w-4 h-4" /> Back
       </Button>
@@ -57,6 +57,21 @@ export default function PlayerStatsPage() {
             </div>
           </div>
         </div>
+
+        {badges.length > 0 && (
+          <div className="pt-1 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
+            <div className="flex flex-wrap gap-2">
+              {badges.map((b) => (
+                <div key={b.id} title={b.description}
+                  className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+                  <span className="text-base leading-none">{b.icon}</span>
+                  <span className="text-xs font-bold text-primary">{b.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats grid */}

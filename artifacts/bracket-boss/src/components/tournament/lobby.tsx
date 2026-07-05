@@ -173,7 +173,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           <h1 className="text-4xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
         )}
         <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
-          Double Elimination · Lobby
+          Lobby
         </p>
       </div>
 
@@ -384,7 +384,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
               </div>
               {tournament.players.length < 4 && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Double elimination requires at least 4 players ({4 - tournament.players.length} more needed)
+                  Requires at least 4 players ({4 - tournament.players.length} more needed)
                 </p>
               )}
             </div>
