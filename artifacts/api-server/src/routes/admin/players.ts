@@ -26,7 +26,7 @@ adminPlayersRouter.get("/", async (req, res) => {
 
 adminPlayersRouter.patch("/:playerId", async (req, res) => {
   const { playerId } = req.params;
-  const { firstName, lastName, partnerName, teamName, eloRating, avatarUrl } =
+  const { firstName, lastName, partnerName, teamName, eloRating, avatarUrl, skillLevel } =
     req.body as Record<string, unknown>;
 
   const updates: Record<string, unknown> = {};
@@ -36,6 +36,7 @@ adminPlayersRouter.patch("/:playerId", async (req, res) => {
   if (teamName !== undefined) updates.teamName = teamName;
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
   if (eloRating !== undefined) updates.eloRating = Number(eloRating);
+  if (skillLevel !== undefined) updates.skillLevel = skillLevel;
 
   const [updated] = await db
     .update(playersTable)

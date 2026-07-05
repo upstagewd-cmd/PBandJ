@@ -183,30 +183,53 @@ export default function ProfilePage() {
           {!isLoading && profile && (
             <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Skill Level</p>
-              <div className="grid grid-cols-3 gap-2">
-                {SKILL_LEVELS.map((s) => {
-                  const current = (profile as any).skillLevel;
-                  const selected = current === s.value;
-                  return (
-                    <button
-                      key={s.value}
-                      onClick={() => setSkillLevel(s.value)}
-                      disabled={savingSkill || selected}
-                      className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
-                        selected
-                          ? "border-primary bg-primary/10"
-                          : "border-border/50 bg-muted/30 hover:border-border"
-                      }`}
-                    >
-                      <span className="text-xl">{s.emoji}</span>
-                      <span className="text-xs font-bold">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {!(profile as any).skillLevel && (
-                <p className="text-xs text-muted-foreground text-center">Select your skill level to seed your starting rating</p>
+              {(profile as any).skillLevel ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SKILL_LEVELS.map((s) => {
+                      const selected = (profile as any).skillLevel === s.value;
+                      return (
+                        <div
+                          key={s.value}
+                          className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
+                            selected
+                              ? "border-primary bg-primary/10"
+                              : "border-border/30 bg-muted/10 opacity-40"
+                          }`}
+                        >
+                          <span className="text-xl">{s.emoji}</span>
+                          <span className="text-xs font-bold">{s.label}</span>
+                          <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground/60 text-center">
+                    To change your skill level, ask an admin.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SKILL_LEVELS.map((s) => {
+                      return (
+                        <button
+                          key={s.value}
+                          onClick={() => setSkillLevel(s.value)}
+                          disabled={savingSkill}
+                          className="flex flex-col items-center gap-1 rounded-xl p-3 border-2 border-border/50 bg-muted/30 hover:border-primary/50 hover:bg-primary/5 transition-all"
+                        >
+                          <span className="text-xl">{s.emoji}</span>
+                          <span className="text-xs font-bold">{s.label}</span>
+                          <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Set your skill level — you won't be able to change it yourself afterward.
+                  </p>
+                </>
               )}
             </div>
           )}

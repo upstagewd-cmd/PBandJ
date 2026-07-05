@@ -6,8 +6,9 @@ import { useTournamentSocket } from "@/hooks/use-tournament-socket";
 import { TournamentLobby } from "@/components/tournament/lobby";
 import { TournamentBracket } from "@/components/tournament/bracket";
 import { TournamentChampionship } from "@/components/tournament/championship";
-import { Loader2, WifiOff, User } from "lucide-react";
+import { Loader2, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import { upsertHistory } from "@/lib/history";
 
 function UserBadge() {
@@ -72,7 +73,10 @@ export default function TournamentPage() {
     }
   }, [tournament?.id, tournament?.name, tournament?.status]);
 
-  const { isConnected } = useTournamentSocket(tournamentId);
+  const queryClient = useQueryClient();
+  const handleRefresh = () => queryClient.refetchQueries({ queryKey: getGetTournamentQueryKey(tournamentId) });
+
+  useTournamentSocket(tournamentId);
 
   if (isLoading) {
     return (
@@ -120,17 +124,13 @@ export default function TournamentPage() {
               Host
             </span>
           )}
-          {isConnected ? (
-            <div className="flex items-center text-xs font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
-              Live
-            </div>
-          ) : (
-            <div className="flex items-center text-xs font-bold text-muted-foreground uppercase tracking-widest bg-muted px-3 py-1.5 rounded-full">
-              <WifiOff className="w-3 h-3 mr-2" />
-              Reconnecting...
-            </div>
-          )}
+          <button
+            onClick={handleRefresh}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </header>
 

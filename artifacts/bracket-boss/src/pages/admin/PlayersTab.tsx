@@ -5,6 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Search, Pencil, Trash2, GitMerge, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const SKILL_LEVELS = [
+  { value: "beginner", label: "Beginner", emoji: "🟢" },
+  { value: "intermediate", label: "Intermediate", emoji: "🔵" },
+  { value: "advanced", label: "Advanced", emoji: "🔴" },
+] as const;
+
 interface Player {
   id: string;
   firstName: string;
@@ -12,6 +18,7 @@ interface Player {
   partnerName: string | null;
   teamName: string | null;
   eloRating: number;
+  skillLevel: string | null;
   avatarUrl: string | null;
   clerkUserId: string | null;
   tournamentId: string;
@@ -50,7 +57,14 @@ export function PlayersTab({ code }: { code: string }) {
 
   const startEdit = (p: Player) => {
     setEditId(p.id);
-    setEditForm({ firstName: p.firstName, lastName: p.lastName, partnerName: p.partnerName ?? "", eloRating: p.eloRating, avatarUrl: p.avatarUrl ?? "" });
+    setEditForm({
+      firstName: p.firstName,
+      lastName: p.lastName,
+      partnerName: p.partnerName ?? "",
+      eloRating: p.eloRating,
+      skillLevel: p.skillLevel ?? "",
+      avatarUrl: p.avatarUrl ?? "",
+    });
   };
 
   const saveEdit = async () => {
@@ -91,6 +105,11 @@ export function PlayersTab({ code }: { code: string }) {
       .then(() => { toast({ title: "Players merged" }); load(); })
       .catch((e) => toast({ title: "Error", description: String(e), variant: "destructive" }))
       .finally(() => { setMergeMode(false); setMergeA(null); });
+  };
+
+  const skillLabel = (level: string | null) => {
+    const found = SKILL_LEVELS.find((s) => s.value === level);
+    return found ? `${found.emoji} ${found.label}` : "—";
   };
 
   if (loading) return <p className="text-muted-foreground p-4">Loading players…</p>;
@@ -137,6 +156,26 @@ export function PlayersTab({ code }: { code: string }) {
                     <label className="text-xs text-muted-foreground w-12 shrink-0">ELO</label>
                     <Input type="number" value={editForm.eloRating ?? 1200} onChange={(e) => setEditForm((f) => ({ ...f, eloRating: Number(e.target.value) }))} />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Skill Level</label>
+                    <div className="flex gap-2">
+                      {SKILL_LEVELS.map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setEditForm((f) => ({ ...f, skillLevel: s.value }))}
+                          className={`flex-1 flex flex-col items-center gap-0.5 rounded-lg p-2 border-2 text-xs font-bold transition-all ${
+                            editForm.skillLevel === s.value
+                              ? "border-primary bg-primary/10"
+                              : "border-border/50 bg-muted/30 hover:border-border"
+                          }`}
+                        >
+                          <span>{s.emoji}</span>
+                          <span>{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveEdit} disabled={saving}><Check className="w-3 h-3 mr-1" />Save</Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancel</Button>
@@ -149,7 +188,9 @@ export function PlayersTab({ code }: { code: string }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate">{p.firstName} {p.lastName}{p.partnerName ? ` + ${p.partnerName}` : ""}</p>
-                    <p className="text-xs text-muted-foreground">{p.rank.emoji} {p.rank.title} · {Math.round(p.eloRating)} ELO</p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.rank.emoji} {p.rank.title} · {Math.round(p.eloRating)} ELO · {skillLabel(p.skillLevel)}
+                    </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {mergeMode ? (
