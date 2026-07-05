@@ -581,17 +581,14 @@ export const GetOpenPlayPoolParams = zod.object({
 export const GetOpenPlayPoolResponse = zod.object({
   "pool": zod.array(zod.object({
   "id": zod.string(),
-  "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "partnerName": zod.string().nullish(),
   "teamName": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "eloRating": zod.number(),
-  "rankTitle": zod.string().nullish(),
-  "rankEmoji": zod.string().nullish(),
-  "seed": zod.number(),
-  "joinedAt": zod.coerce.date()
+  "rankTitle": zod.string().nullable(),
+  "rankEmoji": zod.string().nullable(),
+  "partnerId": zod.string().nullish()
 })),
   "recentMatches": zod.array(zod.object({
   "id": zod.string(),
@@ -649,17 +646,14 @@ export const LogOpenPlayMatchBody = zod.object({
 export const LogOpenPlayMatchResponse = zod.object({
   "pool": zod.array(zod.object({
   "id": zod.string(),
-  "tournamentId": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "partnerName": zod.string().nullish(),
   "teamName": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "eloRating": zod.number(),
-  "rankTitle": zod.string().nullish(),
-  "rankEmoji": zod.string().nullish(),
-  "seed": zod.number(),
-  "joinedAt": zod.coerce.date()
+  "rankTitle": zod.string().nullable(),
+  "rankEmoji": zod.string().nullable(),
+  "partnerId": zod.string().nullish()
 })),
   "recentMatches": zod.array(zod.object({
   "id": zod.string(),
@@ -727,6 +721,8 @@ export const GetSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -744,6 +740,8 @@ export const GetSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -756,6 +754,8 @@ export const GetSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -787,6 +787,8 @@ export const UpdateSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -804,6 +806,8 @@ export const UpdateSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -816,6 +820,8 @@ export const UpdateSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -834,7 +840,9 @@ export const AddSessionPlayerParams = zod.object({
 export const AddSessionPlayerBody = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "teamName": zod.string().optional()
+  "teamName": zod.string().optional(),
+  "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  "clerkUserId": zod.string().optional()
 })
 
 export const AddSessionPlayerResponse = zod.object({
@@ -848,6 +856,8 @@ export const AddSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -865,6 +875,8 @@ export const AddSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -877,6 +889,8 @@ export const AddSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -914,6 +928,8 @@ export const LogSessionMatchResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -931,6 +947,8 @@ export const LogSessionMatchResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -943,6 +961,8 @@ export const LogSessionMatchResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -975,6 +995,8 @@ export const PairSessionPlayersResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -992,6 +1014,8 @@ export const PairSessionPlayersResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1004,6 +1028,8 @@ export const PairSessionPlayersResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1035,6 +1061,8 @@ export const UnpairSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1052,6 +1080,8 @@ export const UnpairSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1064,6 +1094,8 @@ export const UnpairSessionPlayerResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1094,6 +1126,8 @@ export const ReshuffleSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1111,6 +1145,8 @@ export const ReshuffleSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),
@@ -1123,6 +1159,73 @@ export const ReshuffleSessionResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "playedAt": zod.coerce.date()
+}))
+})
+
+
+export const AutoPairSessionParams = zod.object({
+  "sessionId": zod.coerce.string()
+})
+
+export const AutoPairSessionBody = zod.object({
+  "hostToken": zod.string()
+})
+
+export const AutoPairSessionResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "recentMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "team1Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "team2Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
   "partnerId": zod.string().nullish(),
   "eloRating": zod.number(),
   "rankTitle": zod.string(),

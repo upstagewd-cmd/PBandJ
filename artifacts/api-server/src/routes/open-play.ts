@@ -79,9 +79,12 @@ async function getOpenPlayState(tournamentId: string) {
 
   return {
     pool: pool
-      .map((e) => playerMap.get(e.playerId))
-      .filter(Boolean)
-      .map(serializePlayer),
+      .map((e) => {
+        const p = playerMap.get(e.playerId);
+        if (!p) return null;
+        return { ...serializePlayer(p), partnerId: e.partnerId ?? null };
+      })
+      .filter(Boolean),
     recentMatches,
   };
 }

@@ -21,6 +21,7 @@ import type {
 
 import type {
   AddSessionPlayerBody,
+  AutoPairBody,
   GenerateTeamsBody,
   HealthStatus,
   HostTokenInput,
@@ -1882,6 +1883,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getReshuffleSessionMutationOptions(options));
+    }
+
+export const getAutoPairSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/auto-pair`
+}
+
+export const autoPairSession = async (sessionId: string,
+    autoPairBody: AutoPairBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getAutoPairSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(autoPairBody)
+  }
+);}
+
+
+
+
+export const getAutoPairSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoPairSession>>, TError,{sessionId: string;data: BodyType<AutoPairBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof autoPairSession>>, TError,{sessionId: string;data: BodyType<AutoPairBody>}, TContext> => {
+
+const mutationKey = ['autoPairSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof autoPairSession>>, {sessionId: string;data: BodyType<AutoPairBody>}> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  autoPairSession(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AutoPairSessionMutationResult = NonNullable<Awaited<ReturnType<typeof autoPairSession>>>
+    export type AutoPairSessionMutationBody = BodyType<AutoPairBody>
+    export type AutoPairSessionMutationError = ErrorType<unknown>
+
+    export const useAutoPairSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoPairSession>>, TError,{sessionId: string;data: BodyType<AutoPairBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof autoPairSession>>,
+        TError,
+        {sessionId: string;data: BodyType<AutoPairBody>},
+        TContext
+      > => {
+      return useMutation(getAutoPairSessionMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {

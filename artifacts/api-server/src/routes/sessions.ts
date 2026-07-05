@@ -1,10 +1,16 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
-import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
+import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody } from "@workspace/api-zod";
+import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
+
+const SKILL_ELO: Record<string, number> = {
+  beginner: 900,
+  intermediate: 1200,
+  advanced: 1500,
+};
 
 export const sessionsRouter = Router();
 
@@ -33,6 +39,8 @@ function serializePlayer(p: PlayerRow) {
     firstName: p.firstName,
     lastName: p.lastName,
     teamName: p.teamName ?? null,
+    skillLevel: p.skillLevel ?? null,
+    clerkUserId: p.clerkUserId ?? null,
     partnerId: p.partnerId ?? null,
     eloRating: p.eloRating,
     rankTitle: rank.title,
@@ -155,13 +163,28 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
     const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
     if (!session) { res.status(404).json({ error: "Session not found" }); return; }
 
+    // Compute starting ELO: Clerk user history > skill level > default 1200
+    let startingElo = 1200;
+    if (body.clerkUserId) {
+      const userPlayers = await db.select().from(playersTable).where(eq(playersTable.clerkUserId, body.clerkUserId));
+      if (userPlayers.length > 0) {
+        startingElo = Math.round(userPlayers.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / userPlayers.length);
+      } else if (body.skillLevel) {
+        startingElo = SKILL_ELO[body.skillLevel] ?? 1200;
+      }
+    } else if (body.skillLevel) {
+      startingElo = SKILL_ELO[body.skillLevel] ?? 1200;
+    }
+
     await db.insert(sessionPlayersTable).values({
       id: randomUUID(),
       sessionId,
       firstName: body.firstName.trim(),
       lastName: body.lastName.trim(),
       teamName: body.teamName?.trim() || null,
-      eloRating: 1200,
+      skillLevel: body.skillLevel ?? null,
+      clerkUserId: body.clerkUserId ?? null,
+      eloRating: startingElo,
     });
 
     const full = await getSessionFull(sessionId);
@@ -226,6 +249,40 @@ sessionsRouter.post("/:sessionId/matches", async (req: Request<{ sessionId: stri
   } catch (err) {
     req.log.error({ err }, "Failed to log session match");
     res.status(500).json({ error: "Failed to log match" });
+  }
+});
+
+// ─── POST /api/sessions/:sessionId/auto-pair ─────────────────────────────────
+
+sessionsRouter.post("/:sessionId/auto-pair", async (req: Request<{ sessionId: string }>, res) => {
+  try {
+    const body = AutoPairSessionBody.parse(req.body);
+    const { sessionId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    // Clear all existing pairings
+    await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.sessionId, sessionId));
+
+    // Sort by ELO descending and snake-pair (strongest + weakest, etc.)
+    const players = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.sessionId, sessionId));
+    const sorted = [...players].sort((a, b) => b.eloRating - a.eloRating);
+    const numPairs = Math.floor(sorted.length / 2);
+
+    for (let i = 0; i < numPairs; i++) {
+      const p1 = sorted[i];
+      const p2 = sorted[sorted.length - 1 - i];
+      await db.update(sessionPlayersTable).set({ partnerId: p2.id }).where(eq(sessionPlayersTable.id, p1.id));
+      await db.update(sessionPlayersTable).set({ partnerId: p1.id }).where(eq(sessionPlayersTable.id, p2.id));
+    }
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to auto-pair session");
+    res.status(500).json({ error: "Failed to auto-pair" });
   }
 });
 

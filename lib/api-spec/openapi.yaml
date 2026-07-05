@@ -608,6 +608,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/SessionFull"
 
+  /sessions/{sessionId}/auto-pair:
+    post:
+      operationId: autoPairSession
+      tags: [sessions]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutoPairBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFull"
+
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -947,6 +971,29 @@ components:
           type: ["string", "null"]
           format: date-time
 
+    OpenPlayPoolPlayer:
+      type: object
+      required: [id, firstName, lastName, eloRating, rankTitle, rankEmoji]
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        teamName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        eloRating:
+          type: number
+        rankTitle:
+          type: ["string", "null"]
+        rankEmoji:
+          type: ["string", "null"]
+        partnerId:
+          type: ["string", "null"]
+
     OpenPlayState:
       type: object
       required: [pool, recentMatches]
@@ -954,7 +1001,7 @@ components:
         pool:
           type: array
           items:
-            $ref: "#/components/schemas/Player"
+            $ref: "#/components/schemas/OpenPlayPoolPlayer"
         recentMatches:
           type: array
           items:
@@ -1129,6 +1176,10 @@ components:
           type: string
         teamName:
           type: ["string", "null"]
+        skillLevel:
+          type: ["string", "null"]
+        clerkUserId:
+          type: ["string", "null"]
         partnerId:
           type: ["string", "null"]
         eloRating:
@@ -1198,6 +1249,11 @@ components:
           type: string
         teamName:
           type: string
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        clerkUserId:
+          type: string
 
     SessionMatchInput:
       type: object
@@ -1241,6 +1297,13 @@ components:
           type: string
 
     ReshuffleBody:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+
+    AutoPairBody:
       type: object
       required: [hostToken]
       properties:

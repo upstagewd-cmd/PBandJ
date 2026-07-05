@@ -6,6 +6,7 @@ export const openPlayPoolTable = pgTable("open_play_pool", {
   id: text("id").primaryKey(),
   tournamentId: text("tournament_id").notNull(),
   playerId: text("player_id").notNull(),
+  partnerId: text("partner_id"),
   addedAt: timestamp("added_at").notNull().defaultNow(),
   status: text("status").notNull().default("available"),
 });

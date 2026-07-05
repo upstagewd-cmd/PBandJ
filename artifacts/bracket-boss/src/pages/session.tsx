@@ -9,6 +9,7 @@ import {
   usePairSessionPlayers,
   useUnpairSessionPlayer,
   useReshuffleSession,
+  useAutoPairSession,
   SessionFull,
   SessionPlayer,
 } from "@workspace/api-client-react";
@@ -139,19 +140,35 @@ function UserBadge() {
 
 // ─── Join Form ────────────────────────────────────────────────────────────────
 
+const SKILL_LEVELS = [
+  { value: "beginner", label: "Beginner", emoji: "🟢", elo: "~900" },
+  { value: "intermediate", label: "Intermediate", emoji: "🟡", elo: "~1200" },
+  { value: "advanced", label: "Advanced", emoji: "🔴", elo: "~1500" },
+] as const;
+
 function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => void }) {
-  const [first, setFirst] = useState("");
-  const [last, setLast] = useState("");
+  const { user } = useUser();
+  const [first, setFirst] = useState(() => user?.firstName ?? "");
+  const [last, setLast] = useState(() => user?.lastName ?? "");
   const [team, setTeam] = useState("");
+  const [skill, setSkill] = useState<string>("intermediate");
   const addPlayer = useAddSessionPlayer();
   const { toast } = useToast();
+
+  const isLoggedIn = !!user;
 
   const handleJoin = () => {
     if (!first.trim() || !last.trim()) return;
     addPlayer.mutate(
       {
         sessionId,
-        data: { firstName: first.trim(), lastName: last.trim(), teamName: team.trim() || undefined },
+        data: {
+          firstName: first.trim(),
+          lastName: last.trim(),
+          teamName: team.trim() || undefined,
+          skillLevel: !isLoggedIn ? (skill as "beginner" | "intermediate" | "advanced") : undefined,
+          clerkUserId: isLoggedIn ? user.id : undefined,
+        },
       },
       {
         onSuccess: () => {
@@ -200,6 +217,35 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
           onKeyDown={(e) => e.key === "Enter" && handleJoin()}
         />
       </div>
+      {isLoggedIn ? (
+        <p className="text-xs text-muted-foreground bg-muted/30 rounded-xl px-3 py-2.5">
+          ✓ Signed in — your real ELO rating will be used for skill-based pairing
+        </p>
+      ) : (
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block mb-2">
+            Skill Level
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {SKILL_LEVELS.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setSkill(s.value)}
+                className={`rounded-xl px-2 py-2.5 border text-center transition-all ${
+                  skill === s.value
+                    ? "border-primary bg-primary/10 ring-1 ring-primary"
+                    : "border-border bg-muted/20 hover:border-primary/40"
+                }`}
+              >
+                <div className="text-lg">{s.emoji}</div>
+                <div className="text-xs font-bold mt-0.5">{s.label}</div>
+                <div className="text-[10px] text-muted-foreground">{s.elo}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <Button
         className="w-full font-bold"
         onClick={handleJoin}
@@ -245,6 +291,7 @@ function PairingManager({
   const pair = usePairSessionPlayers();
   const unpair = useUnpairSessionPlayer();
   const reshuffle = useReshuffleSession();
+  const autoPair = useAutoPairSession();
   const { toast } = useToast();
 
   const pairs = derivePairs(players);
@@ -290,24 +337,53 @@ function PairingManager({
     );
   };
 
+  const handleAutoPair = () => {
+    setSelecting(null);
+    autoPair.mutate(
+      { sessionId, data: { hostToken } },
+      {
+        onSuccess: () => { onChanged(); toast({ title: "Pairs balanced by skill level!" }); },
+        onError: () => toast({ title: "Failed to auto-pair", variant: "destructive" }),
+      }
+    );
+  };
+
+  const canAutoPair = players.length >= 2;
+  const isActing = reshuffle.isPending || autoPair.isPending;
+
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
           <Users className="w-4 h-4" /> Pairings
         </h3>
-        {pairs.length > 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1.5"
-            onClick={handleReshuffle}
-            disabled={reshuffle.isPending}
-          >
-            {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
-            Reshuffle
-          </Button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {canAutoPair && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleAutoPair}
+              disabled={isActing}
+              title="Balance pairs by skill/ELO"
+            >
+              {autoPair.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>⚡</span>}
+              Auto-pair
+            </Button>
+          )}
+          {pairs.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleReshuffle}
+              disabled={isActing}
+            >
+              {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
+              Reshuffle
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Current pairs */}

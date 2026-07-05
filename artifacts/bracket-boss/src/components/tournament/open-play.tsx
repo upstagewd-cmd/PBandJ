@@ -19,6 +19,7 @@ type PoolPlayer = {
   eloRating?: number;
   rankTitle?: string | null;
   rankEmoji?: string | null;
+  partnerId?: string | null;
 };
 
 function displayName(p: PoolPlayer) {
@@ -44,6 +45,22 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
 
   const pool: PoolPlayer[] = (data?.pool ?? []) as PoolPlayer[];
   const recentMatches = data?.recentMatches ?? [];
+
+  // Group paired players; singletons remain separate
+  const pairedIds = new Set<string>();
+  const pairs: [PoolPlayer, PoolPlayer][] = [];
+  const singles: PoolPlayer[] = [];
+  for (const p of pool) {
+    if (pairedIds.has(p.id)) continue;
+    const partner = p.partnerId ? pool.find((x) => x.id === p.partnerId) : null;
+    if (partner) {
+      pairs.push([p, partner]);
+      pairedIds.add(p.id);
+      pairedIds.add(partner.id);
+    } else {
+      singles.push(p);
+    }
+  }
 
   const selectedIds = new Set([...teamOneIds, ...teamTwoIds]);
 
@@ -115,13 +132,62 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
             <p className="text-xs mt-1 opacity-60">Players join automatically after being eliminated from the bracket.</p>
           </div>
         ) : (
-          <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-2">
-            {pool.map((p) => (
+          <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+            {/* Bracket pairs */}
+            {pairs.map(([p1, p2], i) => {
+              const pairSelected = selectedIds.has(p1.id) || selectedIds.has(p2.id);
+              const onT1 = teamOneIds.includes(p1.id) || teamOneIds.includes(p2.id);
+              const onT2 = teamTwoIds.includes(p1.id) || teamTwoIds.includes(p2.id);
+              const usePair = (team: 1 | 2) => {
+                if (team === 1) setTeamOneIds([p1.id, p2.id]);
+                else setTeamTwoIds([p1.id, p2.id]);
+              };
+              return (
+                <div key={p1.id} className={`rounded-xl border p-2.5 transition-colors ${pairSelected ? "bg-primary/5 border-primary/30" : "bg-muted/20 border-border/40"}`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pair {i + 1}</span>
+                    {building && isHost && (
+                      <div className="flex gap-1 ml-auto">
+                        <button
+                          onClick={() => usePair(1)}
+                          disabled={pairSelected && !onT1}
+                          className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
+                            onT1 ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
+                          }`}
+                        >→ T1</button>
+                        <button
+                          onClick={() => usePair(2)}
+                          disabled={pairSelected && !onT2}
+                          className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
+                            onT2 ? "bg-blue-500 text-white border-blue-500" : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
+                          }`}
+                        >→ T2</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[p1, p2].map((p, j) => (
+                      <div key={p.id} className="flex items-center gap-2 flex-1 min-w-0">
+                        {j === 1 && <span className="text-muted-foreground text-xs">&amp;</span>}
+                        <PlayerAvatar player={p} size="sm" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm truncate">{p.teamName || `${p.firstName} ${p.lastName}`}</p>
+                          {p.rankTitle && <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {Math.round(p.eloRating ?? 1200)}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Singles */}
+            {singles.map((p) => (
               <div key={p.id} className={`flex items-center gap-3 rounded-xl p-2.5 transition-colors ${selectedIds.has(p.id) ? "bg-primary/10" : "bg-muted/30"}`}>
                 <PlayerAvatar player={p} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm truncate">{p.teamName || `${p.firstName} ${p.lastName}`}</p>
-                  {(p.rankTitle) && (
+                  {p.rankTitle && (
                     <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle} · {Math.round(p.eloRating ?? 1200)} ELO</p>
                   )}
                 </div>

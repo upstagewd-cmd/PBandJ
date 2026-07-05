@@ -181,11 +181,13 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
           const loserTeamId = loserId(match);
           const loserTeam = loserTeamId === team1.id ? team1 : team2;
           const loserPlayerIds = [loserTeam.player1Id, loserTeam.player2Id].filter(Boolean) as string[];
+          const [p1Id, p2Id] = loserPlayerIds;
           for (const pid of loserPlayerIds) {
+            const partnerPlayerId = pid === p1Id ? (p2Id ?? null) : (p1Id ?? null);
             const existing = await db.select().from(openPlayPoolTable)
               .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, pid)));
             if (existing.length === 0) {
-              await db.insert(openPlayPoolTable).values({ id: randomUUID(), tournamentId, playerId: pid, status: "available" });
+              await db.insert(openPlayPoolTable).values({ id: randomUUID(), tournamentId, playerId: pid, partnerId: partnerPlayerId, status: "available" });
             }
           }
         }

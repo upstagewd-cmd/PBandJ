@@ -240,6 +240,23 @@ export interface PlayerStats {
   recentMatches: MatchHistoryEntry[];
 }
 
+export interface OpenPlayPoolPlayer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  teamName?: string | null;
+  /** @nullable */
+  avatarUrl?: string | null;
+  eloRating: number;
+  /** @nullable */
+  rankTitle: string | null;
+  /** @nullable */
+  rankEmoji: string | null;
+  /** @nullable */
+  partnerId?: string | null;
+}
+
 export interface OpenPlayMatchRecord {
   id: string;
   winnerTeam: number;
@@ -253,7 +270,7 @@ export interface OpenPlayMatchRecord {
 }
 
 export interface OpenPlayState {
-  pool: Player[];
+  pool: OpenPlayPoolPlayer[];
   recentMatches: OpenPlayMatchRecord[];
 }
 
@@ -354,6 +371,10 @@ export interface SessionPlayer {
   /** @nullable */
   teamName?: string | null;
   /** @nullable */
+  skillLevel?: string | null;
+  /** @nullable */
+  clerkUserId?: string | null;
+  /** @nullable */
   partnerId?: string | null;
   eloRating: number;
   rankTitle: string;
@@ -390,10 +411,21 @@ export interface SessionFull {
   recentMatches: SessionMatchRecord[];
 }
 
+export type AddSessionPlayerBodySkillLevel = typeof AddSessionPlayerBodySkillLevel[keyof typeof AddSessionPlayerBodySkillLevel];
+
+
+export const AddSessionPlayerBodySkillLevel = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
 export interface AddSessionPlayerBody {
   firstName: string;
   lastName: string;
   teamName?: string;
+  skillLevel?: AddSessionPlayerBodySkillLevel;
+  clerkUserId?: string;
 }
 
 export interface SessionMatchInput {
@@ -419,6 +451,10 @@ export interface UnpairPlayerBody {
 }
 
 export interface ReshuffleBody {
+  hostToken: string;
+}
+
+export interface AutoPairBody {
   hostToken: string;
 }
 
