@@ -123,15 +123,47 @@ export function generateSingleEliminationBracket(
 
   const matchMap = new Map(allMatches.map((m) => [m.id, m]));
 
-  // ── Resolve byes top-down ────────────────────────────────────────────────
+  // ── Resolve real byes top-down ───────────────────────────────────────────
   for (let r = 1; r <= wbRounds; r++) {
     for (const match of wb[r]) {
       if (match.playerOneId && match.playerTwoId) {
         match.status = "active";
-      } else if (match.playerOneId && !match.playerTwoId) {
+      } else if (match.playerOneId || match.playerTwoId) {
         applyBye(match, matchMap);
-      } else if (!match.playerOneId && !match.playerTwoId) {
-        // Ghost match — stays pending; will activate when both players arrive
+      }
+      // Ghost matches (no players) handled in the pass below
+    }
+  }
+
+  // ── Mark ghost matches (empty slots that will never receive a player) ────
+  // Iteratively mark matches that have no players and no live upstream source.
+  // "Live source" = a source match that is NOT itself a ghost bye (isBye && !winnerId).
+  let anyChanged = true;
+  while (anyChanged) {
+    anyChanged = false;
+    for (let r = 1; r <= wbRounds; r++) {
+      for (const match of wb[r]) {
+        if (match.isBye || match.playerOneId || match.playerTwoId) continue;
+        // Check whether either slot can ever receive a player from upstream
+        const willGetOne = allMatches.some(
+          (m) =>
+            m.nextWinnerMatchId === match.id &&
+            m.nextWinnerSlot === "one" &&
+            !(m.isBye && !m.winnerId)
+        );
+        const willGetTwo = allMatches.some(
+          (m) =>
+            m.nextWinnerMatchId === match.id &&
+            m.nextWinnerSlot === "two" &&
+            !(m.isBye && !m.winnerId)
+        );
+        if (!willGetOne && !willGetTwo) {
+          // Ghost — mark as void bye so downstream cascadeBye detects it
+          match.status = "bye";
+          match.isBye = true;
+          // winnerId stays null (no player to advance)
+          anyChanged = true;
+        }
       }
     }
   }

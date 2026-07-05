@@ -5,7 +5,9 @@ import {
   useUpdateMatch,
   useUndoLastMatch,
   useUpdateTournament,
+  getGetTournamentQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
@@ -23,6 +25,8 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const isHost = !!hostToken;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const refetch = () => queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournament.id) });
   const updateMatch = useUpdateMatch();
   const undoMatch = useUndoLastMatch();
 
@@ -62,7 +66,10 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
           ...(scoreTwo !== undefined ? { scoreTwo } : {}),
         },
       },
-      { onError: () => toast({ title: "Failed to record winner", variant: "destructive" }) }
+      {
+        onSettled: refetch,
+        onError: () => toast({ title: "Failed to record winner", variant: "destructive" }),
+      }
     );
   };
 
@@ -70,7 +77,10 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     if (!isHost) return;
     undoMatch.mutate(
       { tournamentId: tournament.id, data: { hostToken: hostToken! } },
-      { onError: () => toast({ title: "Nothing to undo", variant: "destructive" }) }
+      {
+        onSettled: refetch,
+        onError: () => toast({ title: "Nothing to undo", variant: "destructive" }),
+      }
     );
   };
 

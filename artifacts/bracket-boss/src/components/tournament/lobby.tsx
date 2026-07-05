@@ -391,7 +391,10 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 <Button
                   className="h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white"
                   disabled={!canStart || startTournament.isPending}
-                  onClick={() => startTournament.mutate({ tournamentId: tournament.id, data: { hostToken: hostToken! } })}
+                  onClick={() => startTournament.mutate(
+                    { tournamentId: tournament.id, data: { hostToken: hostToken! } },
+                    { onSettled: refetch }
+                  )}
                 >
                   {startTournament.isPending
                     ? <Loader2 className="w-5 h-5 animate-spin" />
