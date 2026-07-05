@@ -858,7 +858,7 @@ components:
 
     ProfileStats:
       type: object
-      required: [eloRating, rankTitle, rankEmoji, totalWins, totalLosses, matchesPlayed, winPct, tournamentWins, tournamentsPlayed, recentMatches]
+      required: [eloRating, rankTitle, rankEmoji, totalWins, totalLosses, matchesPlayed, winPct, tournamentWins, tournamentsPlayed, recentMatches, partnerStats]
       properties:
         eloRating:
           type: number
@@ -882,6 +882,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MatchHistoryEntry"
+        partnerStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerStat"
 
     PlayerStats:
       type: object
@@ -906,7 +910,7 @@ components:
 
     MatchHistoryEntry:
       type: object
-      required: [matchId, tournamentId, tournamentName, bracket, round, opponentName, won, completedAt]
+      required: [matchId, tournamentId, tournamentName, bracket, round, opponentName, partnerName, won, completedAt]
       properties:
         matchId:
           type: string
@@ -920,6 +924,8 @@ components:
           type: integer
         opponentName:
           type: string
+        partnerName:
+          type: string
         won:
           type: boolean
         scoreOne:
@@ -928,6 +934,23 @@ components:
           type: ["integer", "null"]
         completedAt:
           type: string
+
+    PartnerStat:
+      type: object
+      required: [playerId, name, wins, losses, winPct, matches]
+      properties:
+        playerId:
+          type: string
+        name:
+          type: string
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winPct:
+          type: number
+        matches:
+          type: integer
 
     Match:
       type: object

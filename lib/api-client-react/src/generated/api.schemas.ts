@@ -209,12 +209,22 @@ export interface MatchHistoryEntry {
   bracket: string;
   round: number;
   opponentName: string;
+  partnerName: string;
   won: boolean;
   /** @nullable */
   scoreOne?: number | null;
   /** @nullable */
   scoreTwo?: number | null;
   completedAt: string;
+}
+
+export interface PartnerStat {
+  playerId: string;
+  name: string;
+  wins: number;
+  losses: number;
+  winPct: number;
+  matches: number;
 }
 
 export interface ProfileStats {
@@ -228,6 +238,7 @@ export interface ProfileStats {
   tournamentWins: number;
   tournamentsPlayed: number;
   recentMatches: MatchHistoryEntry[];
+  partnerStats: PartnerStat[];
 }
 
 export interface PlayerStats {

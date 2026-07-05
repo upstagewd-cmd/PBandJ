@@ -347,10 +347,19 @@ export const GetMyProfileResponse = zod.object({
   "bracket": zod.string(),
   "round": zod.number(),
   "opponentName": zod.string(),
+  "partnerName": zod.string(),
   "won": zod.boolean(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),
   "completedAt": zod.string()
+})),
+  "partnerStats": zod.array(zod.object({
+  "playerId": zod.string(),
+  "name": zod.string(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPct": zod.number(),
+  "matches": zod.number()
 }))
 })
 
@@ -386,6 +395,7 @@ export const GetPlayerStatsResponse = zod.object({
   "bracket": zod.string(),
   "round": zod.number(),
   "opponentName": zod.string(),
+  "partnerName": zod.string(),
   "won": zod.boolean(),
   "scoreOne": zod.number().nullish(),
   "scoreTwo": zod.number().nullish(),

@@ -4,7 +4,7 @@ import { useUser, useClerk, Show } from "@clerk/react";
 import { useGetMyProfile } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 
@@ -303,6 +303,38 @@ export default function ProfilePage() {
                             {m.scoreOne ?? "–"}–{m.scoreTwo ?? "–"}
                           </span>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Partner Stats */}
+              {profile.partnerStats && profile.partnerStats.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Best Partners
+                  </h2>
+                  <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/30 overflow-hidden">
+                    {profile.partnerStats.map((p) => (
+                      <div key={p.playerId} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold truncate">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.wins}W · {p.losses}L · {p.matches} match{p.matches !== 1 ? "es" : ""}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-xs font-extrabold px-2 py-1 rounded-lg ${
+                            p.winPct >= 60
+                              ? "bg-green-500/20 text-green-400"
+                              : p.winPct >= 40
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {p.winPct}%
+                        </span>
                       </div>
                     ))}
                   </div>
