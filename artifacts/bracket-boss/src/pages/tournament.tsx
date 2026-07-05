@@ -1,12 +1,31 @@
 import { useEffect } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
+import { Show, useUser } from "@clerk/react";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
 import { useTournamentSocket } from "@/hooks/use-tournament-socket";
 import { TournamentLobby } from "@/components/tournament/lobby";
 import { TournamentBracket } from "@/components/tournament/bracket";
 import { TournamentChampionship } from "@/components/tournament/championship";
-import { Loader2, WifiOff } from "lucide-react";
+import { Loader2, WifiOff, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+function UserBadge() {
+  const { user } = useUser();
+  return (
+    <div className="flex items-center gap-1.5 bg-card border border-border/40 rounded-full px-2.5 py-1">
+      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+        {user?.imageUrl ? (
+          <img src={user.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+        ) : (
+          <User className="w-3 h-3 text-primary" />
+        )}
+      </div>
+      <span className="text-xs font-semibold text-foreground hidden sm:block">
+        {user?.firstName ?? "Player"}
+      </span>
+    </div>
+  );
+}
 
 export default function TournamentPage() {
   const params = useParams();
@@ -78,6 +97,9 @@ export default function TournamentPage() {
           PB<span className="text-primary">&amp;J</span>
         </div>
         <div className="flex items-center gap-2">
+          <Show when="signed-in">
+            <UserBadge />
+          </Show>
           {hostToken && (
             <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">
               Host

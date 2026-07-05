@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" rx="40" fill="#0a0a0f"/>
+  <circle cx="100" cy="85" r="52" fill="#1a1a2e" stroke="#f96422" stroke-width="4"/>
+  <line x1="52" y1="65" x2="148" y2="65" stroke="#f96422" stroke-width="3" stroke-linecap="round"/>
+  <line x1="52" y1="105" x2="148" y2="105" stroke="#f96422" stroke-width="3" stroke-linecap="round"/>
+  <line x1="70" y1="37" x2="70" y2="133" stroke="#f96422" stroke-width="3" stroke-linecap="round"/>
+  <line x1="130" y1="37" x2="130" y2="133" stroke="#f96422" stroke-width="3" stroke-linecap="round"/>
+  <text x="100" y="170" font-family="Inter, sans-serif" font-size="32" font-weight="900" font-style="italic" text-anchor="middle" fill="white">PB<tspan fill="#f96422">&amp;J</tspan></text>
+</svg>
