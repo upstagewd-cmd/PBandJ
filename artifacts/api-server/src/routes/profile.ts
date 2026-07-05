@@ -50,21 +50,39 @@ profileRouter.get("/me", async (req, res) => {
 
     const playerIds = players.map((p) => p.id);
 
-    const allMatches = playerIds.length
+    // Fetch all teams this user belongs to (need team IDs for match lookup)
+    const userTeamsEarly = playerIds.length
+      ? await db.select().from(teamsTable).where(
+          or(
+            ...playerIds.flatMap((pid) => [
+              eq(teamsTable.player1Id, pid),
+              eq(teamsTable.player2Id, pid),
+            ])
+          )
+        )
+      : [];
+    const teamIds = userTeamsEarly.map((t) => t.id);
+
+    // Matches may store player IDs (old single-player) or team IDs (doubles)
+    const matchIdSet = [...playerIds, ...teamIds];
+    const allMatches = matchIdSet.length
       ? await db.select().from(matchesTable).where(
-          or(...playerIds.flatMap((pid) => [
-            eq(matchesTable.playerOneId, pid),
-            eq(matchesTable.playerTwoId, pid),
+          or(...matchIdSet.flatMap((id) => [
+            eq(matchesTable.playerOneId, id),
+            eq(matchesTable.playerTwoId, id),
           ]))
         )
       : [];
+
+    // A match is "won" if winner_id equals any of the user's player IDs or team IDs
+    const winnerIds = new Set([...playerIds, ...teamIds]);
 
     const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
 
     let totalWins = 0;
     let tournamentWins = 0;
     for (const m of completedMatches) {
-      const isWinner = playerIds.includes(m.winnerId ?? "");
+      const isWinner = winnerIds.has(m.winnerId ?? "");
       if (isWinner) {
         totalWins++;
         if (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset") {
@@ -79,22 +97,9 @@ profileRouter.get("/me", async (req, res) => {
     const rank = getRank(eloRating);
     const tournamentsPlayed = new Set(players.map((p) => p.tournamentId)).size;
 
-    // ── Fetch teams the user was on ──
-    const userTeams = await db
-      .select()
-      .from(teamsTable)
-      .where(
-        or(
-          ...playerIds.flatMap((pid) => [
-            eq(teamsTable.player1Id, pid),
-            eq(teamsTable.player2Id, pid),
-          ])
-        )
-      );
+    // Re-use the teams fetched earlier
+    const userTeams = userTeamsEarly;
     const teamMap = new Map(userTeams.map((t) => [t.id, t]));
-
-    // Build lookup: which playerId the user is per tournament (someone may have multiple player rows)
-    const playerById = new Map(players.map((p) => [p.id, p]));
 
     const recentCompleted = completedMatches
       .filter((m) => m.completedAt)
@@ -102,10 +107,15 @@ profileRouter.get("/me", async (req, res) => {
       .slice(0, 20);
 
     const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
+
+    // Opponent is whichever side is NOT the user (could be a team ID or player ID)
     const opponentIds = recentCompleted.map((m) => {
-      const myId = playerIds.find((pid) => pid === m.playerOneId || pid === m.playerTwoId);
-      return myId === m.playerOneId ? m.playerTwoId : m.playerOneId;
-    }).filter(Boolean) as string[];
+      const myOnSideOne = winnerIds.has(m.playerOneId ?? "") || playerIds.includes(m.playerOneId ?? "");
+      const oppTeamId = myOnSideOne ? m.playerTwoId : m.playerOneId;
+      // Resolve team → individual player IDs for display
+      const oppTeam = oppTeamId ? teamMap.get(oppTeamId) : null;
+      return oppTeam ? [oppTeam.player1Id, oppTeam.player2Id].filter(Boolean) as string[] : (oppTeamId ? [oppTeamId] : []);
+    }).flat();
 
     // Partner IDs from the user's teams
     const partnerIds = userTeams
@@ -176,22 +186,38 @@ profileRouter.get("/me", async (req, res) => {
       p ? (p.teamName ?? `${p.firstName} ${p.lastName}`) : "Unknown";
 
     const recentMatches = recentCompleted.map((m) => {
-      const myPlayerId = playerIds.find((pid) => pid === m.playerOneId || pid === m.playerTwoId)!;
-      const oppId = myPlayerId === m.playerOneId ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
-      const opp = oppMap.get(oppId);
+      const won = winnerIds.has(m.winnerId ?? "");
       const tourney = tourneyMap.get(m.tournamentId);
 
-      // Find my team for this match → then find my partner
+      // Figure out which side the user is on
+      const myOnSideOne =
+        playerIds.includes(m.playerOneId ?? "") ||
+        teamIds.includes(m.playerOneId ?? "");
+      const oppTeamId = myOnSideOne ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
+
+      // Resolve opponent name — could be a team record or a direct player
+      const oppTeam = teamMap.get(oppTeamId);
+      let opponentName = "Unknown";
+      if (oppTeam) {
+        // Use team name from players table if available
+        const p1 = oppMap.get(oppTeam.player1Id ?? "");
+        opponentName = p1?.teamName ?? oppTeam.teamName ?? "Unknown";
+      } else {
+        const directOpp = oppMap.get(oppTeamId);
+        opponentName = directOpp ? (directOpp.teamName ?? `${directOpp.firstName} ${directOpp.lastName}`) : "Unknown";
+      }
+
+      // Find the user's team for this match → partner
       const myTeam = userTeams.find((t) => t.id === m.playerOneId || t.id === m.playerTwoId);
       let partnerName = "—";
       if (myTeam) {
-        const partnerId = myTeam.player1Id === myPlayerId ? myTeam.player2Id : myTeam.player1Id;
+        const myPid = playerIds.find((pid) => pid === myTeam.player1Id || pid === myTeam.player2Id);
+        const partnerId = myPid === myTeam.player1Id ? myTeam.player2Id : myTeam.player1Id;
         if (partnerId) {
           const partner = partnerPlayerMap.get(partnerId);
           partnerName = displayName(partner);
 
           // Aggregate partner stats
-          const won = playerIds.includes(m.winnerId ?? "");
           const existing = partnerStatMap.get(partnerId);
           if (existing) {
             existing.matches++;
@@ -214,9 +240,9 @@ profileRouter.get("/me", async (req, res) => {
         tournamentName: tourney?.name ?? "Unknown",
         bracket: m.bracket,
         round: m.round,
-        opponentName: opp ? (opp.teamName ?? `${opp.firstName} ${opp.lastName}`) : "Unknown",
+        opponentName,
         partnerName,
-        won: playerIds.includes(m.winnerId ?? ""),
+        won,
         scoreOne: m.scoreOne ?? null,
         scoreTwo: m.scoreTwo ?? null,
         completedAt: m.completedAt ? new Date(m.completedAt).toISOString() : new Date().toISOString(),
