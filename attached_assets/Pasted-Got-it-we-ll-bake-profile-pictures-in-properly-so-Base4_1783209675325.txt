@@ -1,0 +1,438 @@
+Got it — we’ll bake profile pictures in properly so Base44 doesn’t “half-add” it or forget storage entirely.
+
+Here is your fully updated single master Base44 prompt with profile images explicitly required and integrated across guest → profile → admin → match history.
+
+⸻
+
+🟩 BASE44 MASTER PROMPT — PB&J (PROFILE IMAGE VERSION)
+
+:::writing{variant=“document” id=“pbj_master_final_v2”}
+
+⚠️ FULL REBUILD REQUIRED (OVERRIDE ALL EXISTING WORK)
+
+Completely discard and replace any previous implementation.
+
+REMOVE:
+	•	Double elimination ❌
+	•	Any consolation bracket systems ❌
+	•	Any multi-bracket or league systems ❌
+	•	Any prior incomplete profile system ❌
+
+This is a full rebuild.
+
+⸻
+
+🏓 APP NAME & BRANDING
+
+PB&J
+(Pickleball & Jesus)
+
+Tagline:
+“Faith. Fellowship. Friendly Competition.”
+
+Secondary line:
+“A Fellowship of Christian Competitors”
+
+Tone:
+Modern, clean, mobile-first sports app with subtle Christian identity. Friendly, community-driven, not preachy.
+
+⸻
+
+🎯 CORE PRODUCT GOAL
+
+PB&J is a lightweight real-time web app for:
+	•	Running doubles pickleball tournaments
+	•	Tracking match results live
+	•	Moving eliminated teams into open play pool
+	•	Optional player profiles with full stats + images
+	•	Ranking system + badges
+	•	Admin override system
+
+Must be:
+	•	Instant to use (no required login)
+	•	Mobile-first
+	•	Real-time synced
+	•	Designed for 8–64 players in live environments
+
+⸻
+
+🔐 AUTH SYSTEM
+
+Guest Mode (Default)
+	•	No login required
+	•	Join via:
+	•	First Name
+	•	Last Name
+	•	OPTIONAL: Upload profile picture (see below)
+
+⸻
+
+Optional Player Profiles (IMPORTANT)
+
+Users may optionally create an account.
+
+REQUIRED PROFILE FIELDS:
+	•	First Name
+	•	Last Name
+	•	Profile Picture (UPLOAD REQUIRED FOR PROFILES)
+	•	Skill Level (Beginner / Intermediate / Advanced)
+
+OPTIONAL FIELDS:
+	•	Email (for login / recovery)
+
+⸻
+
+PROFILE PICTURE REQUIREMENTS
+
+Must support:
+	•	Upload from device camera or gallery
+	•	Square crop preferred
+	•	Stored and displayed in:
+	•	Player list
+	•	Tournament brackets
+	•	Match history
+	•	Profile pages
+	•	Leaderboards
+
+UI behavior:
+	•	If no profile picture exists → show initials avatar
+	•	Profile pictures must appear as small circular avatars in all relevant UI components
+
+⸻
+
+🏓 TOURNAMENT SYSTEM (CRITICAL)
+
+ONLY FORMAT: SINGLE ELIMINATION DOUBLES
+
+Rules:
+	•	Players are paired into teams
+	•	Teams enter single elimination bracket
+	•	Winners advance
+	•	Losers are eliminated from championship
+
+❌ DO NOT IMPLEMENT:
+	•	Double elimination
+	•	Consolation brackets
+	•	Secondary bracket systems
+
+⸻
+
+🔁 OPEN PLAY POOL (VERY IMPORTANT)
+
+When a team loses a tournament match:
+
+They MUST:
+	•	Be removed from tournament bracket
+	•	Be automatically added to Open Play Pool
+
+⸻
+
+OPEN PLAY POOL (NOT A BRACKET)
+
+A simple live list of available teams for casual games.
+
+Includes:
+	•	All eliminated tournament teams
+	•	Any manually added teams
+
+Each team shows:
+	•	Player names
+	•	Profile pictures (if available)
+
+⸻
+
+OPEN PLAY MATCH LOGGING
+
+Users manually log matches:
+
+Inputs:
+	•	Team 1 (2 players)
+	•	Team 2 (2 players)
+	•	Winner
+	•	Score (optional, simple format like 11–8)
+
+System updates:
+	•	Win/loss records
+	•	Hidden rating system
+	•	Player profiles
+	•	Badges
+	•	Match history
+	•	Profile stats
+
+⸻
+
+IMPORTANT RULES:
+	•	NO automatic pairing
+	•	NO scheduling system
+	•	NO consolation bracket logic
+	•	NO automated gameplay management
+
+Open play is ONLY manual logging.
+
+⸻
+
+🧠 SKILL + RATING SYSTEM (CORE ENGINE)
+
+Each player has:
+
+1. Skill Tier (user selected start)
+	•	Beginner = 1000
+	•	Intermediate = 1500
+	•	Advanced = 2000
+
+Used ONLY as initial seed.
+
+⸻
+
+2. Hidden Dynamic Rating (ELO SYSTEM)
+
+System maintains hidden rating per player:
+
+Rules:
+	•	Win → rating increases
+	•	Loss → rating decreases
+	•	Upsets → larger gains
+	•	Expected wins → smaller gains
+
+Team rating = average of both players
+
+Used for:
+	•	Team balancing
+	•	Internal ranking system
+
+NOT prominently displayed.
+
+⸻
+
+3. TEAM BALANCING
+
+When forming teams:
+	•	Use rating system to balance teams
+	•	Prefer evenly matched teams
+	•	Avoid extreme mismatches when possible:
+	•	Beginner + Beginner (avoid if possible)
+	•	Advanced + Advanced (avoid if possible)
+	•	Allow randomness if needed
+
+⸻
+
+🏆 TOURNAMENT FLOW
+	1.	Create tournament → unique URL generated
+	2.	Players join (guest or profile)
+	3.	Lobby shows live players WITH profile pictures
+	4.	Host controls:
+	•	Shuffle players
+	•	Generate balanced teams
+	•	Remove players
+	5.	Start tournament
+	6.	SINGLE elimination bracket generated
+	7.	Each match:
+	•	Select winner
+	•	Update ratings
+	•	Advance bracket
+	•	Loser moves to Open Play Pool
+	8.	Champion screen shown at end
+
+⸻
+
+👤 PLAYER PROFILE SYSTEM (OPTIONAL LOGIN)
+
+Each player profile includes:
+
+Identity
+	•	Name
+	•	Profile picture (required for profile users, optional for guests)
+	•	Skill tier
+	•	Rank title
+
+⸻
+
+Stats
+	•	Wins / losses
+	•	Win %
+	•	Matches played
+	•	Tournament wins
+
+⸻
+
+Partner History
+	•	Partner name + profile picture
+	•	Record with partner (W/L)
+
+⸻
+
+Opponent History
+	•	Opponent name + profile picture
+	•	Rival stats
+
+⸻
+
+Match History
+	•	Full match feed with:
+	•	Team avatars
+	•	Scores
+	•	Win/loss indicator
+	•	Tournament or open play label
+
+⸻
+
+🏅 RANKING SYSTEM (PUBLIC TITLES)
+
+Based on hidden rating:
+
+Rank Ladder:
+	•	🌱 New Seed (1000–1199)
+	•	🔥 Rising Player (1200–1399)
+	•	⚔️ Battle Tested (1400–1599)
+	•	🏛️ Court General (1600–1799)
+	•	🦁 Lion Heart (1800–1999)
+	•	👑 Kingdom Competitor (2000+)
+
+Admin can edit:
+	•	Rank names
+	•	Thresholds
+	•	Number of tiers
+
+⸻
+
+🎖️ BADGES (PHASE 1 — MAX 10)
+
+No in-game tracking required.
+
+Based on:
+	•	Matches played
+	•	Wins
+	•	Tournament wins
+	•	Partner diversity
+	•	Win streaks
+
+Badges:
+	1.	Fresh Out the Gate (first match played)
+	2.	Built Different (10 wins)
+	3.	Lion Mode (25 wins)
+	4.	Anointed (first tournament win)
+	5.	Kingdom Builder (3 tournament wins)
+	6.	Iron Sharpens Iron (10 wins with same partner)
+	7.	One Body (10 different partners)
+	8.	Faithful Runner (50 matches played)
+	9.	Court Dominance (60%+ win rate, min 20 matches)
+	10.	First Fruit (5-match win streak)
+
+⸻
+
+🧑‍💼 ADMIN SYSTEM (PASSCODE ACCESS)
+
+Access via:
+	•	/admin?code=XXXX
+
+No full authentication system required.
+
+⸻
+
+ADMIN FEATURES
+
+Players
+	•	Edit wins/losses
+	•	Adjust skill tier
+	•	Adjust hidden rating
+	•	Merge duplicate players
+	•	Update profile pictures
+
+⸻
+
+Matches
+	•	Edit results
+	•	Change winner
+	•	Fix scores
+	•	Delete matches
+
+⸻
+
+Rankings
+	•	Edit rank names
+	•	Edit thresholds
+	•	Add/remove ranks
+
+⸻
+
+System Settings
+	•	Rating system config
+	•	Badge definitions (view/edit later)
+	•	Tournament rules (locked to single elimination)
+
+⸻
+
+ADMIN RULE (CRITICAL)
+
+Admin changes ALWAYS override system calculations.
+
+System must:
+	•	Recalculate ratings
+	•	Update rankings
+	•	Update badges
+	•	Update profiles
+	•	Refresh open play history
+
+⸻
+
+📱 UI REQUIREMENTS
+	•	Mobile-first design
+	•	Large touch targets
+	•	Clean sports UI
+	•	Fast interactions
+	•	Circular profile pictures everywhere applicable
+	•	Initials fallback avatar if no image exists
+	•	Real-time updates (no refresh)
+
+⸻
+
+⚡ REAL-TIME REQUIREMENTS
+
+Must sync instantly:
+	•	Player joins
+	•	Match results
+	•	Bracket updates
+	•	Ratings
+	•	Admin edits
+	•	Open play logs
+	•	Profile picture updates
+
+⸻
+
+🚫 NON-FEATURES (DO NOT BUILD)
+
+DO NOT include:
+	•	Double elimination
+	•	Consolation brackets
+	•	League systems
+	•	Seasonal systems
+	•	Court scheduling automation
+	•	AI coaching
+	•	Advanced analytics dashboards
+	•	Complex scoring systems
+	•	Automated open play matchmaking
+
+⸻
+
+🧭 SUCCESS DEFINITION
+
+PB&J should feel like:
+
+“Open link → join instantly → play doubles → tap winners → losers keep playing casually → everything updates live → come back next week and see your growth, rank, and community.”
+
+It should feel:
+	•	fast
+	•	social
+	•	visual (profiles matter now)
+	•	community-driven
+	•	repeatable weekly system
+:::
+
+⸻
+
+If you want next step, I can help you:
+	•	￼ design the exact database schema (so Base44 doesn’t mess up relationships)
+	•	or ￼ define the image upload storage setup (this is usually where these tools break)
+	•	or ￼ map the exact screens so the UI comes out clean on first build
+
+You’re now at a point where this can actually become a real weekly-use app, not just a prototype.
