@@ -1,0 +1,108 @@
+import { Router, Request } from "express";
+import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
+import { eq, or } from "drizzle-orm";
+import { getRank } from "../lib/ranks";
+
+export const playerStatsRouter = Router();
+
+playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, res) => {
+  try {
+    const { playerId } = req.params;
+
+    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
+    if (!player) { res.status(404).json({ error: "Player not found" }); return; }
+
+    // All matches this player participated in (across all tournaments)
+    const allMatches = await db
+      .select()
+      .from(matchesTable)
+      .where(
+        or(eq(matchesTable.playerOneId, playerId), eq(matchesTable.playerTwoId, playerId))
+      );
+
+    const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
+    const wins = completedMatches.filter((m) => m.winnerId === playerId).length;
+    const losses = completedMatches.length - wins;
+    const winPct = completedMatches.length > 0 ? Math.round((wins / completedMatches.length) * 100) : 0;
+
+    // Tournament wins: won the grand_finals or grand_finals_reset
+    const tournamentWins = completedMatches.filter(
+      (m) => m.winnerId === playerId && (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset")
+    ).length;
+
+    // Build recent match history
+    const recentCompleted = completedMatches
+      .filter((m) => m.completedAt)
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+      .slice(0, 20);
+
+    // Collect all tournament IDs and opponent IDs to batch-fetch
+    const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
+    const opponentIds = recentCompleted.map((m) =>
+      m.playerOneId === playerId ? m.playerTwoId : m.playerOneId
+    ).filter(Boolean) as string[];
+
+    const tournaments = tournamentIds.length
+      ? await db.select().from(tournamentsTable).where(
+          tournamentIds.length === 1
+            ? eq(tournamentsTable.id, tournamentIds[0])
+            : or(...tournamentIds.map((id) => eq(tournamentsTable.id, id)))
+        )
+      : [];
+    const opponentPlayers = opponentIds.length
+      ? await db.select().from(playersTable).where(
+          opponentIds.length === 1
+            ? eq(playersTable.id, opponentIds[0])
+            : or(...opponentIds.map((id) => eq(playersTable.id, id)))
+        )
+      : [];
+
+    const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
+    const oppMap = new Map(opponentPlayers.map((p) => [p.id, p]));
+
+    const recentMatchesResult = recentCompleted.map((m) => {
+      const opp = oppMap.get(m.playerOneId === playerId ? (m.playerTwoId ?? "") : (m.playerOneId ?? ""));
+      const tourney = tourneyMap.get(m.tournamentId);
+      return {
+        matchId: m.id,
+        tournamentId: m.tournamentId,
+        tournamentName: tourney?.name ?? "Unknown",
+        bracket: m.bracket,
+        round: m.round,
+        opponentName: opp ? `${opp.teamName ?? `${opp.firstName} ${opp.lastName}`}` : "Unknown",
+        won: m.winnerId === playerId,
+        scoreOne: m.scoreOne ?? null,
+        scoreTwo: m.scoreTwo ?? null,
+        completedAt: m.completedAt ? new Date(m.completedAt).toISOString() : new Date().toISOString(),
+      };
+    });
+
+    const rank = getRank(player.eloRating ?? 1200);
+
+    res.json({
+      player: {
+        id: player.id,
+        tournamentId: player.tournamentId,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        partnerName: player.partnerName ?? null,
+        teamName: player.teamName ?? null,
+        avatarUrl: player.avatarUrl ?? null,
+        eloRating: player.eloRating ?? 1200,
+        rankTitle: rank.title,
+        rankEmoji: rank.emoji,
+        seed: player.seed,
+        joinedAt: player.joinedAt.toISOString(),
+      },
+      wins,
+      losses,
+      matchesPlayed: completedMatches.length,
+      winPct,
+      tournamentWins,
+      recentMatches: recentMatchesResult,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get player stats");
+    res.status(500).json({ error: "Failed to get player stats" });
+  }
+});

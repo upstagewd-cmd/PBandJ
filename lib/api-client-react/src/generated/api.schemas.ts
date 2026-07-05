@@ -62,6 +62,13 @@ export interface Player {
   partnerName?: string | null;
   /** @nullable */
   teamName?: string | null;
+  /** @nullable */
+  avatarUrl?: string | null;
+  eloRating: number;
+  /** @nullable */
+  rankTitle?: string | null;
+  /** @nullable */
+  rankEmoji?: string | null;
   seed: number;
   joinedAt: string;
 }
@@ -150,9 +157,69 @@ export interface PlayerWithToken {
   partnerName?: string | null;
   /** @nullable */
   teamName?: string | null;
+  /** @nullable */
+  avatarUrl?: string | null;
+  eloRating: number;
+  /** @nullable */
+  rankTitle?: string | null;
+  /** @nullable */
+  rankEmoji?: string | null;
   seed: number;
   joinedAt: string;
   playerToken: string;
+}
+
+export interface MatchHistoryEntry {
+  matchId: string;
+  tournamentId: string;
+  tournamentName: string;
+  bracket: string;
+  round: number;
+  opponentName: string;
+  won: boolean;
+  /** @nullable */
+  scoreOne?: number | null;
+  /** @nullable */
+  scoreTwo?: number | null;
+  completedAt: string;
+}
+
+export interface PlayerStats {
+  player: Player;
+  wins: number;
+  losses: number;
+  matchesPlayed: number;
+  winPct: number;
+  tournamentWins: number;
+  recentMatches: MatchHistoryEntry[];
+}
+
+export interface OpenPlayMatchRecord {
+  id: string;
+  winnerTeam: number;
+  /** @nullable */
+  scoreOne?: number | null;
+  /** @nullable */
+  scoreTwo?: number | null;
+  teamOnePlayers?: Player[];
+  teamTwoPlayers?: Player[];
+  playedAt: string;
+}
+
+export interface OpenPlayState {
+  pool: Player[];
+  recentMatches: OpenPlayMatchRecord[];
+}
+
+export interface OpenPlayMatchInput {
+  hostToken: string;
+  teamOnePOneId: string;
+  teamOnePTwoId?: string;
+  teamTwoPOneId: string;
+  teamTwoPTwoId?: string;
+  winnerTeam: number;
+  scoreOne?: number;
+  scoreTwo?: number;
 }
 
 export interface TournamentInput {
@@ -177,6 +244,7 @@ export interface PlayerInput {
 export interface PlayerUpdate {
   playerToken: string;
   teamName?: string;
+  avatarUrl?: string;
 }
 
 export interface MatchUpdate {
@@ -188,5 +256,16 @@ export interface MatchUpdate {
 
 export interface HostTokenInput {
   hostToken: string;
+}
+
+export interface RequestUploadUrlBody {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export interface RequestUploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
 }
 

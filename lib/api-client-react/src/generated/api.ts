@@ -23,10 +23,15 @@ import type {
   HealthStatus,
   HostTokenInput,
   MatchUpdate,
+  OpenPlayMatchInput,
+  OpenPlayState,
   Player,
   PlayerInput,
+  PlayerStats,
   PlayerUpdate,
   PlayerWithToken,
+  RequestUploadUrlBody,
+  RequestUploadUrlResponse,
   Tournament,
   TournamentFull,
   TournamentInput,
@@ -70,9 +75,6 @@ export const getHealthCheckUrl = () => {
   return `/api/healthz`
 }
 
-/**
- * @summary Health check
- */
 export const healthCheck = async ( options?: RequestInit): Promise<HealthStatus> => {
 
   return customFetch<HealthStatus>(getHealthCheckUrl(),
@@ -117,9 +119,6 @@ export type HealthCheckQueryResult = NonNullable<Awaited<ReturnType<typeof healt
 export type HealthCheckQueryError = ErrorType<unknown>
 
 
-/**
- * @summary Health check
- */
 
 export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
@@ -147,9 +146,6 @@ export const getCreateTournamentUrl = () => {
   return `/api/tournaments`
 }
 
-/**
- * @summary Create a new tournament
- */
 export const createTournament = async (tournamentInput?: TournamentInput, options?: RequestInit): Promise<TournamentWithToken> => {
 
   return customFetch<TournamentWithToken>(getCreateTournamentUrl(),
@@ -195,10 +191,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateTournamentMutationBody = BodyType<TournamentInput> | undefined
     export type CreateTournamentMutationError = ErrorType<unknown>
 
-    /**
- * @summary Create a new tournament
- */
-export const useCreateTournament = <TError = ErrorType<unknown>,
+    export const useCreateTournament = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTournament>>, TError,{data?: BodyType<TournamentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createTournament>>,
@@ -217,9 +210,6 @@ export const getGetTournamentUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}`
 }
 
-/**
- * @summary Get tournament details
- */
 export const getTournament = async (tournamentId: string, options?: RequestInit): Promise<TournamentFull> => {
 
   return customFetch<TournamentFull>(getGetTournamentUrl(tournamentId),
@@ -242,7 +232,7 @@ export const getGetTournamentQueryKey = (tournamentId: string,) => {
     }
 
 
-export const getGetTournamentQueryOptions = <TData = Awaited<ReturnType<typeof getTournament>>, TError = ErrorType<void>>(tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTournament>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetTournamentQueryOptions = <TData = Awaited<ReturnType<typeof getTournament>>, TError = ErrorType<unknown>>(tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTournament>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -261,14 +251,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetTournamentQueryResult = NonNullable<Awaited<ReturnType<typeof getTournament>>>
-export type GetTournamentQueryError = ErrorType<void>
+export type GetTournamentQueryError = ErrorType<unknown>
 
 
-/**
- * @summary Get tournament details
- */
 
-export function useGetTournament<TData = Awaited<ReturnType<typeof getTournament>>, TError = ErrorType<void>>(
+export function useGetTournament<TData = Awaited<ReturnType<typeof getTournament>>, TError = ErrorType<unknown>>(
  tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTournament>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -294,9 +281,6 @@ export const getUpdateTournamentUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}`
 }
 
-/**
- * @summary Update tournament
- */
 export const updateTournament = async (tournamentId: string,
     tournamentUpdate: TournamentUpdate, options?: RequestInit): Promise<Tournament> => {
 
@@ -343,10 +327,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateTournamentMutationBody = BodyType<TournamentUpdate>
     export type UpdateTournamentMutationError = ErrorType<unknown>
 
-    /**
- * @summary Update tournament
- */
-export const useUpdateTournament = <TError = ErrorType<unknown>,
+    export const useUpdateTournament = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTournament>>, TError,{tournamentId: string;data: BodyType<TournamentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateTournament>>,
@@ -365,9 +346,6 @@ export const getStartTournamentUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}/start`
 }
 
-/**
- * @summary Start tournament
- */
 export const startTournament = async (tournamentId: string,
     hostTokenInput: HostTokenInput, options?: RequestInit): Promise<TournamentFull> => {
 
@@ -414,10 +392,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type StartTournamentMutationBody = BodyType<HostTokenInput>
     export type StartTournamentMutationError = ErrorType<unknown>
 
-    /**
- * @summary Start tournament
- */
-export const useStartTournament = <TError = ErrorType<unknown>,
+    export const useStartTournament = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTournament>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof startTournament>>,
@@ -436,9 +411,6 @@ export const getJoinTournamentUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}/players`
 }
 
-/**
- * @summary Join a tournament
- */
 export const joinTournament = async (tournamentId: string,
     playerInput: PlayerInput, options?: RequestInit): Promise<PlayerWithToken> => {
 
@@ -485,10 +457,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type JoinTournamentMutationBody = BodyType<PlayerInput>
     export type JoinTournamentMutationError = ErrorType<unknown>
 
-    /**
- * @summary Join a tournament
- */
-export const useJoinTournament = <TError = ErrorType<unknown>,
+    export const useJoinTournament = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinTournament>>, TError,{tournamentId: string;data: BodyType<PlayerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof joinTournament>>,
@@ -507,9 +476,6 @@ export const getShufflePlayersUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}/players/shuffle`
 }
 
-/**
- * @summary Shuffle player order (host only)
- */
 export const shufflePlayers = async (tournamentId: string,
     hostTokenInput: HostTokenInput, options?: RequestInit): Promise<Player[]> => {
 
@@ -556,10 +522,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type ShufflePlayersMutationBody = BodyType<HostTokenInput>
     export type ShufflePlayersMutationError = ErrorType<unknown>
 
-    /**
- * @summary Shuffle player order (host only)
- */
-export const useShufflePlayers = <TError = ErrorType<unknown>,
+    export const useShufflePlayers = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof shufflePlayers>>,
@@ -579,9 +542,6 @@ export const getUpdatePlayerUrl = (tournamentId: string,
   return `/api/tournaments/${tournamentId}/players/${playerId}`
 }
 
-/**
- * @summary Update team name (player token required)
- */
 export const updatePlayer = async (tournamentId: string,
     playerId: string,
     playerUpdate: PlayerUpdate, options?: RequestInit): Promise<Player> => {
@@ -629,10 +589,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdatePlayerMutationBody = BodyType<PlayerUpdate>
     export type UpdatePlayerMutationError = ErrorType<unknown>
 
-    /**
- * @summary Update team name (player token required)
- */
-export const useUpdatePlayer = <TError = ErrorType<unknown>,
+    export const useUpdatePlayer = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePlayer>>, TError,{tournamentId: string;playerId: string;data: BodyType<PlayerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updatePlayer>>,
@@ -652,9 +609,6 @@ export const getRemovePlayerUrl = (tournamentId: string,
   return `/api/tournaments/${tournamentId}/players/${playerId}`
 }
 
-/**
- * @summary Remove a player (host only)
- */
 export const removePlayer = async (tournamentId: string,
     playerId: string,
     hostTokenInput: HostTokenInput, options?: RequestInit): Promise<Player> => {
@@ -702,10 +656,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RemovePlayerMutationBody = BodyType<HostTokenInput>
     export type RemovePlayerMutationError = ErrorType<unknown>
 
-    /**
- * @summary Remove a player (host only)
- */
-export const useRemovePlayer = <TError = ErrorType<unknown>,
+    export const useRemovePlayer = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePlayer>>, TError,{tournamentId: string;playerId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof removePlayer>>,
@@ -716,6 +667,77 @@ export const useRemovePlayer = <TError = ErrorType<unknown>,
       return useMutation(getRemovePlayerMutationOptions(options));
     }
 
+export const getGetPlayerStatsUrl = (playerId: string,) => {
+
+
+
+
+  return `/api/players/${playerId}/stats`
+}
+
+export const getPlayerStats = async (playerId: string, options?: RequestInit): Promise<PlayerStats> => {
+
+  return customFetch<PlayerStats>(getGetPlayerStatsUrl(playerId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlayerStatsQueryKey = (playerId: string,) => {
+    return [
+    `/api/players/${playerId}/stats`
+    ] as const;
+    }
+
+
+export const getGetPlayerStatsQueryOptions = <TData = Awaited<ReturnType<typeof getPlayerStats>>, TError = ErrorType<unknown>>(playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlayerStatsQueryKey(playerId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlayerStats>>> = ({ signal }) => getPlayerStats(playerId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: playerId !== null && playerId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlayerStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlayerStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getPlayerStats>>>
+export type GetPlayerStatsQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlayerStats<TData = Awaited<ReturnType<typeof getPlayerStats>>, TError = ErrorType<unknown>>(
+ playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlayerStatsQueryOptions(playerId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getUpdateMatchUrl = (tournamentId: string,
     matchId: string,) => {
 
@@ -725,9 +747,6 @@ export const getUpdateMatchUrl = (tournamentId: string,
   return `/api/tournaments/${tournamentId}/matches/${matchId}`
 }
 
-/**
- * @summary Set winner or update scores
- */
 export const updateMatch = async (tournamentId: string,
     matchId: string,
     matchUpdate: MatchUpdate, options?: RequestInit): Promise<TournamentFull> => {
@@ -775,10 +794,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateMatchMutationBody = BodyType<MatchUpdate>
     export type UpdateMatchMutationError = ErrorType<unknown>
 
-    /**
- * @summary Set winner or update scores
- */
-export const useUpdateMatch = <TError = ErrorType<unknown>,
+    export const useUpdateMatch = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMatch>>, TError,{tournamentId: string;matchId: string;data: BodyType<MatchUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateMatch>>,
@@ -797,9 +813,6 @@ export const getUndoLastMatchUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}/matches/undo`
 }
 
-/**
- * @summary Undo the last completed match (host only)
- */
 export const undoLastMatch = async (tournamentId: string,
     hostTokenInput: HostTokenInput, options?: RequestInit): Promise<TournamentFull> => {
 
@@ -846,10 +859,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UndoLastMatchMutationBody = BodyType<HostTokenInput>
     export type UndoLastMatchMutationError = ErrorType<unknown>
 
-    /**
- * @summary Undo the last completed match (host only)
- */
-export const useUndoLastMatch = <TError = ErrorType<unknown>,
+    export const useUndoLastMatch = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof undoLastMatch>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof undoLastMatch>>,
@@ -868,9 +878,6 @@ export const getGetTournamentSummaryUrl = (tournamentId: string,) => {
   return `/api/tournaments/${tournamentId}/summary`
 }
 
-/**
- * @summary Get championship summary
- */
 export const getTournamentSummary = async (tournamentId: string, options?: RequestInit): Promise<TournamentSummary> => {
 
   return customFetch<TournamentSummary>(getGetTournamentSummaryUrl(tournamentId),
@@ -915,9 +922,6 @@ export type GetTournamentSummaryQueryResult = NonNullable<Awaited<ReturnType<typ
 export type GetTournamentSummaryQueryError = ErrorType<unknown>
 
 
-/**
- * @summary Get championship summary
- */
 
 export function useGetTournamentSummary<TData = Awaited<ReturnType<typeof getTournamentSummary>>, TError = ErrorType<unknown>>(
  tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTournamentSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
@@ -936,4 +940,204 @@ export function useGetTournamentSummary<TData = Awaited<ReturnType<typeof getTou
 
 
 
+
+export const getGetOpenPlayPoolUrl = (tournamentId: string,) => {
+
+
+
+
+  return `/api/tournaments/${tournamentId}/open-play`
+}
+
+export const getOpenPlayPool = async (tournamentId: string, options?: RequestInit): Promise<OpenPlayState> => {
+
+  return customFetch<OpenPlayState>(getGetOpenPlayPoolUrl(tournamentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpenPlayPoolQueryKey = (tournamentId: string,) => {
+    return [
+    `/api/tournaments/${tournamentId}/open-play`
+    ] as const;
+    }
+
+
+export const getGetOpenPlayPoolQueryOptions = <TData = Awaited<ReturnType<typeof getOpenPlayPool>>, TError = ErrorType<unknown>>(tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenPlayPool>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpenPlayPoolQueryKey(tournamentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpenPlayPool>>> = ({ signal }) => getOpenPlayPool(tournamentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: tournamentId !== null && tournamentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpenPlayPool>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpenPlayPoolQueryResult = NonNullable<Awaited<ReturnType<typeof getOpenPlayPool>>>
+export type GetOpenPlayPoolQueryError = ErrorType<unknown>
+
+
+
+export function useGetOpenPlayPool<TData = Awaited<ReturnType<typeof getOpenPlayPool>>, TError = ErrorType<unknown>>(
+ tournamentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenPlayPool>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpenPlayPoolQueryOptions(tournamentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLogOpenPlayMatchUrl = (tournamentId: string,) => {
+
+
+
+
+  return `/api/tournaments/${tournamentId}/open-play/matches`
+}
+
+export const logOpenPlayMatch = async (tournamentId: string,
+    openPlayMatchInput: OpenPlayMatchInput, options?: RequestInit): Promise<OpenPlayState> => {
+
+  return customFetch<OpenPlayState>(getLogOpenPlayMatchUrl(tournamentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(openPlayMatchInput)
+  }
+);}
+
+
+
+
+export const getLogOpenPlayMatchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logOpenPlayMatch>>, TError,{tournamentId: string;data: BodyType<OpenPlayMatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logOpenPlayMatch>>, TError,{tournamentId: string;data: BodyType<OpenPlayMatchInput>}, TContext> => {
+
+const mutationKey = ['logOpenPlayMatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logOpenPlayMatch>>, {tournamentId: string;data: BodyType<OpenPlayMatchInput>}> = (props) => {
+          const {tournamentId,data} = props ?? {};
+
+          return  logOpenPlayMatch(tournamentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogOpenPlayMatchMutationResult = NonNullable<Awaited<ReturnType<typeof logOpenPlayMatch>>>
+    export type LogOpenPlayMatchMutationBody = BodyType<OpenPlayMatchInput>
+    export type LogOpenPlayMatchMutationError = ErrorType<unknown>
+
+    export const useLogOpenPlayMatch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logOpenPlayMatch>>, TError,{tournamentId: string;data: BodyType<OpenPlayMatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logOpenPlayMatch>>,
+        TError,
+        {tournamentId: string;data: BodyType<OpenPlayMatchInput>},
+        TContext
+      > => {
+      return useMutation(getLogOpenPlayMatchMutationOptions(options));
+    }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+export const requestUploadUrl = async (requestUploadUrlBody: RequestUploadUrlBody, options?: RequestInit): Promise<RequestUploadUrlResponse> => {
+
+  return customFetch<RequestUploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(requestUploadUrlBody)
+  }
+);}
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<RequestUploadUrlBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<RequestUploadUrlBody>
+    export type RequestUploadUrlMutationError = ErrorType<unknown>
+
+    export const useRequestUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<RequestUploadUrlBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<RequestUploadUrlBody>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
+    }
 

@@ -1,0 +1,50 @@
+import { cn } from "@/lib/utils";
+
+interface Player {
+  firstName: string;
+  lastName: string;
+  teamName?: string | null;
+  avatarUrl?: string | null;
+}
+
+interface PlayerAvatarProps {
+  player: Player;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}
+
+const sizeMap = {
+  sm: "w-7 h-7 text-[10px]",
+  md: "w-9 h-9 text-xs",
+  lg: "w-14 h-14 text-base",
+};
+
+export function PlayerAvatar({ player, size = "md", className }: PlayerAvatarProps) {
+  const initials = `${player.firstName.charAt(0)}${player.lastName.charAt(0)}`.toUpperCase();
+
+  return (
+    <div
+      className={cn(
+        "rounded-full shrink-0 overflow-hidden flex items-center justify-center font-bold bg-primary/20 text-primary border border-primary/30",
+        sizeMap[size],
+        className
+      )}
+    >
+      {player.avatarUrl ? (
+        <img
+          src={`/api/storage${player.avatarUrl}`}
+          alt={initials}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback to initials on load error
+            (e.target as HTMLImageElement).style.display = "none";
+            const parent = (e.target as HTMLImageElement).parentElement;
+            if (parent) parent.setAttribute("data-fallback", "true");
+          }}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </div>
+  );
+}

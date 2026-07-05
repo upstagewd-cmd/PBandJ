@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -10,6 +10,8 @@ export const playersTable = pgTable("players", {
   partnerName: text("partner_name"),
   teamName: text("team_name"),
   playerToken: text("player_token"),
+  avatarUrl: text("avatar_url"),
+  eloRating: real("elo_rating").notNull().default(1200),
   seed: integer("seed").notNull().default(0),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });

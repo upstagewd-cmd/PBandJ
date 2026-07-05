@@ -1,9 +1,11 @@
 import { Router, Request } from "express";
-import { db, tournamentsTable, matchesTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { db, tournamentsTable, matchesTable, playersTable, openPlayPoolTable } from "@workspace/db";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { UpdateMatchBody, UndoLastMatchBody } from "@workspace/api-zod";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
+import { computeElo } from "../lib/elo";
 
 export const matchesRouter = Router({ mergeParams: true });
 
@@ -154,6 +156,41 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
       match.winnerId = body.winnerId;
       match.status = "completed";
       (match as any).completedAt = new Date();
+
+      // ── ELO update for both players ───────────────────────────────────
+      if (!match.isBye && match.playerOneId && match.playerTwoId) {
+        const [p1, p2] = await Promise.all([
+          db.select().from(playersTable).where(eq(playersTable.id, match.playerOneId)),
+          db.select().from(playersTable).where(eq(playersTable.id, match.playerTwoId)),
+        ]);
+        const player1 = p1[0];
+        const player2 = p2[0];
+        if (player1 && player2) {
+          const r1 = player1.eloRating ?? 1200;
+          const r2 = player2.eloRating ?? 1200;
+          const p1won = match.winnerId === player1.id;
+          const { winnerDelta, loserDelta } = computeElo(p1won ? r1 : r2, p1won ? r2 : r1);
+          await db.update(playersTable).set({ eloRating: Math.max(800, r1 + (p1won ? winnerDelta : loserDelta)) }).where(eq(playersTable.id, player1.id));
+          await db.update(playersTable).set({ eloRating: Math.max(800, r2 + (p1won ? loserDelta : winnerDelta)) }).where(eq(playersTable.id, player2.id));
+        }
+
+        // ── Add loser to open play pool (LB matches: losing = elimination) ─
+        const loserPlayerId = match.winnerId === match.playerOneId ? match.playerTwoId : match.playerOneId;
+        const isLBElimination = match.bracket === "loser" && !match.nextLoserMatchId;
+        const isGF = match.bracket === "grand_finals" || match.bracket === "grand_finals_reset";
+        if (loserPlayerId && (isLBElimination || isGF)) {
+          const existing = await db.select().from(openPlayPoolTable)
+            .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, loserPlayerId)));
+          if (existing.length === 0) {
+            await db.insert(openPlayPoolTable).values({
+              id: randomUUID(),
+              tournamentId,
+              playerId: loserPlayerId,
+              status: "available",
+            });
+          }
+        }
+      }
 
       // ── Special handling for Grand Finals ────────────────────────────
       if (match.bracket === "grand_finals") {

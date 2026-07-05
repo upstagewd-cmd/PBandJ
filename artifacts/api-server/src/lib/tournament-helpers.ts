@@ -1,5 +1,25 @@
 import { db, tournamentsTable, playersTable, matchesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getRank } from "./ranks";
+
+function serializePlayer(p: typeof playersTable.$inferSelect) {
+  const rank = getRank(p.eloRating ?? 1200);
+  return {
+    id: p.id,
+    tournamentId: p.tournamentId,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    partnerName: p.partnerName ?? null,
+    teamName: p.teamName ?? null,
+    avatarUrl: p.avatarUrl ?? null,
+    eloRating: p.eloRating ?? 1200,
+    rankTitle: rank.title,
+    rankEmoji: rank.emoji,
+    seed: p.seed,
+    joinedAt: p.joinedAt.toISOString(),
+    // playerToken intentionally omitted — never broadcast to all clients
+  };
+}
 
 export async function getTournamentFull(tournamentId: string) {
   const [tournament] = await db
@@ -29,17 +49,7 @@ export async function getTournamentFull(tournamentId: string) {
     createdAt: tournament.createdAt.toISOString(),
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
-    players: players.map((p) => ({
-      id: p.id,
-      tournamentId: p.tournamentId,
-      firstName: p.firstName,
-      lastName: p.lastName,
-      partnerName: p.partnerName ?? null,
-      teamName: p.teamName ?? null,
-      seed: p.seed,
-      joinedAt: p.joinedAt.toISOString(),
-      // playerToken intentionally omitted — never broadcast to all clients
-    })),
+    players: players.map(serializePlayer),
     matches: matches.map((m) => ({
       ...m,
       completedAt: (m as any).completedAt?.toISOString?.() ?? null,

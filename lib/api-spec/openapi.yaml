@@ -5,22 +5,22 @@ info:
   description: Bracket Boss API
 servers:
   - url: /api
-    description: Base API path
 tags:
   - name: health
   - name: tournaments
   - name: players
   - name: matches
+  - name: openplay
+  - name: storage
 
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
       responses:
         "200":
-          description: Healthy
+          description: OK
           content:
             application/json:
               schema:
@@ -30,7 +30,6 @@ paths:
     post:
       operationId: createTournament
       tags: [tournaments]
-      summary: Create a new tournament
       requestBody:
         required: false
         content:
@@ -39,7 +38,7 @@ paths:
               $ref: "#/components/schemas/TournamentInput"
       responses:
         "201":
-          description: Tournament created
+          description: Created
           content:
             application/json:
               schema:
@@ -49,7 +48,6 @@ paths:
     get:
       operationId: getTournament
       tags: [tournaments]
-      summary: Get tournament details
       parameters:
         - name: tournamentId
           in: path
@@ -58,18 +56,14 @@ paths:
             type: string
       responses:
         "200":
-          description: Tournament details
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TournamentFull"
-        "404":
-          description: Not found
-
     patch:
       operationId: updateTournament
       tags: [tournaments]
-      summary: Update tournament
       parameters:
         - name: tournamentId
           in: path
@@ -84,7 +78,7 @@ paths:
               $ref: "#/components/schemas/TournamentUpdate"
       responses:
         "200":
-          description: Updated
+          description: OK
           content:
             application/json:
               schema:
@@ -94,7 +88,6 @@ paths:
     post:
       operationId: startTournament
       tags: [tournaments]
-      summary: Start tournament
       parameters:
         - name: tournamentId
           in: path
@@ -109,7 +102,7 @@ paths:
               $ref: "#/components/schemas/HostTokenInput"
       responses:
         "200":
-          description: Tournament started
+          description: OK
           content:
             application/json:
               schema:
@@ -119,7 +112,6 @@ paths:
     post:
       operationId: joinTournament
       tags: [players]
-      summary: Join a tournament
       parameters:
         - name: tournamentId
           in: path
@@ -134,7 +126,7 @@ paths:
               $ref: "#/components/schemas/PlayerInput"
       responses:
         "201":
-          description: Player joined
+          description: Created
           content:
             application/json:
               schema:
@@ -144,7 +136,6 @@ paths:
     post:
       operationId: shufflePlayers
       tags: [players]
-      summary: Shuffle player order (host only)
       parameters:
         - name: tournamentId
           in: path
@@ -159,7 +150,7 @@ paths:
               $ref: "#/components/schemas/HostTokenInput"
       responses:
         "200":
-          description: Players shuffled
+          description: OK
           content:
             application/json:
               schema:
@@ -171,7 +162,6 @@ paths:
     patch:
       operationId: updatePlayer
       tags: [players]
-      summary: Update team name (player token required)
       parameters:
         - name: tournamentId
           in: path
@@ -191,16 +181,14 @@ paths:
               $ref: "#/components/schemas/PlayerUpdate"
       responses:
         "200":
-          description: Player updated
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
-
     delete:
       operationId: removePlayer
       tags: [players]
-      summary: Remove a player (host only)
       parameters:
         - name: tournamentId
           in: path
@@ -220,17 +208,34 @@ paths:
               $ref: "#/components/schemas/HostTokenInput"
       responses:
         "200":
-          description: Player removed
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
 
+  /players/{playerId}/stats:
+    get:
+      operationId: getPlayerStats
+      tags: [players]
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerStats"
+
   /tournaments/{tournamentId}/matches/{matchId}:
     patch:
       operationId: updateMatch
       tags: [matches]
-      summary: Set winner or update scores
       parameters:
         - name: tournamentId
           in: path
@@ -250,7 +255,7 @@ paths:
               $ref: "#/components/schemas/MatchUpdate"
       responses:
         "200":
-          description: Match updated
+          description: OK
           content:
             application/json:
               schema:
@@ -260,7 +265,6 @@ paths:
     post:
       operationId: undoLastMatch
       tags: [matches]
-      summary: Undo the last completed match (host only)
       parameters:
         - name: tournamentId
           in: path
@@ -275,7 +279,7 @@ paths:
               $ref: "#/components/schemas/HostTokenInput"
       responses:
         "200":
-          description: Match undone
+          description: OK
           content:
             application/json:
               schema:
@@ -285,7 +289,6 @@ paths:
     get:
       operationId: getTournamentSummary
       tags: [tournaments]
-      summary: Get championship summary
       parameters:
         - name: tournamentId
           in: path
@@ -294,11 +297,71 @@ paths:
             type: string
       responses:
         "200":
-          description: Championship summary
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TournamentSummary"
+
+  /tournaments/{tournamentId}/open-play:
+    get:
+      operationId: getOpenPlayPool
+      tags: [openplay]
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenPlayState"
+
+  /tournaments/{tournamentId}/open-play/matches:
+    post:
+      operationId: logOpenPlayMatch
+      tags: [openplay]
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenPlayMatchInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenPlayState"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
 
 components:
   schemas:
@@ -399,7 +462,7 @@ components:
 
     Player:
       type: object
-      required: [id, tournamentId, firstName, lastName, seed, joinedAt]
+      required: [id, tournamentId, firstName, lastName, seed, joinedAt, eloRating]
       properties:
         id:
           type: string
@@ -412,6 +475,14 @@ components:
         partnerName:
           type: ["string", "null"]
         teamName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        eloRating:
+          type: number
+        rankTitle:
+          type: ["string", "null"]
+        rankEmoji:
           type: ["string", "null"]
         seed:
           type: integer
@@ -421,7 +492,7 @@ components:
 
     PlayerWithToken:
       type: object
-      required: [id, tournamentId, firstName, lastName, seed, joinedAt, playerToken]
+      required: [id, tournamentId, firstName, lastName, seed, joinedAt, eloRating, playerToken]
       properties:
         id:
           type: string
@@ -435,12 +506,66 @@ components:
           type: ["string", "null"]
         teamName:
           type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        eloRating:
+          type: number
+        rankTitle:
+          type: ["string", "null"]
+        rankEmoji:
+          type: ["string", "null"]
         seed:
           type: integer
         joinedAt:
           type: string
           format: date-time
         playerToken:
+          type: string
+
+    PlayerStats:
+      type: object
+      required: [player, wins, losses, matchesPlayed, winPct, tournamentWins, recentMatches]
+      properties:
+        player:
+          $ref: "#/components/schemas/Player"
+        wins:
+          type: integer
+        losses:
+          type: integer
+        matchesPlayed:
+          type: integer
+        winPct:
+          type: number
+        tournamentWins:
+          type: integer
+        recentMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchHistoryEntry"
+
+    MatchHistoryEntry:
+      type: object
+      required: [matchId, tournamentId, tournamentName, bracket, round, opponentName, won, completedAt]
+      properties:
+        matchId:
+          type: string
+        tournamentId:
+          type: string
+        tournamentName:
+          type: string
+        bracket:
+          type: string
+        round:
+          type: integer
+        opponentName:
+          type: string
+        won:
+          type: boolean
+        scoreOne:
+          type: ["integer", "null"]
+        scoreTwo:
+          type: ["integer", "null"]
+        completedAt:
           type: string
 
     Match:
@@ -485,6 +610,64 @@ components:
           type: ["string", "null"]
           format: date-time
 
+    OpenPlayState:
+      type: object
+      required: [pool, recentMatches]
+      properties:
+        pool:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        recentMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenPlayMatchRecord"
+
+    OpenPlayMatchRecord:
+      type: object
+      required: [id, winnerTeam, playedAt]
+      properties:
+        id:
+          type: string
+        winnerTeam:
+          type: integer
+        scoreOne:
+          type: ["integer", "null"]
+        scoreTwo:
+          type: ["integer", "null"]
+        teamOnePlayers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        teamTwoPlayers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        playedAt:
+          type: string
+          format: date-time
+
+    OpenPlayMatchInput:
+      type: object
+      required: [hostToken, teamOnePOneId, teamTwoPOneId, winnerTeam]
+      properties:
+        hostToken:
+          type: string
+        teamOnePOneId:
+          type: string
+        teamOnePTwoId:
+          type: string
+        teamTwoPOneId:
+          type: string
+        teamTwoPTwoId:
+          type: string
+        winnerTeam:
+          type: integer
+        scoreOne:
+          type: integer
+        scoreTwo:
+          type: integer
+
     TournamentInput:
       type: object
       properties:
@@ -524,6 +707,8 @@ components:
           type: string
         teamName:
           type: string
+        avatarUrl:
+          type: string
 
     MatchUpdate:
       type: object
@@ -543,4 +728,24 @@ components:
       required: [hostToken]
       properties:
         hostToken:
+          type: string
+
+    RequestUploadUrlBody:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+
+    RequestUploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
           type: string

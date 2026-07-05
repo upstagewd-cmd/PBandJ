@@ -27,11 +27,13 @@ import {
   Link,
   Pencil,
   X,
+  Camera,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 
 interface LobbyProps {
   tournament: TournamentFull;
@@ -55,7 +57,6 @@ function useCopyButton() {
   return { copied, copy };
 }
 
-/** Returns all playerTokens stored in localStorage for this tournament */
 function getMyPlayerToken(tournamentId: string, playerId: string): string | null {
   return localStorage.getItem(`playerToken_${tournamentId}_${playerId}`);
 }
@@ -105,6 +106,26 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
     }
   };
 
+  // Preview the auto-generated team name as user types
+  const watchedFirst = joinForm.watch("firstName");
+  const watchedLast = joinForm.watch("lastName");
+  const watchedPartner = joinForm.watch("partnerName");
+  const watchedTeam = joinForm.watch("teamName");
+
+  const autoTeamName = (() => {
+    if (watchedTeam?.trim()) return null; // user typed their own
+    if (!watchedFirst.trim() || !watchedLast.trim()) return null;
+    const p1Last = watchedLast.charAt(0).toUpperCase() + ".";
+    const p1Name = `${watchedFirst.trim()} ${p1Last}`;
+    if (watchedPartner?.trim()) {
+      const parts = watchedPartner.trim().split(/\s+/);
+      const partnerFirst = parts[0];
+      const partnerLast = parts.length > 1 ? parts[parts.length - 1].charAt(0).toUpperCase() + "." : "";
+      return partnerLast ? `${p1Name} + ${partnerFirst} ${partnerLast}` : `${p1Name} + ${partnerFirst}`;
+    }
+    return `${watchedFirst.trim()} ${watchedLast.trim()}`;
+  })();
+
   const onJoin = (values: z.infer<typeof joinSchema>) => {
     joinTournament.mutate(
       {
@@ -119,13 +140,10 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
       {
         onSuccess: (data: any) => {
           if (data?.playerToken) {
-            localStorage.setItem(
-              `playerToken_${tournament.id}_${data.id}`,
-              data.playerToken
-            );
+            localStorage.setItem(`playerToken_${tournament.id}_${data.id}`, data.playerToken);
           }
           joinForm.reset();
-          toast({ title: "Joined! You can now edit your team name." });
+          toast({ title: "Joined! You can edit your team name anytime." });
         },
         onError: (err: any) => {
           toast({
@@ -141,7 +159,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* Header / Name */}
+      {/* Header */}
       <div className="text-center space-y-2">
         {isHost ? (
           <input
@@ -164,7 +182,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         <div className="bg-white p-4 rounded-2xl shadow-sm">
           <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
         </div>
-
         <div className="w-full space-y-2">
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Link className="w-3 h-3" /> Player Link
@@ -180,7 +197,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
             </Button>
           </div>
         </div>
-
         {isHost && hostUrl && (
           <div className="w-full space-y-2">
             <p className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
@@ -302,11 +318,16 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                     <FormField control={joinForm.control} name="teamName" render={({ field }) => (
                       <FormItem>
                         <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">
-                          Team Name <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional — you can edit this after joining)</span>
+                          Team Name <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
                         </Label>
                         <FormControl>
-                          <Input placeholder="The Dream Team" className="h-11 bg-muted/50 border-none" {...field} />
+                          <Input placeholder={autoTeamName ?? "The Dream Team"} className="h-11 bg-muted/50 border-none" {...field} />
                         </FormControl>
+                        {autoTeamName && !watchedTeam?.trim() && (
+                          <p className="text-xs text-muted-foreground">
+                            Will use: <span className="font-bold text-foreground">{autoTeamName}</span>
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -374,7 +395,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   );
 }
 
-// ── PlayerRow — handles inline team name editing ─────────────────────────────
+// ── PlayerRow ─────────────────────────────────────────────────────────────────
 
 interface PlayerRowProps {
   player: TournamentFull["players"][0];
@@ -389,6 +410,7 @@ interface PlayerRowProps {
 function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: PlayerRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
+  const [uploading, setUploading] = useState(false);
   const updatePlayer = useUpdatePlayer();
   const { toast } = useToast();
 
@@ -399,11 +421,7 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: P
     setEditing(false);
     if (draft === (player.teamName ?? "")) return;
     updatePlayer.mutate(
-      {
-        tournamentId,
-        playerId: player.id,
-        data: { playerToken: myToken, teamName: draft },
-      },
+      { tournamentId, playerId: player.id, data: { playerToken: myToken, teamName: draft } },
       {
         onError: () => {
           toast({ title: "Couldn't save team name", variant: "destructive" });
@@ -413,10 +431,67 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: P
     );
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !myToken) return;
+    setUploading(true);
+    try {
+      // Step 1: Request presigned upload URL
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      // Step 2: Upload directly to GCS
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      // Step 3: Save objectPath as avatarUrl on the player
+      updatePlayer.mutate(
+        { tournamentId, playerId: player.id, data: { playerToken: myToken, avatarUrl: objectPath } },
+        { onError: () => toast({ title: "Couldn't save avatar", variant: "destructive" }) }
+      );
+    } catch {
+      toast({ title: "Avatar upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <li className="flex items-center justify-between bg-muted/50 rounded-xl p-3 gap-2">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <span className="text-muted-foreground font-mono text-sm w-4 shrink-0">{index + 1}</span>
+
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          <PlayerAvatar player={player} size="md" />
+          {canEdit && (
+            <label className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
+              {uploading ? (
+                <Loader2 className="w-3 h-3 text-white animate-spin" />
+              ) : (
+                <Camera className="w-3 h-3 text-white" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleAvatarUpload}
+                disabled={uploading}
+              />
+            </label>
+          )}
+        </div>
+
         <div className="min-w-0 flex-1">
           {editing ? (
             <div className="flex items-center gap-2">
@@ -425,7 +500,10 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: P
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={saveTeamName}
-                onKeyDown={(e) => { if (e.key === "Enter") saveTeamName(); if (e.key === "Escape") { setEditing(false); setDraft(player.teamName ?? ""); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveTeamName();
+                  if (e.key === "Escape") { setEditing(false); setDraft(player.teamName ?? ""); }
+                }}
                 placeholder="Team name..."
                 className="h-8 text-sm bg-background border-primary/40"
               />
@@ -444,8 +522,15 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, onRemove }: P
                 )}
                 <p className={`font-bold truncate ${player.teamName ? "text-xs text-muted-foreground" : "text-base"}`}>
                   {player.firstName} {player.lastName}
-                  {player.partnerName && <span className="text-muted-foreground"> &amp; {player.partnerName}</span>}
+                  {(player as any).partnerName && (
+                    <span className="text-muted-foreground"> &amp; {(player as any).partnerName}</span>
+                  )}
                 </p>
+                {(player as any).rankTitle && (
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    {(player as any).rankEmoji} {(player as any).rankTitle}
+                  </p>
+                )}
               </div>
               {canEdit && (
                 <Button
