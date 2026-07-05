@@ -28,6 +28,8 @@ import {
   Pencil,
   X,
   Camera,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -49,7 +51,6 @@ const SKILL_LEVELS = [
 const joinSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  partnerName: z.string().optional(),
   teamName: z.string().optional(),
   skillLevel: z.enum(["beginner", "intermediate", "advanced"]),
 });
@@ -91,7 +92,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
   const joinForm = useForm<z.infer<typeof joinSchema>>({
     resolver: zodResolver(joinSchema),
-    defaultValues: { firstName: "", lastName: "", partnerName: "", teamName: "", skillLevel: "intermediate" },
+    defaultValues: { firstName: "", lastName: "", teamName: "", skillLevel: "intermediate" },
   });
 
   useEffect(() => {
@@ -116,20 +117,11 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   // Preview the auto-generated team name as user types
   const watchedFirst = joinForm.watch("firstName");
   const watchedLast = joinForm.watch("lastName");
-  const watchedPartner = joinForm.watch("partnerName");
   const watchedTeam = joinForm.watch("teamName");
 
   const autoTeamName = (() => {
     if (watchedTeam?.trim()) return null; // user typed their own
     if (!watchedFirst.trim() || !watchedLast.trim()) return null;
-    const p1Last = watchedLast.charAt(0).toUpperCase() + ".";
-    const p1Name = `${watchedFirst.trim()} ${p1Last}`;
-    if (watchedPartner?.trim()) {
-      const parts = watchedPartner.trim().split(/\s+/);
-      const partnerFirst = parts[0];
-      const partnerLast = parts.length > 1 ? parts[parts.length - 1].charAt(0).toUpperCase() + "." : "";
-      return partnerLast ? `${p1Name} + ${partnerFirst} ${partnerLast}` : `${p1Name} + ${partnerFirst}`;
-    }
     return `${watchedFirst.trim()} ${watchedLast.trim()}`;
   })();
 
@@ -140,7 +132,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         data: {
           firstName: values.firstName,
           lastName: values.lastName,
-          partnerName: values.partnerName || undefined,
           teamName: values.teamName || undefined,
           skillLevel: values.skillLevel,
         },
@@ -256,27 +247,46 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
               </div>
             ) : (
               <ul className="space-y-2">
-                {tournament.players.map((p, i) => {
-                  const myToken = getMyPlayerToken(tournament.id, p.id);
-                  return (
-                    <PlayerRow
-                      key={p.id}
-                      player={p}
-                      index={i}
-                      tournamentId={tournament.id}
-                      myToken={myToken}
-                      isHost={isHost}
-                      hostToken={hostToken}
-                      onRemove={() =>
-                        removePlayer.mutate({
-                          tournamentId: tournament.id,
-                          playerId: p.id,
-                          data: { hostToken: hostToken! },
-                        })
-                      }
-                    />
-                  );
-                })}
+                {(() => {
+                  const anySeeded = tournament.players.some((p) => (p.seed ?? 0) > 0);
+                  const displayed = anySeeded
+                    ? [...tournament.players].sort((a, b) => (a.seed ?? 0) - (b.seed ?? 0))
+                    : tournament.players;
+                  return displayed.map((p, i) => {
+                    const myToken = getMyPlayerToken(tournament.id, p.id);
+                    const handleSwap = (direction: "up" | "down") => {
+                      const newOrder = [...displayed];
+                      const targetIdx = direction === "up" ? i - 1 : i + 1;
+                      [newOrder[i], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[i]];
+                      shufflePlayers.mutate({
+                        tournamentId: tournament.id,
+                        data: { hostToken: hostToken!, playerIds: newOrder.map((pl) => pl.id) },
+                      });
+                    };
+                    return (
+                      <PlayerRow
+                        key={p.id}
+                        player={p}
+                        index={i}
+                        total={displayed.length}
+                        isSeeded={anySeeded}
+                        tournamentId={tournament.id}
+                        myToken={myToken}
+                        isHost={isHost}
+                        hostToken={hostToken}
+                        onMoveUp={i > 0 ? () => handleSwap("up") : undefined}
+                        onMoveDown={i < displayed.length - 1 ? () => handleSwap("down") : undefined}
+                        onRemove={() =>
+                          removePlayer.mutate({
+                            tournamentId: tournament.id,
+                            playerId: p.id,
+                            data: { hostToken: hostToken! },
+                          })
+                        }
+                      />
+                    );
+                  });
+                })()}
               </ul>
             )}
           </div>
@@ -310,18 +320,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                         </FormItem>
                       )} />
                     </div>
-
-                    <FormField control={joinForm.control} name="partnerName" render={({ field }) => (
-                      <FormItem>
-                        <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">
-                          Partner Name <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
-                        </Label>
-                        <FormControl>
-                          <Input placeholder="Jane Doe" className="h-11 bg-muted/50 border-none" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
 
                     <FormField control={joinForm.control} name="teamName" render={({ field }) => (
                       <FormItem>
@@ -428,14 +426,18 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 interface PlayerRowProps {
   player: TournamentFull["players"][0];
   index: number;
+  total: number;
+  isSeeded: boolean;
   tournamentId: string;
   myToken: string | null;
   isHost: boolean;
   hostToken: string | null;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onRemove: () => void;
 }
 
-function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, onRemove }: PlayerRowProps) {
+function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myToken, isHost, hostToken, onMoveUp, onMoveDown, onRemove }: PlayerRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
   const [uploading, setUploading] = useState(false);
@@ -499,6 +501,25 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
 
   return (
     <li className="flex items-center justify-between bg-muted/50 rounded-xl p-3 gap-2">
+      {/* Seed swap arrows — visible to host after shuffle */}
+      {isHost && isSeeded && (
+        <div className="flex flex-col gap-0.5 shrink-0">
+          <button
+            onClick={onMoveUp}
+            disabled={!onMoveUp}
+            className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-20 disabled:cursor-default transition-colors"
+          >
+            <ArrowUp className="w-3 h-3" />
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={!onMoveDown}
+            className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-20 disabled:cursor-default transition-colors"
+          >
+            <ArrowDown className="w-3 h-3" />
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <span className="text-muted-foreground font-mono text-sm w-4 shrink-0">{index + 1}</span>
 
@@ -553,9 +574,6 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
                 )}
                 <p className={`font-bold truncate ${player.teamName ? "text-xs text-muted-foreground" : "text-base"}`}>
                   {player.firstName} {player.lastName}
-                  {(player as any).partnerName && (
-                    <span className="text-muted-foreground"> &amp; {(player as any).partnerName}</span>
-                  )}
                 </p>
                 {(player as any).rankTitle && (
                   <p className="text-[10px] text-muted-foreground font-medium">

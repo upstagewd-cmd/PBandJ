@@ -39,6 +39,7 @@ import type {
   SessionMatchInput,
   SessionUpdate,
   SessionWithToken,
+  ShufflePlayersBody,
   Tournament,
   TournamentFull,
   TournamentInput,
@@ -484,14 +485,14 @@ export const getShufflePlayersUrl = (tournamentId: string,) => {
 }
 
 export const shufflePlayers = async (tournamentId: string,
-    hostTokenInput: HostTokenInput, options?: RequestInit): Promise<Player[]> => {
+    shufflePlayersBody: ShufflePlayersBody, options?: RequestInit): Promise<Player[]> => {
 
   return customFetch<Player[]>(getShufflePlayersUrl(tournamentId),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(hostTokenInput)
+    body: JSON.stringify(shufflePlayersBody)
   }
 );}
 
@@ -499,8 +500,8 @@ export const shufflePlayers = async (tournamentId: string,
 
 
 export const getShufflePlayersMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<ShufflePlayersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<ShufflePlayersBody>}, TContext> => {
 
 const mutationKey = ['shufflePlayers'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -512,7 +513,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shufflePlayers>>, {tournamentId: string;data: BodyType<HostTokenInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shufflePlayers>>, {tournamentId: string;data: BodyType<ShufflePlayersBody>}> = (props) => {
           const {tournamentId,data} = props ?? {};
 
           return  shufflePlayers(tournamentId,data,requestOptions)
@@ -526,15 +527,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ShufflePlayersMutationResult = NonNullable<Awaited<ReturnType<typeof shufflePlayers>>>
-    export type ShufflePlayersMutationBody = BodyType<HostTokenInput>
+    export type ShufflePlayersMutationBody = BodyType<ShufflePlayersBody>
     export type ShufflePlayersMutationError = ErrorType<unknown>
 
     export const useShufflePlayers = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<HostTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shufflePlayers>>, TError,{tournamentId: string;data: BodyType<ShufflePlayersBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof shufflePlayers>>,
         TError,
-        {tournamentId: string;data: BodyType<HostTokenInput>},
+        {tournamentId: string;data: BodyType<ShufflePlayersBody>},
         TContext
       > => {
       return useMutation(getShufflePlayersMutationOptions(options));

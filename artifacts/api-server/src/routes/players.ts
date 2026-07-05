@@ -155,14 +155,24 @@ playersRouter.post("/shuffle", async (req: Request<{ tournamentId: string }>, re
     if (body.hostToken !== tournament.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
 
     const players = await db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId));
-    const shuffled = [...players].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < shuffled.length; i++) {
-      await db.update(playersTable).set({ seed: i + 1 }).where(eq(playersTable.id, shuffled[i].id));
+
+    let ordered: typeof players;
+    if (body.playerIds && body.playerIds.length > 0) {
+      const idOrder = body.playerIds;
+      const byId = new Map(players.map((p) => [p.id, p]));
+      ordered = idOrder.map((id) => byId.get(id)).filter(Boolean) as typeof players;
+      players.filter((p) => !idOrder.includes(p.id)).forEach((p) => ordered.push(p));
+    } else {
+      ordered = [...players].sort(() => Math.random() - 0.5);
+    }
+
+    for (let i = 0; i < ordered.length; i++) {
+      await db.update(playersTable).set({ seed: i + 1 }).where(eq(playersTable.id, ordered[i].id));
     }
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-    res.json(shuffled.map((p, i) => serializePlayer({ ...p, seed: i + 1 })));
+    res.json(ordered.map((p, i) => serializePlayer({ ...p, seed: i + 1 })));
   } catch (err) {
     req.log.error({ err }, "Failed to shuffle players");
     res.status(500).json({ error: "Failed to shuffle players" });

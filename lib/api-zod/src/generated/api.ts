@@ -183,7 +183,8 @@ export const ShufflePlayersParams = zod.object({
 })
 
 export const ShufflePlayersBody = zod.object({
-  "hostToken": zod.string()
+  "hostToken": zod.string(),
+  "playerIds": zod.array(zod.string()).optional().describe('If provided, assigns seeds in this exact order instead of randomizing')
 })
 
 export const ShufflePlayersResponseItem = zod.object({

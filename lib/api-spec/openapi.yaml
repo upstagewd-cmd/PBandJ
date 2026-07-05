@@ -147,7 +147,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/HostTokenInput"
+              $ref: "#/components/schemas/ShufflePlayersBody"
       responses:
         "200":
           description: OK
@@ -873,6 +873,18 @@ components:
           type: integer
         scoreTwo:
           type: integer
+
+    ShufflePlayersBody:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+        playerIds:
+          type: array
+          items:
+            type: string
+          description: If provided, assigns seeds in this exact order instead of randomizing
 
     HostTokenInput:
       type: object

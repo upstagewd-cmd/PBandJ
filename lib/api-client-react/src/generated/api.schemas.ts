@@ -275,6 +275,12 @@ export interface MatchUpdate {
   scoreTwo?: number;
 }
 
+export interface ShufflePlayersBody {
+  hostToken: string;
+  /** If provided, assigns seeds in this exact order instead of randomizing */
+  playerIds?: string[];
+}
+
 export interface HostTokenInput {
   hostToken: string;
 }
