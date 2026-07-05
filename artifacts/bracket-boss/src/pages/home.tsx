@@ -166,7 +166,7 @@ export default function Home() {
         </Show>
       </div>
 
-      <div className="relative z-10 space-y-6 max-w-md w-full">
+      <div className="relative z-10 space-y-6 max-w-md w-full py-20 sm:py-8">
         <div className="mx-auto w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 shadow-[0_0_40px_rgba(255,100,50,0.2)]">
           <Trophy className="w-12 h-12 text-primary" />
         </div>
