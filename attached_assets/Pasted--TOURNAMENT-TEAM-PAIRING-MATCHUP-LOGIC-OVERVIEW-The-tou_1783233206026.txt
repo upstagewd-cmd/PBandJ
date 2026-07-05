@@ -1,0 +1,169 @@
+# TOURNAMENT TEAM PAIRING & MATCHUP LOGIC
+
+## OVERVIEW
+
+The tournament consists of two separate steps:
+
+1. Build doubles teams.
+2. Build the tournament bracket.
+
+These are independent processes.
+
+---
+
+# STEP 1: BUILDING TEAMS
+
+When all players have joined, the host selects **Generate Teams**.
+
+The default behavior should be **Balanced Random**.
+
+## Balanced Random
+
+Every player has a hidden rating.
+
+The system should create random teams while attempting to keep overall team strength balanced.
+
+Goals:
+
+* Avoid pairing two Advanced players together whenever possible.
+* Avoid pairing two Beginners together whenever possible.
+* Prefer:
+
+  * Advanced + Beginner
+  * Advanced + Intermediate
+  * Intermediate + Intermediate
+
+The system should not always create the exact same teams.
+
+Introduce enough randomness that players cannot predict the pairings, while still creating reasonably balanced teams.
+
+Perfect balance is NOT required.
+
+Fun and variety are more important.
+
+---
+
+# ODD NUMBER OF PLAYERS
+
+If there is an odd number of players:
+
+Display a message indicating one player must sit out the first round.
+
+The host chooses which player sits out.
+
+That player should be highlighted as waiting for the next available game.
+
+---
+
+# HOST TEAM EDITING
+
+After teams are generated, but BEFORE the tournament begins, the host enters a Team Review screen.
+
+The tournament has NOT started yet.
+
+The host can manually modify any team.
+
+Host actions include:
+
+* Swap Player A with Player B
+* Drag players between teams
+* Completely rebuild teams
+* Shuffle again
+* Generate a new Balanced Random pairing
+* Generate a completely Random pairing (ignores ratings)
+
+Changes should update instantly.
+
+The host can continue making adjustments until pressing:
+
+**Start Tournament**
+
+Once the tournament begins:
+
+Teams become locked.
+
+No team changes are allowed unless using the Admin page.
+
+---
+
+# TEAM DISPLAY
+
+Show teams as cards.
+
+Each card includes:
+
+* Player 1 profile picture
+* Player 1 name
+* Player 2 profile picture
+* Player 2 name
+* Combined team rating (host only)
+* Team average skill level (host only)
+
+Regular players should NOT see ratings.
+
+---
+
+# STEP 2: BUILDING THE BRACKET
+
+Once teams are finalized:
+
+Generate a SINGLE ELIMINATION bracket.
+
+The bracket should be randomly seeded.
+
+Do NOT seed based on ratings.
+
+Every team should have an equal chance of drawing any opponent.
+
+The randomness should feel fair.
+
+Avoid intentionally matching the strongest teams together in Round 1.
+
+Avoid intentionally matching the weakest teams together in Round 1.
+
+If possible, slightly distribute stronger teams across the bracket, but prioritize randomness over perfect seeding.
+
+The tournament should feel like a casual church pickleball tournament, not a professional sports league.
+
+---
+
+# BYES
+
+If the number of teams is not a power of two:
+
+Automatically assign first-round byes.
+
+Byes should be randomly assigned.
+
+Do not favor higher-rated teams.
+
+---
+
+# HOST CONTROLS BEFORE START
+
+Before pressing **Start Tournament**, the host can:
+
+* Shuffle players
+* Generate Balanced Random teams
+* Generate Completely Random teams
+* Swap individual players
+* Drag and drop players between teams
+* Remove players
+* Add late players
+* Regenerate the bracket
+
+Once **Start Tournament** is pressed:
+
+* Teams lock
+* Bracket locks
+* Tournament officially begins
+
+---
+
+# DESIGN GOAL
+
+The system should make organizing a tournament effortless.
+
+The host should be able to create balanced teams in one click while still having complete manual control before the tournament starts.
+
+Players should feel that teams are fair, varied, and fun, without needing to understand the hidden rating system.

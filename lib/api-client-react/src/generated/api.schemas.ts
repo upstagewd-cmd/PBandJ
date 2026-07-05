@@ -44,6 +44,41 @@ export interface TournamentWithToken {
   hostToken: string;
 }
 
+export interface Team {
+  id: string;
+  tournamentId: string;
+  /** @nullable */
+  player1Id?: string | null;
+  /** @nullable */
+  player2Id?: string | null;
+  /** @nullable */
+  teamName?: string | null;
+  seed: number;
+  createdAt: string;
+}
+
+export type GenerateTeamsBodyMode = typeof GenerateTeamsBodyMode[keyof typeof GenerateTeamsBodyMode];
+
+
+export const GenerateTeamsBodyMode = {
+  balanced: 'balanced',
+  random: 'random',
+} as const;
+
+export interface GenerateTeamsBody {
+  hostToken: string;
+  mode?: GenerateTeamsBodyMode;
+}
+
+export interface UpdateTeamBody {
+  hostToken: string;
+  /** @nullable */
+  player1Id?: string | null;
+  /** @nullable */
+  player2Id?: string | null;
+  teamName?: string;
+}
+
 export type TournamentFullStatus = typeof TournamentFullStatus[keyof typeof TournamentFullStatus];
 
 
@@ -131,6 +166,7 @@ export interface TournamentFull {
   /** @nullable */
   completedAt?: string | null;
   players: Player[];
+  teams: Team[];
   matches: Match[];
 }
 

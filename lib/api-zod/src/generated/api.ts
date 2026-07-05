@@ -52,6 +52,15 @@ export const GetTournamentResponse = zod.object({
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
+  "teams": zod.array(zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
   "matches": zod.array(zod.object({
   "id": zod.string(),
   "tournamentId": zod.string(),
@@ -122,6 +131,15 @@ export const StartTournamentResponse = zod.object({
   "rankEmoji": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
+})),
+  "teams": zod.array(zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
 })),
   "matches": zod.array(zod.object({
   "id": zod.string(),
@@ -202,6 +220,61 @@ export const ShufflePlayersResponseItem = zod.object({
   "joinedAt": zod.coerce.date()
 })
 export const ShufflePlayersResponse = zod.array(ShufflePlayersResponseItem)
+
+
+export const GenerateTeamsParams = zod.object({
+  "tournamentId": zod.coerce.string()
+})
+
+export const GenerateTeamsBody = zod.object({
+  "hostToken": zod.string(),
+  "mode": zod.enum(['balanced', 'random']).optional()
+})
+
+export const GenerateTeamsResponseItem = zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const GenerateTeamsResponse = zod.array(GenerateTeamsResponseItem)
+
+
+export const ResetTeamsParams = zod.object({
+  "tournamentId": zod.coerce.string()
+})
+
+export const ResetTeamsBody = zod.object({
+  "hostToken": zod.string()
+})
+
+export const ResetTeamsResponse = zod.unknown()
+
+
+export const UpdateTeamParams = zod.object({
+  "tournamentId": zod.coerce.string(),
+  "teamId": zod.coerce.string()
+})
+
+export const UpdateTeamBody = zod.object({
+  "hostToken": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().optional()
+})
+
+export const UpdateTeamResponse = zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
+})
 
 
 export const UpdatePlayerParams = zod.object({
@@ -355,6 +428,15 @@ export const UpdateMatchResponse = zod.object({
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
 })),
+  "teams": zod.array(zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
   "matches": zod.array(zod.object({
   "id": zod.string(),
   "tournamentId": zod.string(),
@@ -406,6 +488,15 @@ export const UndoLastMatchResponse = zod.object({
   "rankEmoji": zod.string().nullish(),
   "seed": zod.number(),
   "joinedAt": zod.coerce.date()
+})),
+  "teams": zod.array(zod.object({
+  "id": zod.string(),
+  "tournamentId": zod.string(),
+  "player1Id": zod.string().nullish(),
+  "player2Id": zod.string().nullish(),
+  "teamName": zod.string().nullish(),
+  "seed": zod.number(),
+  "createdAt": zod.coerce.date()
 })),
   "matches": zod.array(zod.object({
   "id": zod.string(),

@@ -1,6 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
-import { db, tournamentsTable, playersTable, matchesTable } from "@workspace/db";
+import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import {
   CreateTournamentBody,
@@ -136,28 +136,28 @@ tournamentsRouter.post("/:tournamentId/start", async (req: Request<{ tournamentI
       return;
     }
 
-    const players = await db
+    const teams = await db
       .select()
-      .from(playersTable)
-      .where(eq(playersTable.tournamentId, tournamentId));
+      .from(teamsTable)
+      .where(eq(teamsTable.tournamentId, tournamentId));
 
-    if (players.length < 4) {
-      res.status(400).json({ error: "Double elimination requires at least 4 players" });
+    if (teams.length < 2) {
+      res.status(400).json({ error: "Generate teams first (minimum 2 teams required)" });
       return;
     }
 
-    // Randomly seed players
-    const shuffled = [...players].sort(() => Math.random() - 0.5);
+    // Randomly seed teams
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
     for (let i = 0; i < shuffled.length; i++) {
       await db
-        .update(playersTable)
+        .update(teamsTable)
         .set({ seed: i + 1 })
-        .where(eq(playersTable.id, shuffled[i].id));
+        .where(eq(teamsTable.id, shuffled[i].id));
     }
 
-    // Generate single-elimination bracket
-    const seededPlayers = shuffled.map((p, i) => ({ id: p.id, seed: i + 1 }));
-    const bracketMatches = generateSingleEliminationBracket(tournamentId, seededPlayers);
+    // Generate single-elimination bracket using team IDs
+    const seededTeams = shuffled.map((t, i) => ({ id: t.id, seed: i + 1 }));
+    const bracketMatches = generateSingleEliminationBracket(tournamentId, seededTeams);
 
     if (bracketMatches.length > 0) {
       await db.insert(matchesTable).values(bracketMatches);

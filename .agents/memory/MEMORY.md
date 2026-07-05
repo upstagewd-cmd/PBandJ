@@ -1,3 +1,4 @@
 - [Orval zod codegen conflict](orval-zod-conflict.md) — removing `schemas` from orval zod config and using single-file mode prevents duplicate export errors between api.ts and types/index.ts
 - [Object storage template type fix](object-storage-type-fix.md) — objectStorage.ts template needs a type cast on `response.json()` for `signed_url` destructuring
 - [ELO + open play architecture](elo-open-play.md) — single elimination only; ELO updates on any match completion; loser auto-joins open_play_pool immediately on any bracket loss
+- [Doubles teams architecture](doubles-teams.md) — matchesTable.playerOneId/playerTwoId/winnerId store TEAM IDs; teamsTable joins two players; bracket generated from teams not players

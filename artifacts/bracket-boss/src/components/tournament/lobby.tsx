@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   TournamentFull,
+  Team,
   useUpdateTournament,
   useStartTournament,
   useJoinTournament,
-  useShufflePlayers,
   useRemovePlayer,
   useUpdatePlayer,
+  useGenerateTeams,
+  useResetTeams,
+  useUpdateTeam,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +20,6 @@ import {
   Copy,
   Users,
   Play,
-  Shuffle,
   UserMinus,
   Lock,
   Unlock,
@@ -26,10 +28,11 @@ import {
   Shield,
   Link,
   Pencil,
-  X,
   Camera,
-  ArrowUp,
-  ArrowDown,
+  Shuffle,
+  RefreshCw,
+  X,
+  ArrowLeftRight,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -87,8 +90,9 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   const updateTournament = useUpdateTournament();
   const startTournament = useStartTournament();
   const joinTournament = useJoinTournament();
-  const shufflePlayers = useShufflePlayers();
   const removePlayer = useRemovePlayer();
+  const generateTeams = useGenerateTeams();
+  const resetTeams = useResetTeams();
 
   const joinForm = useForm<z.infer<typeof joinSchema>>({
     resolver: zodResolver(joinSchema),
@@ -114,17 +118,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
     }
   };
 
-  // Preview the auto-generated team name as user types
-  const watchedFirst = joinForm.watch("firstName");
-  const watchedLast = joinForm.watch("lastName");
-  const watchedTeam = joinForm.watch("teamName");
-
-  const autoTeamName = (() => {
-    if (watchedTeam?.trim()) return null; // user typed their own
-    if (!watchedFirst.trim() || !watchedLast.trim()) return null;
-    return `${watchedFirst.trim()} ${watchedLast.trim()}`;
-  })();
-
   const onJoin = (values: z.infer<typeof joinSchema>) => {
     joinTournament.mutate(
       {
@@ -142,7 +135,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
             localStorage.setItem(`playerToken_${tournament.id}_${data.id}`, data.playerToken);
           }
           joinForm.reset();
-          toast({ title: "Joined! You can edit your team name anytime." });
+          toast({ title: "Joined! See you on the court." });
         },
         onError: (err: any) => {
           toast({
@@ -154,6 +147,28 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
       }
     );
   };
+
+  const handleGenerateTeams = (mode: "balanced" | "random") => {
+    generateTeams.mutate(
+      { tournamentId: tournament.id, data: { hostToken: hostToken!, mode } },
+      {
+        onSuccess: () => toast({ title: `Teams generated (${mode})!` }),
+        onError: () => toast({ title: "Failed to generate teams", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleResetTeams = () => {
+    resetTeams.mutate(
+      { tournamentId: tournament.id, data: { hostToken: hostToken! } },
+      {
+        onError: () => toast({ title: "Failed to reset teams", variant: "destructive" }),
+      }
+    );
+  };
+
+  const hasTeams = (tournament.teams?.length ?? 0) > 0;
+  const canStart = hasTeams && (tournament.teams?.length ?? 0) >= 2;
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -171,9 +186,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         ) : (
           <h1 className="text-4xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
         )}
-        <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
-          Lobby
-        </p>
+        <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">Lobby</p>
       </div>
 
       {/* QR + Links */}
@@ -227,16 +240,6 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
               Players
               <span className="text-muted-foreground ml-1">({tournament.players.length})</span>
             </h2>
-            {isHost && tournament.players.length > 1 && (
-              <Button
-                variant="outline" size="sm"
-                onClick={() => shufflePlayers.mutate({ tournamentId: tournament.id, data: { hostToken: hostToken! } })}
-                disabled={shufflePlayers.isPending}
-                className="font-bold uppercase tracking-wider text-xs"
-              >
-                <Shuffle className="w-4 h-4 mr-2" /> Shuffle
-              </Button>
-            )}
           </div>
 
           <div className="bg-card border border-border/50 rounded-3xl p-4 shadow-xl min-h-[200px]">
@@ -247,52 +250,33 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
               </div>
             ) : (
               <ul className="space-y-2">
-                {(() => {
-                  const anySeeded = tournament.players.some((p) => (p.seed ?? 0) > 0);
-                  const displayed = anySeeded
-                    ? [...tournament.players].sort((a, b) => (a.seed ?? 0) - (b.seed ?? 0))
-                    : tournament.players;
-                  return displayed.map((p, i) => {
-                    const myToken = getMyPlayerToken(tournament.id, p.id);
-                    const handleSwap = (direction: "up" | "down") => {
-                      const newOrder = [...displayed];
-                      const targetIdx = direction === "up" ? i - 1 : i + 1;
-                      [newOrder[i], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[i]];
-                      shufflePlayers.mutate({
-                        tournamentId: tournament.id,
-                        data: { hostToken: hostToken!, playerIds: newOrder.map((pl) => pl.id) },
-                      });
-                    };
-                    return (
-                      <PlayerRow
-                        key={p.id}
-                        player={p}
-                        index={i}
-                        total={displayed.length}
-                        isSeeded={anySeeded}
-                        tournamentId={tournament.id}
-                        myToken={myToken}
-                        isHost={isHost}
-                        hostToken={hostToken}
-                        onMoveUp={i > 0 ? () => handleSwap("up") : undefined}
-                        onMoveDown={i < displayed.length - 1 ? () => handleSwap("down") : undefined}
-                        onRemove={() =>
-                          removePlayer.mutate({
-                            tournamentId: tournament.id,
-                            playerId: p.id,
-                            data: { hostToken: hostToken! },
-                          })
-                        }
-                      />
-                    );
-                  });
-                })()}
+                {tournament.players.map((p, i) => {
+                  const myToken = getMyPlayerToken(tournament.id, p.id);
+                  return (
+                    <PlayerRow
+                      key={p.id}
+                      player={p}
+                      index={i}
+                      tournamentId={tournament.id}
+                      myToken={myToken}
+                      isHost={isHost}
+                      hostToken={hostToken}
+                      onRemove={() =>
+                        removePlayer.mutate({
+                          tournamentId: tournament.id,
+                          playerId: p.id,
+                          data: { hostToken: hostToken! },
+                        })
+                      }
+                    />
+                  );
+                })}
               </ul>
             )}
           </div>
         </div>
 
-        {/* Join / Host Controls */}
+        {/* Right column: Join form OR host team/start controls */}
         <div className="space-y-4">
           {!tournament.registrationLocked ? (
             <>
@@ -324,10 +308,10 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                     <FormField control={joinForm.control} name="teamName" render={({ field }) => (
                       <FormItem>
                         <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">
-                          Team Name <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
+                          Nickname <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
                         </Label>
                         <FormControl>
-                          <Input placeholder="The Dream Team" className="h-11 bg-muted/50 border-none" {...field} />
+                          <Input placeholder="The Dink Masters" className="h-11 bg-muted/50 border-none" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -399,7 +383,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 </Button>
                 <Button
                   className="h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white"
-                  disabled={tournament.players.length < 4 || startTournament.isPending}
+                  disabled={!canStart || startTournament.isPending}
                   onClick={() => startTournament.mutate({ tournamentId: tournament.id, data: { hostToken: hostToken! } })}
                 >
                   {startTournament.isPending
@@ -408,14 +392,205 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                   }
                 </Button>
               </div>
-              {tournament.players.length < 4 && (
+              {!canStart && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Requires at least 4 players ({4 - tournament.players.length} more needed)
+                  {hasTeams
+                    ? "Need at least 2 teams to start"
+                    : "Generate teams below before starting"}
                 </p>
               )}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Teams Section — host only */}
+      {isHost && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <ArrowLeftRight className="w-6 h-6 text-primary" />
+              Teams
+              {hasTeams && (
+                <span className="text-muted-foreground ml-1">({tournament.teams?.length})</span>
+              )}
+            </h2>
+            <div className="flex items-center gap-2">
+              {hasTeams && (
+                <Button
+                  variant="outline" size="sm"
+                  onClick={handleResetTeams}
+                  disabled={resetTeams.isPending}
+                  className="font-bold uppercase tracking-wider text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  <X className="w-3 h-3 mr-1.5" /> Reset
+                </Button>
+              )}
+              <Button
+                variant="outline" size="sm"
+                onClick={() => handleGenerateTeams("balanced")}
+                disabled={generateTeams.isPending || tournament.players.length < 2}
+                className="font-bold uppercase tracking-wider text-xs"
+              >
+                {generateTeams.isPending
+                  ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                  : <Shuffle className="w-3 h-3 mr-1.5" />
+                }
+                {hasTeams ? "Regenerate" : "Generate"} Balanced
+              </Button>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => handleGenerateTeams("random")}
+                disabled={generateTeams.isPending || tournament.players.length < 2}
+                className="font-bold uppercase tracking-wider text-xs"
+              >
+                <RefreshCw className="w-3 h-3 mr-1.5" /> Random
+              </Button>
+            </div>
+          </div>
+
+          {!hasTeams ? (
+            <div className="bg-card border border-dashed border-border/60 rounded-3xl p-10 text-center text-muted-foreground space-y-3">
+              <ArrowLeftRight className="w-10 h-10 opacity-20 mx-auto" />
+              <p className="font-medium">No teams yet.</p>
+              <p className="text-sm">
+                {tournament.players.length < 2
+                  ? "Add at least 2 players first, then generate teams."
+                  : "Click \"Generate Balanced\" to auto-pair players by skill level."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {tournament.teams?.map((team, idx) => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  index={idx}
+                  tournament={tournament}
+                  hostToken={hostToken!}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Teams view for non-hosts when teams exist */}
+      {!isHost && hasTeams && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <ArrowLeftRight className="w-6 h-6 text-primary" />
+            Teams
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {tournament.teams?.map((team, idx) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                index={idx}
+                tournament={tournament}
+                hostToken={null}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TeamCard ───────────────────────────────────────────────────────────────────
+
+interface TeamCardProps {
+  team: Team;
+  index: number;
+  tournament: TournamentFull;
+  hostToken: string | null;
+}
+
+function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
+  const isHost = !!hostToken;
+  const { toast } = useToast();
+  const updateTeam = useUpdateTeam();
+
+  const getPlayer = (id: string | null | undefined) =>
+    id ? tournament.players.find((p) => p.id === id) ?? null : null;
+
+  const p1 = getPlayer(team.player1Id);
+  const p2 = getPlayer(team.player2Id);
+
+  const teamLabel = team.teamName
+    || (p1 && p2 ? `${p1.firstName} & ${p2.firstName}` : `Team ${index + 1}`);
+
+  const handleSwapSlot = (slot: "player1Id" | "player2Id", newPlayerId: string) => {
+    if (!isHost) return;
+    updateTeam.mutate(
+      { tournamentId: tournament.id, teamId: team.id, data: { hostToken: hostToken!, [slot]: newPlayerId } },
+      { onError: () => toast({ title: "Swap failed", variant: "destructive" }) }
+    );
+  };
+
+  const otherPlayerOptions = tournament.players.filter(
+    (p) => p.id !== team.player1Id && p.id !== team.player2Id
+  );
+
+  return (
+    <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Team {index + 1}
+        </span>
+        {team.teamName && (
+          <span className="text-xs font-bold text-primary truncate ml-2">{team.teamName}</span>
+        )}
+      </div>
+
+      <div className="font-semibold text-base truncate">{teamLabel}</div>
+
+      <div className="space-y-2">
+        {[
+          { player: p1, slot: "player1Id" as const, label: "Player 1" },
+          { player: p2, slot: "player2Id" as const, label: "Player 2" },
+        ].map(({ player, slot, label }) => (
+          <div key={slot} className="flex items-center gap-2">
+            {player ? (
+              <>
+                <PlayerAvatar player={player} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">
+                    {player.firstName} {player.lastName}
+                  </p>
+                  {(player as any).skillLevel && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {(player as any).skillLevel === "advanced" ? "🔴" : (player as any).skillLevel === "intermediate" ? "🔵" : "🟢"}{" "}
+                      {(player as any).skillLevel}
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground italic">{label} (open)</span>
+            )}
+            {isHost && otherPlayerOptions.length > 0 && (
+              <select
+                className="ml-auto text-xs bg-muted border border-border/50 rounded-lg px-1.5 py-1 cursor-pointer hover:bg-muted/80 text-foreground"
+                value=""
+                onChange={(e) => { if (e.target.value) handleSwapSlot(slot, e.target.value); }}
+              >
+                <option value="">↕ swap</option>
+                {otherPlayerOptions.map((op) => {
+                  const inTeam = tournament.teams?.find((t) => t.player1Id === op.id || t.player2Id === op.id);
+                  const teamIdx = inTeam ? tournament.teams?.indexOf(inTeam) : -1;
+                  return (
+                    <option key={op.id} value={op.id}>
+                      {op.firstName} {op.lastName}{inTeam && teamIdx !== undefined && teamIdx >= 0 ? ` (T${teamIdx + 1})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -426,18 +601,14 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 interface PlayerRowProps {
   player: TournamentFull["players"][0];
   index: number;
-  total: number;
-  isSeeded: boolean;
   tournamentId: string;
   myToken: string | null;
   isHost: boolean;
   hostToken: string | null;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
   onRemove: () => void;
 }
 
-function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myToken, isHost, hostToken, onMoveUp, onMoveDown, onRemove }: PlayerRowProps) {
+function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, onRemove }: PlayerRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
   const [uploading, setUploading] = useState(false);
@@ -457,7 +628,7 @@ function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myTok
       { tournamentId, playerId: player.id, data: { ...auth, teamName: draft } },
       {
         onError: () => {
-          toast({ title: "Couldn't save team name", variant: "destructive" });
+          toast({ title: "Couldn't save nickname", variant: "destructive" });
           setDraft(player.teamName ?? "");
         },
       }
@@ -469,7 +640,6 @@ function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myTok
     if (!file || !myToken) return;
     setUploading(true);
     try {
-      // Step 1: Request presigned upload URL
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -477,16 +647,12 @@ function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myTok
       });
       if (!urlRes.ok) throw new Error("Failed to get upload URL");
       const { uploadURL, objectPath } = await urlRes.json();
-
-      // Step 2: Upload directly to GCS
       const uploadRes = await fetch(uploadURL, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
       });
       if (!uploadRes.ok) throw new Error("Upload failed");
-
-      // Step 3: Save objectPath as avatarUrl on the player
       updatePlayer.mutate(
         { tournamentId, playerId: player.id, data: { playerToken: myToken, avatarUrl: objectPath } },
         { onError: () => toast({ title: "Couldn't save avatar", variant: "destructive" }) }
@@ -501,29 +667,9 @@ function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myTok
 
   return (
     <li className="flex items-center justify-between bg-muted/50 rounded-xl p-3 gap-2">
-      {/* Seed swap arrows — visible to host after shuffle */}
-      {isHost && isSeeded && (
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button
-            onClick={onMoveUp}
-            disabled={!onMoveUp}
-            className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-20 disabled:cursor-default transition-colors"
-          >
-            <ArrowUp className="w-3 h-3" />
-          </button>
-          <button
-            onClick={onMoveDown}
-            disabled={!onMoveDown}
-            className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-20 disabled:cursor-default transition-colors"
-          >
-            <ArrowDown className="w-3 h-3" />
-          </button>
-        </div>
-      )}
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <span className="text-muted-foreground font-mono text-sm w-4 shrink-0">{index + 1}</span>
 
-        {/* Avatar */}
         <div className="relative shrink-0">
           <PlayerAvatar player={player} size="md" />
           {canEdit && (
@@ -556,52 +702,43 @@ function PlayerRow({ player, index, total: _total, isSeeded, tournamentId, myTok
                   if (e.key === "Enter") saveTeamName();
                   if (e.key === "Escape") { setEditing(false); setDraft(player.teamName ?? ""); }
                 }}
-                placeholder="Team name..."
+                placeholder="Nickname..."
                 className="h-8 text-sm bg-background border-primary/40"
               />
-              <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={saveTeamName}>
-                <Check className="w-4 h-4 text-primary" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => { setEditing(false); setDraft(player.teamName ?? ""); }}>
-                <X className="w-4 h-4" />
-              </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <div className="min-w-0">
-                {player.teamName && (
-                  <p className="font-extrabold text-sm text-primary truncate">{player.teamName}</p>
-                )}
-                <p className={`font-bold truncate ${player.teamName ? "text-xs text-muted-foreground" : "text-base"}`}>
+            <div>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="font-semibold text-sm truncate">
                   {player.firstName} {player.lastName}
-                </p>
-                {(player as any).rankTitle && (
-                  <p className="text-[10px] text-muted-foreground font-medium">
-                    {(player as any).rankEmoji} {(player as any).rankTitle}
-                  </p>
+                </span>
+                {player.teamName && (
+                  <span className="text-xs text-muted-foreground truncate">· {player.teamName}</span>
+                )}
+                {canEdit && (
+                  <button onClick={() => setEditing(true)} className="shrink-0 opacity-40 hover:opacity-100 transition-opacity">
+                    <Pencil className="w-3 h-3" />
+                  </button>
                 )}
               </div>
-              {canEdit && (
-                <Button
-                  size="icon" variant="ghost"
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
-                  onClick={() => { setDraft(player.teamName ?? ""); setEditing(true); }}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
+              {(player as any).skillLevel && (
+                <p className="text-[10px] text-muted-foreground">
+                  {(player as any).skillLevel === "advanced" ? "🔴" : (player as any).skillLevel === "intermediate" ? "🔵" : "🟢"}{" "}
+                  {(player as any).skillLevel}
+                </p>
               )}
             </div>
           )}
         </div>
       </div>
+
       {isHost && (
-        <Button
-          variant="ghost" size="icon"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 h-8 w-8"
+        <button
           onClick={onRemove}
+          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
         >
           <UserMinus className="w-4 h-4" />
-        </Button>
+        </button>
       )}
     </li>
   );

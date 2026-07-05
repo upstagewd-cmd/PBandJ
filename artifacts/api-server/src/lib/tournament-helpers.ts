@@ -1,4 +1,4 @@
-import { db, tournamentsTable, playersTable, matchesTable } from "@workspace/db";
+import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getRank } from "./ranks";
 
@@ -16,6 +16,7 @@ function serializePlayer(p: typeof playersTable.$inferSelect) {
     rankTitle: rank.title,
     rankEmoji: rank.emoji,
     seed: p.seed,
+    teamId: p.teamId ?? null,
     joinedAt: p.joinedAt.toISOString(),
     // playerToken intentionally omitted — never broadcast to all clients
   };
@@ -29,17 +30,11 @@ export async function getTournamentFull(tournamentId: string) {
 
   if (!tournament) return null;
 
-  const players = await db
-    .select()
-    .from(playersTable)
-    .where(eq(playersTable.tournamentId, tournamentId))
-    .orderBy(playersTable.seed, playersTable.joinedAt);
-
-  const matches = await db
-    .select()
-    .from(matchesTable)
-    .where(eq(matchesTable.tournamentId, tournamentId))
-    .orderBy(matchesTable.round, matchesTable.matchNumber);
+  const [players, teams, matches] = await Promise.all([
+    db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId)).orderBy(playersTable.seed, playersTable.joinedAt),
+    db.select().from(teamsTable).where(eq(teamsTable.tournamentId, tournamentId)).orderBy(teamsTable.seed, teamsTable.createdAt),
+    db.select().from(matchesTable).where(eq(matchesTable.tournamentId, tournamentId)).orderBy(matchesTable.round, matchesTable.matchNumber),
+  ]);
 
   return {
     id: tournament.id,
@@ -50,6 +45,15 @@ export async function getTournamentFull(tournamentId: string) {
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
     players: players.map(serializePlayer),
+    teams: teams.map((t) => ({
+      id: t.id,
+      tournamentId: t.tournamentId,
+      player1Id: t.player1Id ?? null,
+      player2Id: t.player2Id ?? null,
+      teamName: t.teamName ?? null,
+      seed: t.seed,
+      createdAt: t.createdAt.toISOString(),
+    })),
     matches: matches.map((m) => ({
       ...m,
       completedAt: (m as any).completedAt?.toISOString?.() ?? null,

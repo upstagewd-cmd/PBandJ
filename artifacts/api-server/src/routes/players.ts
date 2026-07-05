@@ -97,7 +97,7 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     if (full) broadcastTournamentUpdate(tournamentId, full);
 
     res.status(201).json({
-      ...serializePlayer({ ...playerRow, joinedAt: new Date() }),
+      ...serializePlayer({ ...playerRow, joinedAt: new Date(), teamId: null }),
       playerToken,
     });
   } catch (err) {

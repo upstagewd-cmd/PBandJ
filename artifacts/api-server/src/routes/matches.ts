@@ -1,7 +1,7 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
-import { db, tournamentsTable, matchesTable, playersTable, openPlayPoolTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, tournamentsTable, matchesTable, playersTable, teamsTable, openPlayPoolTable } from "@workspace/db";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { UpdateMatchBody, UndoLastMatchBody } from "@workspace/api-zod";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
@@ -143,35 +143,50 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
       match.status = "completed";
       (match as any).completedAt = new Date();
 
-      // ── ELO update for both players ───────────────────────────────────
+      // ── ELO update for all 4 players (team-based) ────────────────────
       if (!match.isBye && match.playerOneId && match.playerTwoId) {
-        const [p1, p2] = await Promise.all([
-          db.select().from(playersTable).where(eq(playersTable.id, match.playerOneId)),
-          db.select().from(playersTable).where(eq(playersTable.id, match.playerTwoId)),
+        // playerOneId / playerTwoId now hold team IDs
+        const [team1Rows, team2Rows] = await Promise.all([
+          db.select().from(teamsTable).where(eq(teamsTable.id, match.playerOneId!)),
+          db.select().from(teamsTable).where(eq(teamsTable.id, match.playerTwoId!)),
         ]);
-        const player1 = p1[0];
-        const player2 = p2[0];
-        if (player1 && player2) {
-          const r1 = player1.eloRating ?? 1200;
-          const r2 = player2.eloRating ?? 1200;
-          const p1won = match.winnerId === player1.id;
-          const { winnerDelta, loserDelta } = computeElo(p1won ? r1 : r2, p1won ? r2 : r1);
-          await db.update(playersTable).set({ eloRating: Math.max(800, r1 + (p1won ? winnerDelta : loserDelta)) }).where(eq(playersTable.id, player1.id));
-          await db.update(playersTable).set({ eloRating: Math.max(800, r2 + (p1won ? loserDelta : winnerDelta)) }).where(eq(playersTable.id, player2.id));
-        }
+        const team1 = team1Rows[0];
+        const team2 = team2Rows[0];
 
-        // ── Add loser to open play pool immediately (single elimination) ─
-        const loserPlayerId = loserId(match);
-        if (loserPlayerId) {
-          const existing = await db.select().from(openPlayPoolTable)
-            .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, loserPlayerId)));
-          if (existing.length === 0) {
-            await db.insert(openPlayPoolTable).values({
-              id: randomUUID(),
-              tournamentId,
-              playerId: loserPlayerId,
-              status: "available",
-            });
+        if (team1 && team2) {
+          const team1PlayerIds = [team1.player1Id, team1.player2Id].filter(Boolean) as string[];
+          const team2PlayerIds = [team2.player1Id, team2.player2Id].filter(Boolean) as string[];
+
+          type PlayerRow = typeof playersTable.$inferSelect;
+          const [t1Players, t2Players] = await Promise.all([
+            team1PlayerIds.length ? db.select().from(playersTable).where(inArray(playersTable.id, team1PlayerIds)) : Promise.resolve([] as PlayerRow[]),
+            team2PlayerIds.length ? db.select().from(playersTable).where(inArray(playersTable.id, team2PlayerIds)) : Promise.resolve([] as PlayerRow[]),
+          ]);
+
+          const team1Won = match.winnerId === team1.id;
+          const t1Avg = t1Players.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / Math.max(1, t1Players.length);
+          const t2Avg = t2Players.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / Math.max(1, t2Players.length);
+          const { winnerDelta, loserDelta } = computeElo(team1Won ? t1Avg : t2Avg, team1Won ? t2Avg : t1Avg);
+
+          for (const p of t1Players) {
+            const delta = team1Won ? winnerDelta : loserDelta;
+            await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + delta) }).where(eq(playersTable.id, p.id));
+          }
+          for (const p of t2Players) {
+            const delta = team1Won ? loserDelta : winnerDelta;
+            await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + delta) }).where(eq(playersTable.id, p.id));
+          }
+
+          // ── Add both losing team players to open play pool ─────────────
+          const loserTeamId = loserId(match);
+          const loserTeam = loserTeamId === team1.id ? team1 : team2;
+          const loserPlayerIds = [loserTeam.player1Id, loserTeam.player2Id].filter(Boolean) as string[];
+          for (const pid of loserPlayerIds) {
+            const existing = await db.select().from(openPlayPoolTable)
+              .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, pid)));
+            if (existing.length === 0) {
+              await db.insert(openPlayPoolTable).values({ id: randomUUID(), tournamentId, playerId: pid, status: "available" });
+            }
           }
         }
       }
@@ -257,16 +272,21 @@ matchesRouter.post("/undo", async (req: Request<{ tournamentId: string }>, res) 
       }
     }
 
-    // ── Remove loser from open play pool ──────────────────────────────────
-    const loserPlayerId = lastCompleted.playerOneId === lastCompleted.winnerId
+    // ── Remove losing team players from open play pool ───────────────────
+    const loserTeamId = lastCompleted.playerOneId === lastCompleted.winnerId
       ? lastCompleted.playerTwoId
       : lastCompleted.playerOneId;
-    if (loserPlayerId) {
-      await db.delete(openPlayPoolTable)
-        .where(and(
+    if (loserTeamId) {
+      const [loserTeam] = await db.select().from(teamsTable).where(eq(teamsTable.id, loserTeamId));
+      const loserPlayerIds = loserTeam
+        ? [loserTeam.player1Id, loserTeam.player2Id].filter(Boolean) as string[]
+        : [];
+      for (const pid of loserPlayerIds) {
+        await db.delete(openPlayPoolTable).where(and(
           eq(openPlayPoolTable.tournamentId, tournamentId),
-          eq(openPlayPoolTable.playerId, loserPlayerId)
+          eq(openPlayPoolTable.playerId, pid)
         ));
+      }
     }
 
     // ── Revert tournament completion if needed ────────────────────────────

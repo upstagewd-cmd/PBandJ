@@ -15,6 +15,7 @@ export const playersTable = pgTable("players", {
   skillLevel: text("skill_level"),
   eloRating: real("elo_rating").notNull().default(1200),
   seed: integer("seed").notNull().default(0),
+  teamId: text("team_id"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

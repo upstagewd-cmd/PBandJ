@@ -26,14 +26,22 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   const updateMatch = useUpdateMatch();
   const undoMatch = useUndoLastMatch();
 
+  const getTeam = (id?: string | null) =>
+    id ? (tournament.teams?.find((t) => t.id === id) ?? null) : null;
+
   const getPlayer = (id?: string | null) =>
     id ? (tournament.players.find((p) => p.id === id) ?? null) : null;
 
-  const displayName = (id?: string | null): string | null => {
-    const p = getPlayer(id);
-    if (!p) return null;
-    if (p.teamName) return p.teamName;
-    return `${p.firstName} ${p.lastName.charAt(0)}.`;
+  // displayName now resolves a TEAM id to a readable name
+  const displayName = (teamId?: string | null): string | null => {
+    const team = getTeam(teamId);
+    if (!team) return null;
+    if (team.teamName) return team.teamName;
+    const p1 = getPlayer(team.player1Id);
+    const p2 = getPlayer(team.player2Id);
+    if (p1 && p2) return `${p1.firstName} & ${p2.firstName}`;
+    if (p1) return `${p1.firstName} ${p1.lastName.charAt(0)}.`;
+    return null;
   };
 
   const handleSetWinner = (
@@ -304,8 +312,14 @@ function MatchCard({
     return match.winnerId === playerId ? "bg-primary/10" : "opacity-40 grayscale";
   };
 
-  const getPlayer = (id?: string | null) =>
-    id ? tournament.players.find((p) => p.id === id) ?? null : null;
+  const getTeamPlayers = (teamId: string | null | undefined) => {
+    const team = teamId ? tournament.teams?.find((t) => t.id === teamId) ?? null : null;
+    if (!team) return [];
+    return [team.player1Id, team.player2Id]
+      .filter(Boolean)
+      .map((pid) => tournament.players.find((p) => p.id === pid) ?? null)
+      .filter(Boolean) as TournamentFull["players"];
+  };
 
   return (
     <div
@@ -333,10 +347,10 @@ function MatchCard({
         </div>
       )}
 
-      {/* Player 1 */}
+      {/* Team 1 */}
       <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerOneId)}`}>
-        <PlayerSlot
-          player={getPlayer(match.playerOneId)}
+        <TeamSlot
+          players={getTeamPlayers(match.playerOneId)}
           name={displayName(match.playerOneId)}
           isWinner={isDone && match.winnerId === match.playerOneId}
           isChampionship={isChampionship}
@@ -355,13 +369,13 @@ function MatchCard({
 
       <div className="h-px bg-border" />
 
-      {/* Player 2 */}
+      {/* Team 2 */}
       {isBye ? (
         <div className="p-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/30">Bye</div>
       ) : (
         <div className={`p-3 flex items-center justify-between gap-2 transition-colors ${rowBg(match.playerTwoId)}`}>
-          <PlayerSlot
-            player={getPlayer(match.playerTwoId)}
+          <TeamSlot
+            players={getTeamPlayers(match.playerTwoId)}
             name={displayName(match.playerTwoId)}
             isWinner={isDone && match.winnerId === match.playerTwoId}
             isChampionship={isChampionship}
@@ -384,37 +398,46 @@ function MatchCard({
 
 // ── Small components ──────────────────────────────────────────────────────────
 
-function PlayerSlot({
-  player, name, isWinner, isChampionship, onPlayerClick,
+function TeamSlot({
+  players, name, isWinner, isChampionship, onPlayerClick,
 }: {
-  player: TournamentFull["players"][0] | null;
+  players: TournamentFull["players"];
   name: string | null;
   isWinner: boolean;
   isChampionship?: boolean;
   onPlayerClick: (id: string) => void;
 }) {
+  if (!name && players.length === 0) {
+    return (
+      <div className="font-bold flex items-center gap-2 min-w-0 flex-1">
+        <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
+      </div>
+    );
+  }
   return (
     <div className="font-bold flex items-center gap-2 min-w-0 flex-1">
-      {player ? (
-        <button
-          onClick={() => onPlayerClick(player.id)}
-          className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity text-left"
-        >
-          <PlayerAvatar player={player} size="sm" />
-          <div className="min-w-0 flex flex-col">
-            <span className={`truncate text-sm ${isWinner && !isChampionship ? "text-primary" : ""}`}>
-              {name}
-            </span>
-            {(player as any).rankTitle && (
-              <span className="text-[10px] text-muted-foreground/70 truncate leading-tight">
-                {(player as any).rankEmoji} {(player as any).rankTitle}
-              </span>
-            )}
-          </div>
-        </button>
-      ) : (
-        <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>
+      {/* Stacked mini-avatars */}
+      {players.length > 0 && (
+        <div className="flex -space-x-2 shrink-0">
+          {players.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onPlayerClick(p.id)}
+              className="hover:opacity-80 transition-opacity ring-2 ring-card rounded-full"
+            >
+              <PlayerAvatar player={p} size="sm" />
+            </button>
+          ))}
+        </div>
       )}
+      <div className="min-w-0 flex flex-col">
+        <span className={`truncate text-sm ${isWinner && !isChampionship ? "text-primary" : ""}`}>
+          {name ?? "TBD"}
+        </span>
+        {isWinner && isChampionship && (
+          <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">Champions 🏆</span>
+        )}
+      </div>
     </div>
   );
 }

@@ -158,6 +158,79 @@ paths:
                 items:
                   $ref: "#/components/schemas/Player"
 
+  /tournaments/{tournamentId}/teams:
+    post:
+      operationId: generateTeams
+      tags: [teams]
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateTeamsBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+    delete:
+      operationId: resetTeams
+      tags: [teams]
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostTokenInput"
+      responses:
+        "200":
+          description: OK
+
+  /tournaments/{tournamentId}/teams/{teamId}:
+    patch:
+      operationId: updateTeam
+      tags: [teams]
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
   /tournaments/{tournamentId}/players/{playerId}:
     patch:
       operationId: updatePlayer
@@ -528,9 +601,52 @@ components:
         hostToken:
           type: string
 
+    Team:
+      type: object
+      required: [id, tournamentId, seed, createdAt]
+      properties:
+        id:
+          type: string
+        tournamentId:
+          type: string
+        player1Id:
+          type: ["string", "null"]
+        player2Id:
+          type: ["string", "null"]
+        teamName:
+          type: ["string", "null"]
+        seed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    GenerateTeamsBody:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+        mode:
+          type: string
+          enum: [balanced, random]
+
+    UpdateTeamBody:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+        player1Id:
+          type: ["string", "null"]
+        player2Id:
+          type: ["string", "null"]
+        teamName:
+          type: string
+
     TournamentFull:
       type: object
-      required: [id, name, status, createdAt, players, matches]
+      required: [id, name, status, createdAt, players, matches, teams]
       properties:
         id:
           type: string
@@ -554,6 +670,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Player"
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/Team"
         matches:
           type: array
           items:
