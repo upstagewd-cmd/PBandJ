@@ -7,6 +7,7 @@ import {
   tournamentsTable,
 } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { broadcastMatchDeleted } from "../../lib/ws";
 
 export const adminMatchesRouter = Router();
 
@@ -71,6 +72,7 @@ adminMatchesRouter.delete("/:matchId", async (req, res) => {
       res.status(404).json({ error: "Match not found" });
       return;
     }
+    broadcastMatchDeleted(deleted.tournamentId, matchId);
   } else {
     const [deleted] = await db
       .delete(matchesTable)
@@ -80,6 +82,7 @@ adminMatchesRouter.delete("/:matchId", async (req, res) => {
       res.status(404).json({ error: "Match not found" });
       return;
     }
+    broadcastMatchDeleted(deleted.tournamentId, matchId);
   }
   res.json({ ok: true });
 });

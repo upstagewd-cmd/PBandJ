@@ -22,6 +22,14 @@ interface OpenMatch {
   tournament: { id: string; name: string } | null;
 }
 
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    + " · "
+    + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 export function MatchesTab({ code }: { code: string }) {
   const { toast } = useToast();
   const [bracket, setBracket] = useState<BracketMatch[]>([]);
@@ -154,8 +162,11 @@ export function MatchesTab({ code }: { code: string }) {
                   <p className="text-xs font-bold text-primary">{t?.name}</p>
                   <p className="text-sm font-bold">{bracketLabel[m.bracket] ?? m.bracket} · Round {m.round}</p>
                   <p className="text-xs text-muted-foreground">
-                    Status: {m.status} {m.scoreOne !== null ? `· ${m.scoreOne}–${m.scoreTwo}` : ""}
+                    {m.scoreOne !== null ? `${m.scoreOne}–${m.scoreTwo}` : "No score"}
                     {m.winnerId ? " · Has winner" : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">
+                    {m.status === "completed" ? `Completed ${fmtDateTime(m.completedAt)}` : `Status: ${m.status}`}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -199,7 +210,10 @@ export function MatchesTab({ code }: { code: string }) {
                 <div className="flex-1">
                   <p className="text-xs font-bold text-primary">{t?.name}</p>
                   <p className="text-sm font-bold">Open Play · Team {m.winnerTeam} won</p>
-                  <p className="text-xs text-muted-foreground">{m.scoreOne !== null ? `${m.scoreOne}–${m.scoreTwo}` : "No score"} · {new Date(m.playedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.scoreOne !== null ? `${m.scoreOne}–${m.scoreTwo}` : "No score"}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">{fmtDateTime(m.playedAt)}</p>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setEditForm({ winnerTeam: m.winnerTeam, scoreOne: m.scoreOne, scoreTwo: m.scoreTwo }); }}>

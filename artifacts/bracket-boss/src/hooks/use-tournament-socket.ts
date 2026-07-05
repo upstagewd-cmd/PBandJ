@@ -29,6 +29,9 @@ export function useTournamentSocket(tournamentId: string | undefined) {
           const msg = JSON.parse(event.data);
           if (msg.type === "tournament_update" && msg.data) {
             queryClient.setQueryData(getGetTournamentQueryKey(tournamentId), msg.data);
+          } else if (msg.type === "match_deleted") {
+            queryClient.invalidateQueries({ queryKey: ["openPlayPool", tournamentId] });
+            queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournamentId) });
           }
         } catch {
           // ignore malformed messages

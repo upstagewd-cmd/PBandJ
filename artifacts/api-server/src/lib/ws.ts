@@ -44,3 +44,12 @@ export function broadcastTournamentUpdate(tournamentId: string, data: unknown) {
     }
   }
 }
+
+export function broadcastMatchDeleted(tournamentId: string, matchId: string) {
+  const message = JSON.stringify({ type: "match_deleted", matchId });
+  for (const client of clients) {
+    if (client.tournamentId === tournamentId && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  }
+}
