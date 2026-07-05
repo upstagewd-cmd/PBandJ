@@ -56,6 +56,7 @@ async function saveMatches(updates: MatchRow[]) {
         scoreTwo: m.scoreTwo,
         status: m.status,
         isBye: m.isBye,
+        completedAt: (m as any).completedAt ?? null,
       })
       .where(eq(matchesTable.id, m.id));
   }

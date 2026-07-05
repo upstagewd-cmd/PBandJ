@@ -166,7 +166,9 @@ export function MatchesTab({ code }: { code: string }) {
                     {m.winnerId ? " · Has winner" : ""}
                   </p>
                   <p className="text-xs text-muted-foreground/60 mt-0.5">
-                    {m.status === "completed" ? `Completed ${fmtDateTime(m.completedAt)}` : `Status: ${m.status}`}
+                    {m.completedAt
+                      ? `Completed ${fmtDateTime(m.completedAt)}`
+                      : `Status: ${m.status}`}
                   </p>
                 </div>
                 <div className="flex gap-1">
