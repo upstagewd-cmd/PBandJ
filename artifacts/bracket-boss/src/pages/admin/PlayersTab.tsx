@@ -297,9 +297,7 @@ export function PlayersTab({ code }: { code: string }) {
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-sm font-bold overflow-hidden shrink-0">
-                    {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover" /> : `${p.firstName[0]}${p.lastName[0]}`}
-                  </div>
+                  <PlayerAvatar player={p} size="md" className="rounded-xl" />
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate">{p.firstName} {p.lastName}{p.partnerName ? ` + ${p.partnerName}` : ""}</p>
                     <p className="text-xs text-muted-foreground">
