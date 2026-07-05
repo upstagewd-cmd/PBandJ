@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { adminGet, adminPatch, adminDelete, adminPost } from "./useAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Pencil, Trash2, GitMerge, X, Check } from "lucide-react";
+import { Search, Pencil, Trash2, GitMerge, X, Check, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 
 const SKILL_LEVELS = [
   { value: "beginner", label: "Beginner", emoji: "🟢" },
@@ -37,6 +38,31 @@ export function PlayersTab({ code }: { code: string }) {
   const [pendingMerge, setPendingMerge] = useState<{ keepId: string; mergeId: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+      const uploadRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      setEditForm((f) => ({ ...f, avatarUrl: objectPath }));
+    } catch {
+      toast({ title: "Avatar upload failed", variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
 
   const load = async () => {
     try {
@@ -201,6 +227,40 @@ export function PlayersTab({ code }: { code: string }) {
             <div key={p.id} className={`bg-card border rounded-xl p-3 space-y-2 transition-colors ${isMergeA ? "border-orange-500" : "border-border/50"}`}>
               {isEditTarget ? (
                 <div className="space-y-2">
+                  {/* Avatar picker */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      <PlayerAvatar
+                        player={{ firstName: editForm.firstName ?? p.firstName, lastName: editForm.lastName ?? p.lastName, avatarUrl: editForm.avatarUrl ?? null }}
+                        size="lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={uploadingAvatar}
+                        className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        {uploadingAvatar
+                          ? <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          : <Camera className="w-5 h-5 text-white" />}
+                      </button>
+                      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Photo</p>
+                      <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}>
+                          {uploadingAvatar ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Camera className="w-3 h-3 mr-1" />}
+                          {editForm.avatarUrl ? "Replace" : "Upload"}
+                        </Button>
+                        {editForm.avatarUrl && (
+                          <Button type="button" size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => setEditForm((f) => ({ ...f, avatarUrl: "" }))}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Input placeholder="First" value={editForm.firstName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} />
                     <Input placeholder="Last" value={editForm.lastName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} />
