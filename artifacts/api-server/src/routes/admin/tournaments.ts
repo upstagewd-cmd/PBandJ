@@ -59,7 +59,6 @@ adminTournamentsRouter.patch("/:tournamentId", async (req, res) => {
 adminTournamentsRouter.delete("/:tournamentId", async (req, res) => {
   const { tournamentId } = req.params;
   await db.delete(matchesTable).where(eq(matchesTable.tournamentId, tournamentId));
-  await db.delete(playersTable).where(eq(playersTable.tournamentId, tournamentId));
   const [deleted] = await db
     .delete(tournamentsTable)
     .where(eq(tournamentsTable.id, tournamentId))
