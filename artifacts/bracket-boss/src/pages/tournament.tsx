@@ -11,8 +11,12 @@ import { Button } from "@/components/ui/button";
 
 function UserBadge() {
   const { user } = useUser();
+  const [, setLocation] = useLocation();
   return (
-    <div className="flex items-center gap-1.5 bg-card border border-border/40 rounded-full px-2.5 py-1">
+    <button
+      onClick={() => setLocation("/profile")}
+      className="flex items-center gap-1.5 bg-card border border-border/40 rounded-full px-2.5 py-1 hover:border-primary/40 transition-colors"
+    >
       <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
         {user?.imageUrl ? (
           <img src={user.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
@@ -23,7 +27,7 @@ function UserBadge() {
       <span className="text-xs font-semibold text-foreground hidden sm:block">
         {user?.firstName ?? "Player"}
       </span>
-    </div>
+    </button>
   );
 }
 

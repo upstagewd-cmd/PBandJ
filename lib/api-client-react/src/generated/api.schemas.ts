@@ -184,6 +184,19 @@ export interface MatchHistoryEntry {
   completedAt: string;
 }
 
+export interface ProfileStats {
+  eloRating: number;
+  rankTitle: string;
+  rankEmoji: string;
+  totalWins: number;
+  totalLosses: number;
+  matchesPlayed: number;
+  winPct: number;
+  tournamentWins: number;
+  tournamentsPlayed: number;
+  recentMatches: MatchHistoryEntry[];
+}
+
 export interface PlayerStats {
   player: Player;
   wins: number;

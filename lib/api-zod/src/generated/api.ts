@@ -254,6 +254,31 @@ export const RemovePlayerResponse = zod.object({
 })
 
 
+export const GetMyProfileResponse = zod.object({
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "totalWins": zod.number(),
+  "totalLosses": zod.number(),
+  "matchesPlayed": zod.number(),
+  "winPct": zod.number(),
+  "tournamentWins": zod.number(),
+  "tournamentsPlayed": zod.number(),
+  "recentMatches": zod.array(zod.object({
+  "matchId": zod.string(),
+  "tournamentId": zod.string(),
+  "tournamentName": zod.string(),
+  "bracket": zod.string(),
+  "round": zod.number(),
+  "opponentName": zod.string(),
+  "won": zod.boolean(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "completedAt": zod.string()
+}))
+})
+
+
 export const GetPlayerStatsParams = zod.object({
   "playerId": zod.coerce.string()
 })

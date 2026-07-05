@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TournamentPage from "@/pages/tournament";
 import PlayerStatsPage from "@/pages/player-stats";
+import ProfilePage from "@/pages/profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -139,6 +140,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
       <Route path="/player/:playerId" component={PlayerStatsPage} />
       <Route component={NotFound} />

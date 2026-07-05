@@ -491,9 +491,16 @@ function PlayerSlot({
           className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity text-left"
         >
           <PlayerAvatar player={player} size="sm" />
-          <span className={`truncate text-sm ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>
-            {name}
-          </span>
+          <div className="min-w-0 flex flex-col">
+            <span className={`truncate text-sm ${isWinner && !isGrandFinal ? "text-primary" : ""}`}>
+              {name}
+            </span>
+            {(player as any).rankTitle && (
+              <span className="text-[10px] text-muted-foreground/70 truncate leading-tight">
+                {(player as any).rankEmoji} {(player as any).rankTitle}
+              </span>
+            )}
+          </div>
         </button>
       ) : (
         <span className="text-muted-foreground/40 italic text-sm font-normal">TBD</span>

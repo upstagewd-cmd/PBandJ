@@ -1,5 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
+import { getAuth } from "@clerk/express";
 import { db, tournamentsTable, playersTable, openPlayPoolTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
@@ -65,6 +66,9 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       }
     }
 
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId ?? null;
+
     const playerRow = {
       id,
       tournamentId,
@@ -74,6 +78,7 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       teamName,
       playerToken,
       avatarUrl: null as string | null,
+      clerkUserId,
       eloRating: 1200 as number,
       seed: existingPlayers.length + 1,
     };

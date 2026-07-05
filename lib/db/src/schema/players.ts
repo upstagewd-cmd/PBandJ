@@ -11,6 +11,7 @@ export const playersTable = pgTable("players", {
   teamName: text("team_name"),
   playerToken: text("player_token"),
   avatarUrl: text("avatar_url"),
+  clerkUserId: text("clerk_user_id"),
   eloRating: real("elo_rating").notNull().default(1200),
   seed: integer("seed").notNull().default(0),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),

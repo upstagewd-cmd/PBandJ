@@ -57,7 +57,10 @@ export default function Home() {
         </Show>
         <Show when="signed-in">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-card border border-border/40 rounded-full px-3 py-1.5">
+            <button
+              onClick={() => setLocation("/profile")}
+              className="flex items-center gap-2 bg-card border border-border/40 rounded-full px-3 py-1.5 hover:border-primary/40 transition-colors"
+            >
               <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                 {user?.imageUrl ? (
                   <img src={user.imageUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
@@ -68,7 +71,7 @@ export default function Home() {
               <span className="text-sm font-semibold text-foreground">
                 {user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] ?? "Player"}
               </span>
-            </div>
+            </button>
             <Button
               variant="ghost"
               size="sm"
