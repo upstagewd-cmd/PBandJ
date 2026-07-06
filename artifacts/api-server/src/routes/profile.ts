@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
 import { eq, or, and, inArray } from "drizzle-orm";
@@ -280,6 +280,30 @@ profileRouter.get("/me", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to get profile");
     res.status(500).json({ error: "Failed to get profile" });
+  }
+});
+
+profileRouter.put("/me/name", async (req, res) => {
+  try {
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    if (!clerkUserId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { firstName, lastName } = req.body ?? {};
+    if (!firstName?.trim() || !lastName?.trim()) {
+      res.status(400).json({ error: "firstName and lastName are required" });
+      return;
+    }
+
+    await clerkClient.users.updateUser(clerkUserId, {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update user name via Clerk");
+    res.status(500).json({ error: "Failed to update name" });
   }
 });
 

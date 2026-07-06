@@ -98,7 +98,12 @@ export default function ProfilePage() {
     if (!user || !nameFirst.trim() || !nameLast.trim()) return;
     setSavingName(true);
     try {
-      await user.update({ firstName: nameFirst.trim(), lastName: nameLast.trim() });
+      const res = await fetch("/api/profile/me/name", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName: nameFirst.trim(), lastName: nameLast.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed");
       await user.reload();
       setEditingName(false);
       toast({ title: "Name updated!" });
