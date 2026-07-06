@@ -204,20 +204,8 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
     );
   }
 
-  // If the Clerk profile has no name, direct the user to fill in the form below
-  if (!user.firstName || !user.lastName) {
-    return (
-      <div className="bg-card border border-border/50 rounded-2xl p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/20 shrink-0 flex items-center justify-center">
-          <User className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold">Signed in</p>
-          <p className="text-xs text-muted-foreground">Your account has no name — use the form below to join</p>
-        </div>
-      </div>
-    );
-  }
+  // No name on Clerk profile — let JoinForm handle it (it pre-fills + attaches clerkUserId)
+  if (!user.firstName || !user.lastName) return null;
 
   const handleQuickJoin = () => {
     addPlayer.mutate(
