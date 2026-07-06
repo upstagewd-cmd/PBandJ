@@ -860,6 +860,10 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
         </div>
       </div>
 
+      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+        {player.rankEmoji} {Math.round(player.eloRating)}
+      </span>
+
       {isHost && (
         <button
           onClick={onRemove}
