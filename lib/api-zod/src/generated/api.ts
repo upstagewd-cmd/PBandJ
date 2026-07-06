@@ -373,7 +373,7 @@ export const GetMyProfileResponse = zod.object({
 
 export const GetKnownPlayersResponseItem = zod.object({
   "id": zod.string(),
-  "clerkUserId": zod.string(),
+  "clerkUserId": zod.string().nullish(),
   "firstName": zod.string(),
   "lastName": zod.string(),
   "avatarUrl": zod.string().nullish(),

@@ -1112,12 +1112,12 @@ components:
 
     KnownPlayer:
       type: object
-      required: [id, clerkUserId, firstName, lastName, eloRating]
+      required: [id, firstName, lastName, eloRating]
       properties:
         id:
           type: string
         clerkUserId:
-          type: string
+          type: ["string", "null"]
         firstName:
           type: string
         lastName:

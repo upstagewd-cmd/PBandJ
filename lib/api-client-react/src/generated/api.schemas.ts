@@ -311,7 +311,8 @@ export interface TournamentUpdate {
 
 export interface KnownPlayer {
   id: string;
-  clerkUserId: string;
+  /** @nullable */
+  clerkUserId?: string | null;
   firstName: string;
   lastName: string;
   /** @nullable */

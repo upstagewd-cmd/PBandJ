@@ -26,7 +26,7 @@ export function KnownPlayerPicker({ onSelect, isPending = false, disabledClerkId
   const handleSelect = (player: KnownPlayer) => {
     if (isPending) return;
     onSelect(player);
-    setRecentlyAdded((prev) => new Set([...prev, player.clerkUserId]));
+    setRecentlyAdded((prev) => new Set([...prev, player.id]));
   };
 
   return (
@@ -67,8 +67,8 @@ export function KnownPlayerPicker({ onSelect, isPending = false, disabledClerkId
           ) : (
             <ul className="space-y-0.5 max-h-56 overflow-y-auto -mx-1">
               {filtered.map((p) => {
-                const alreadyIn = disabledClerkIds.has(p.clerkUserId) || recentlyAdded.has(p.clerkUserId);
-                const justAdded = recentlyAdded.has(p.clerkUserId);
+                const alreadyIn = (p.clerkUserId ? disabledClerkIds.has(p.clerkUserId) : false) || recentlyAdded.has(p.id);
+                const justAdded = recentlyAdded.has(p.id);
                 return (
                   <li key={p.id}>
                     <button

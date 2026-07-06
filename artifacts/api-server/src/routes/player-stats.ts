@@ -1,31 +1,37 @@
 import { Router, Request } from "express";
 import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
-import { eq, or, and, isNotNull, desc } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 
 export const playerStatsRouter = Router();
 
-// GET /api/players/known — all Clerk-linked players, deduplicated by clerkUserId
+// GET /api/players/known — all players, deduplicated by clerkUserId (signed-in) or full name (guests)
 playerStatsRouter.get("/known", async (_req, res) => {
   try {
     const allPlayers = await db
       .select()
       .from(playersTable)
-      .where(isNotNull(playersTable.clerkUserId))
       .orderBy(desc(playersTable.joinedAt));
 
-    const seen = new Set<string>();
+    const seenClerk = new Set<string>();
+    const seenName = new Set<string>();
     const known = allPlayers.filter((p) => {
-      if (!p.clerkUserId || seen.has(p.clerkUserId)) return false;
-      seen.add(p.clerkUserId);
+      if (p.clerkUserId) {
+        if (seenClerk.has(p.clerkUserId)) return false;
+        seenClerk.add(p.clerkUserId);
+        return true;
+      }
+      const nameKey = `${p.firstName.toLowerCase()} ${p.lastName.toLowerCase()}`;
+      if (seenName.has(nameKey)) return false;
+      seenName.add(nameKey);
       return true;
     });
 
     res.json(
       known.map((p) => ({
         id: p.id,
-        clerkUserId: p.clerkUserId,
+        clerkUserId: p.clerkUserId ?? null,
         firstName: p.firstName,
         lastName: p.lastName,
         avatarUrl: p.avatarUrl ?? null,

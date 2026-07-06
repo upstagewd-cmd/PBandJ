@@ -403,7 +403,7 @@ function HostAddExistingPlayer({
         data: {
           firstName: player.firstName,
           lastName: player.lastName,
-          clerkUserId: player.clerkUserId,
+          clerkUserId: player.clerkUserId ?? undefined,
         },
       },
       {
