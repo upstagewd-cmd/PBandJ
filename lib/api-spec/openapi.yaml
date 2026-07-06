@@ -301,6 +301,20 @@ paths:
         "401":
           description: Unauthorized
 
+  /players/known:
+    get:
+      operationId: getKnownPlayers
+      tags: [players]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnownPlayer"
+
   /players/{playerId}/stats:
     get:
       operationId: getPlayerStats
@@ -1096,6 +1110,23 @@ components:
         hostToken:
           type: string
 
+    KnownPlayer:
+      type: object
+      required: [id, clerkUserId, firstName, lastName, eloRating]
+      properties:
+        id:
+          type: string
+        clerkUserId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        eloRating:
+          type: number
+
     PlayerInput:
       type: object
       required: [firstName, lastName]
@@ -1113,6 +1144,8 @@ components:
         skillLevel:
           type: string
           enum: [beginner, intermediate, advanced]
+        clerkUserId:
+          type: string
 
     PlayerUpdate:
       type: object

@@ -25,6 +25,7 @@ import type {
   GenerateTeamsBody,
   HealthStatus,
   HostTokenInput,
+  KnownPlayer,
   MatchUpdate,
   OpenPlayMatchInput,
   OpenPlayState,
@@ -938,6 +939,77 @@ export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMyProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetKnownPlayersUrl = () => {
+
+
+
+
+  return `/api/players/known`
+}
+
+export const getKnownPlayers = async ( options?: RequestInit): Promise<KnownPlayer[]> => {
+
+  return customFetch<KnownPlayer[]>(getGetKnownPlayersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnownPlayersQueryKey = () => {
+    return [
+    `/api/players/known`
+    ] as const;
+    }
+
+
+export const getGetKnownPlayersQueryOptions = <TData = Awaited<ReturnType<typeof getKnownPlayers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKnownPlayers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnownPlayersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnownPlayers>>> = ({ signal }) => getKnownPlayers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnownPlayers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKnownPlayersQueryResult = NonNullable<Awaited<ReturnType<typeof getKnownPlayers>>>
+export type GetKnownPlayersQueryError = ErrorType<unknown>
+
+
+
+export function useGetKnownPlayers<TData = Awaited<ReturnType<typeof getKnownPlayers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKnownPlayers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKnownPlayersQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

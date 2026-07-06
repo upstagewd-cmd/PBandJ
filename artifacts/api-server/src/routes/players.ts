@@ -65,7 +65,20 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     const teamName = body.teamName || null;
 
     const auth = getAuth(req);
-    const clerkUserId = auth?.userId ?? null;
+    // Accept clerkUserId from body (host pre-adding a known player) or fall back to auth
+    const clerkUserId = body.clerkUserId ?? auth?.userId ?? null;
+
+    // Duplicate guard: prevent the same Clerk user from joining twice
+    if (clerkUserId) {
+      const [existing] = await db
+        .select({ id: playersTable.id })
+        .from(playersTable)
+        .where(and(eq(playersTable.tournamentId, tournamentId), eq(playersTable.clerkUserId, clerkUserId)));
+      if (existing) {
+        res.status(409).json({ error: "already_added" });
+        return;
+      }
+    }
 
     // Determine starting ELO: carry over existing rating for returning Clerk users,
     // otherwise seed from self-reported skill level

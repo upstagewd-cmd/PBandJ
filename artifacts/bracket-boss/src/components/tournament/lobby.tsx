@@ -4,6 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   TournamentFull,
   Team,
+  KnownPlayer,
   useUpdateTournament,
   useStartTournament,
   useJoinTournament,
@@ -14,6 +15,7 @@ import {
   useUpdateTeam,
   getGetTournamentQueryKey,
 } from "@workspace/api-client-react";
+import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,6 +186,8 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
     defaultValues: { firstName: "", lastName: "", teamName: "", skillLevel: "intermediate" },
   });
 
+  const [joinAlreadyAdded, setJoinAlreadyAdded] = useState(false);
+
   useEffect(() => {
     if (!isEditingName) setTournamentName(tournament.name);
   }, [tournament.name, isEditingName]);
@@ -224,12 +228,17 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           joinForm.reset();
           toast({ title: "Joined! See you on the court." });
         },
-        onError: (err: any) => {
-          toast({
-            title: "Could not join",
-            description: err.message || "Registration might be locked.",
-            variant: "destructive",
-          });
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) {
+            setJoinAlreadyAdded(true);
+          } else {
+            toast({
+              title: "Could not join",
+              description: (err as { message?: string })?.message || "Registration might be locked.",
+              variant: "destructive",
+            });
+          }
         },
       }
     );
@@ -252,6 +261,31 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
       {
         onSettled: refetch,
         onError: () => toast({ title: "Failed to reset teams", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleSelectKnownPlayer = (player: KnownPlayer) => {
+    joinTournament.mutate(
+      {
+        tournamentId: tournament.id,
+        data: {
+          firstName: player.firstName,
+          lastName: player.lastName,
+          clerkUserId: player.clerkUserId,
+        },
+      },
+      {
+        onSettled: refetch,
+        onSuccess: () => toast({ title: `${player.firstName} ${player.lastName} added!` }),
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) {
+            toast({ title: `${player.firstName} is already in the tournament.` });
+          } else {
+            toast({ title: "Failed to add player", variant: "destructive" });
+          }
+        },
       }
     );
   };
@@ -369,9 +403,23 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           {!tournament.registrationLocked ? (
             <>
               <h2 className="text-2xl font-bold">Join Match</h2>
+
+              {isHost && (
+                <KnownPlayerPicker
+                  onSelect={handleSelectKnownPlayer}
+                  isPending={joinTournament.isPending}
+                />
+              )}
+
               <Show when="signed-in">
                 <QuickJoinCard tournament={tournament} onJoined={refetch} />
               </Show>
+
+              {joinAlreadyAdded ? (
+                <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">
+                  You've already been added by the host — look for your name in the list.
+                </div>
+              ) : (
               <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
                 <Form {...joinForm}>
                   <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">
@@ -443,6 +491,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                   </form>
                 </Form>
               </div>
+              )}
             </>
           ) : (
             <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center justify-center space-y-4">

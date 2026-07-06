@@ -178,7 +178,8 @@ export const JoinTournamentBody = zod.object({
   "lastName": zod.string().min(1),
   "partnerName": zod.string().optional(),
   "teamName": zod.string().optional(),
-  "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced']).optional()
+  "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  "clerkUserId": zod.string().optional()
 })
 
 export const JoinTournamentResponse = zod.object({
@@ -368,6 +369,17 @@ export const GetMyProfileResponse = zod.object({
   "matches": zod.number()
 }))
 })
+
+
+export const GetKnownPlayersResponseItem = zod.object({
+  "id": zod.string(),
+  "clerkUserId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "eloRating": zod.number()
+})
+export const GetKnownPlayersResponse = zod.array(GetKnownPlayersResponseItem)
 
 
 export const GetPlayerStatsParams = zod.object({

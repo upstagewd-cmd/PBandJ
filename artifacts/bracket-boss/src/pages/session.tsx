@@ -12,7 +12,9 @@ import {
   useAutoPairSession,
   SessionFull,
   SessionPlayer,
+  KnownPlayer,
 } from "@workspace/api-client-react";
+import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -255,10 +257,19 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
   const [last, setLast] = useState(() => user?.lastName ?? "");
   const [team, setTeam] = useState("");
   const [skill, setSkill] = useState<string>("intermediate");
+  const [alreadyAdded, setAlreadyAdded] = useState(false);
   const addPlayer = useAddSessionPlayer();
   const { toast } = useToast();
 
   const isLoggedIn = !!user;
+
+  if (alreadyAdded) {
+    return (
+      <div className="bg-muted/50 border border-border/50 rounded-2xl p-4 text-sm text-muted-foreground text-center">
+        You've already been added by the host — look for your name in the list above.
+      </div>
+    );
+  }
 
   const handleJoin = () => {
     if (!first.trim() || !last.trim()) return;
@@ -279,7 +290,14 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
           onJoined();
           toast({ title: "You're in the pool! Start playing." });
         },
-        onError: () => toast({ title: "Failed to join", variant: "destructive" }),
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) {
+            setAlreadyAdded(true);
+          } else {
+            toast({ title: "Failed to join", variant: "destructive" });
+          }
+        },
       }
     );
   };
@@ -357,6 +375,60 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
         {addPlayer.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add to Pool"}
       </Button>
     </div>
+  );
+}
+
+// ─── Host: add existing (Clerk) player ────────────────────────────────────────
+
+function HostAddExistingPlayer({
+  sessionId,
+  players,
+  onAdded,
+}: {
+  sessionId: string;
+  players: SessionPlayer[];
+  onAdded: () => void;
+}) {
+  const addPlayer = useAddSessionPlayer();
+  const { toast } = useToast();
+
+  const existingClerkIds = new Set(
+    players.map((p) => p.clerkUserId).filter((id): id is string => !!id)
+  );
+
+  const handleSelect = (player: KnownPlayer) => {
+    addPlayer.mutate(
+      {
+        sessionId,
+        data: {
+          firstName: player.firstName,
+          lastName: player.lastName,
+          clerkUserId: player.clerkUserId,
+        },
+      },
+      {
+        onSuccess: () => {
+          onAdded();
+          toast({ title: `${player.firstName} ${player.lastName} added to the pool!` });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) {
+            toast({ title: `${player.firstName} is already in the pool.` });
+          } else {
+            toast({ title: "Failed to add player", variant: "destructive" });
+          }
+        },
+      }
+    );
+  };
+
+  return (
+    <KnownPlayerPicker
+      onSelect={handleSelect}
+      isPending={addPlayer.isPending}
+      disabledClerkIds={existingClerkIds}
+    />
   );
 }
 
@@ -994,6 +1066,15 @@ export default function SessionPage() {
 
         {/* Who's Here — visible to everyone */}
         <PlayerPool players={session.players} />
+
+        {/* Host: add existing (Clerk) player */}
+        {isHost && (
+          <HostAddExistingPlayer
+            sessionId={sessionId}
+            players={session.players}
+            onAdded={() => refetch()}
+          />
+        )}
 
         {/* Quick join card for signed-in users (shown above the form) */}
         <Show when="signed-in">

@@ -309,6 +309,16 @@ export interface TournamentUpdate {
   hostToken?: string;
 }
 
+export interface KnownPlayer {
+  id: string;
+  clerkUserId: string;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+  eloRating: number;
+}
+
 export type PlayerInputSkillLevel = typeof PlayerInputSkillLevel[keyof typeof PlayerInputSkillLevel];
 
 
@@ -326,6 +336,7 @@ export interface PlayerInput {
   partnerName?: string;
   teamName?: string;
   skillLevel?: PlayerInputSkillLevel;
+  clerkUserId?: string;
 }
 
 export interface PlayerUpdate {

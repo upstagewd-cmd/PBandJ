@@ -1,10 +1,42 @@
 import { Router, Request } from "express";
 import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, isNotNull, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 
 export const playerStatsRouter = Router();
+
+// GET /api/players/known — all Clerk-linked players, deduplicated by clerkUserId
+playerStatsRouter.get("/known", async (_req, res) => {
+  try {
+    const allPlayers = await db
+      .select()
+      .from(playersTable)
+      .where(isNotNull(playersTable.clerkUserId))
+      .orderBy(desc(playersTable.joinedAt));
+
+    const seen = new Set<string>();
+    const known = allPlayers.filter((p) => {
+      if (!p.clerkUserId || seen.has(p.clerkUserId)) return false;
+      seen.add(p.clerkUserId);
+      return true;
+    });
+
+    res.json(
+      known.map((p) => ({
+        id: p.id,
+        clerkUserId: p.clerkUserId,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        avatarUrl: p.avatarUrl ?? null,
+        eloRating: p.eloRating ?? 1200,
+      }))
+    );
+  } catch (err) {
+    _req.log.error({ err }, "Failed to get known players");
+    res.status(500).json({ error: "Failed to get known players" });
+  }
+});
 
 playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, res) => {
   try {
