@@ -90,6 +90,7 @@ tournamentsRouter.patch("/:tournamentId", async (req: Request<{ tournamentId: st
     const updates: Partial<typeof existing> = {};
     if (body.name !== undefined) updates.name = body.name;
     if (body.registrationLocked !== undefined) updates.registrationLocked = body.registrationLocked;
+    if (body.status !== undefined) updates.status = body.status;
 
     if (Object.keys(updates).length > 0) {
       await db.update(tournamentsTable).set(updates).where(eq(tournamentsTable.id, tournamentId));

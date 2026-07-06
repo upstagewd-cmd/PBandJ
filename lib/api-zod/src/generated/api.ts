@@ -19,7 +19,7 @@ export const CreateTournamentBody = zod.object({
 export const CreateTournamentResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "hostToken": zod.string()
@@ -33,7 +33,7 @@ export const GetTournamentParams = zod.object({
 export const GetTournamentResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
@@ -91,13 +91,14 @@ export const UpdateTournamentParams = zod.object({
 export const UpdateTournamentBody = zod.object({
   "name": zod.string().optional(),
   "registrationLocked": zod.boolean().optional(),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']).optional(),
   "hostToken": zod.string().optional()
 })
 
 export const UpdateTournamentResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date()
 })
@@ -114,7 +115,7 @@ export const StartTournamentBody = zod.object({
 export const StartTournamentResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
@@ -438,7 +439,7 @@ export const UpdateMatchBody = zod.object({
 export const UpdateMatchResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
@@ -500,7 +501,7 @@ export const UndoLastMatchBody = zod.object({
 export const UndoLastMatchResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['lobby', 'active', 'completed']),
+  "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),

@@ -21,6 +21,7 @@ function RecentGames() {
     if (e.type === "tournament") {
       if (e.status === "completed") return "Finished";
       if (e.status === "active") return "In Progress";
+      if (e.status === "cancelled") return "Cancelled";
       return "Lobby";
     }
     if (e.status === "completed") return "Finished";
@@ -29,7 +30,7 @@ function RecentGames() {
   };
 
   const statusColor = (e: HistoryEntry) =>
-    e.status === "completed" || e.status === "closed"
+    e.status === "completed" || e.status === "closed" || e.status === "cancelled"
       ? "text-muted-foreground/60"
       : e.status === "active"
       ? "text-green-500"

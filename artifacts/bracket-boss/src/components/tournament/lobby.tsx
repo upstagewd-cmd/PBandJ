@@ -160,6 +160,7 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
 export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   const { toast } = useToast();
   const isHost = !!hostToken;
+  const isCancelled = tournament.status === "cancelled";
   const queryClient = useQueryClient();
   const refetch = () => queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tournament.id) });
 
@@ -298,7 +299,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
       {/* Header */}
       <div className="text-center space-y-2">
-        {isHost ? (
+        {isHost && !isCancelled ? (
           <input
             className="text-4xl font-extrabold tracking-tight bg-transparent text-center border-none outline-none w-full focus:ring-0 text-primary"
             value={tournamentName}
@@ -307,10 +308,35 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
             onBlur={handleNameBlur}
           />
         ) : (
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
+          <h1 className={`text-4xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
         )}
-        <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">Lobby</p>
+        <div className="flex items-center justify-center gap-3">
+          <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
+            {isCancelled ? "Cancelled" : "Lobby"}
+          </p>
+          {isHost && (
+            <CancelTournamentButton
+              tournamentId={tournament.id}
+              hostToken={hostToken!}
+              isCancelled={isCancelled}
+              onChanged={refetch}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Cancelled banner for non-hosts */}
+      {isCancelled && !isHost && (
+        <div className="bg-muted/60 border border-border/60 rounded-3xl p-6 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <X className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-bold">This tournament has been cancelled</p>
+            <p className="text-sm text-muted-foreground">The host cancelled it. The player list is preserved below.</p>
+          </div>
+        </div>
+      )}
 
       {/* QR + Links */}
       <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl flex flex-col items-center space-y-5">
@@ -382,7 +408,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                       index={i}
                       tournamentId={tournament.id}
                       myToken={myToken}
-                      isHost={isHost}
+                      isHost={isHost && !isCancelled}
                       hostToken={hostToken}
                       onRemove={() =>
                         removePlayer.mutate(
@@ -400,7 +426,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
         {/* Right column: Join form OR host team/start controls */}
         <div className="space-y-4">
-          {!tournament.registrationLocked ? (
+          {isCancelled ? null : !tournament.registrationLocked ? (
             <>
               <h2 className="text-2xl font-bold">Join Match</h2>
 
@@ -503,7 +529,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
             </div>
           )}
 
-          {isHost && (
+          {isHost && !isCancelled && (
             <div className="pt-4 border-t border-border/50 space-y-3">
               <h3 className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Host Controls</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -547,8 +573,8 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         </div>
       </div>
 
-      {/* Teams Section — host only */}
-      {isHost && (
+      {/* Teams Section — host only, active only */}
+      {isHost && !isCancelled && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -922,5 +948,83 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
         </button>
       )}
     </li>
+  );
+}
+
+// ── CancelTournamentButton ─────────────────────────────────────────────────────
+
+function CancelTournamentButton({
+  tournamentId,
+  hostToken,
+  isCancelled,
+  onChanged,
+}: {
+  tournamentId: string;
+  hostToken: string;
+  isCancelled: boolean;
+  onChanged: () => void;
+}) {
+  const updateTournament = useUpdateTournament();
+  const { toast } = useToast();
+  const [confirming, setConfirming] = useState(false);
+
+  const handle = (status: "cancelled" | "lobby") => {
+    updateTournament.mutate(
+      { tournamentId, data: { hostToken, status } },
+      {
+        onSuccess: () => {
+          onChanged();
+          setConfirming(false);
+          toast({ title: status === "cancelled" ? "Tournament cancelled" : "Tournament reopened" });
+        },
+        onError: () => toast({ title: "Failed to update tournament", variant: "destructive" }),
+      }
+    );
+  };
+
+  if (isCancelled) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
+        onClick={() => handle("lobby")}
+        disabled={updateTournament.isPending}
+      >
+        {updateTournament.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+        Reopen
+      </Button>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Cancel tournament?</span>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="h-7 text-xs font-bold uppercase tracking-wider"
+          onClick={() => handle("cancelled")}
+          disabled={updateTournament.isPending}
+        >
+          {updateTournament.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes, cancel"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setConfirming(false)}>
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-destructive font-bold uppercase tracking-wider"
+      onClick={() => setConfirming(true)}
+    >
+      <X className="w-3 h-3" /> Cancel Tournament
+    </Button>
   );
 }

@@ -16,6 +16,7 @@ export const TournamentStatus = {
   lobby: 'lobby',
   active: 'active',
   completed: 'completed',
+  cancelled: 'cancelled',
 } as const;
 
 export interface Tournament {
@@ -33,6 +34,7 @@ export const TournamentWithTokenStatus = {
   lobby: 'lobby',
   active: 'active',
   completed: 'completed',
+  cancelled: 'cancelled',
 } as const;
 
 export interface TournamentWithToken {
@@ -86,6 +88,7 @@ export const TournamentFullStatus = {
   lobby: 'lobby',
   active: 'active',
   completed: 'completed',
+  cancelled: 'cancelled',
 } as const;
 
 export interface Player {
@@ -303,9 +306,20 @@ export interface TournamentInput {
   name?: string;
 }
 
+export type TournamentUpdateStatus = typeof TournamentUpdateStatus[keyof typeof TournamentUpdateStatus];
+
+
+export const TournamentUpdateStatus = {
+  lobby: 'lobby',
+  active: 'active',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
 export interface TournamentUpdate {
   name?: string;
   registrationLocked?: boolean;
+  status?: TournamentUpdateStatus;
   hostToken?: string;
 }
 
