@@ -19,9 +19,10 @@ export function KnownPlayerPicker({ onSelect, isPending = false, disabledClerkId
   const { data: knownPlayers = [] } = useGetKnownPlayers();
 
   const query = search.toLowerCase().trim();
-  const filtered = query
+  const filtered = (query
     ? knownPlayers.filter((p) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(query))
-    : knownPlayers;
+    : knownPlayers
+  ).slice().sort((a, b) => a.firstName.localeCompare(b.firstName) || a.lastName.localeCompare(b.lastName));
 
   const handleSelect = (player: KnownPlayer) => {
     if (isPending) return;

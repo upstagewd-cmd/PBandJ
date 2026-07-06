@@ -32,6 +32,7 @@ import {
   User,
   Pencil,
   Shuffle,
+  RefreshCw,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
@@ -523,7 +524,7 @@ function PairingManager({
     );
   };
 
-  const canAutoPair = players.length >= 2;
+  const canPair = players.length >= 2;
   const isActing = reshuffle.isPending || autoPair.isPending;
 
   return (
@@ -533,30 +534,30 @@ function PairingManager({
           <Users className="w-4 h-4" /> Pairings
         </h3>
         <div className="flex items-center gap-1.5">
-          {canAutoPair && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs gap-1.5"
-              onClick={handleAutoPair}
-              disabled={isActing}
-              title="Balance pairs by skill/ELO"
-            >
-              {autoPair.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>⚡</span>}
-              Auto-pair
-            </Button>
-          )}
-          {pairs.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs gap-1.5"
-              onClick={handleReshuffle}
-              disabled={isActing}
-            >
-              {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
-              Reshuffle
-            </Button>
+          {canPair && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
+                onClick={handleAutoPair}
+                disabled={isActing}
+                title="Balance pairs by skill/ELO"
+              >
+                {autoPair.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
+                {pairs.length > 0 ? "Regenerate" : "Generate"} Balanced
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
+                onClick={handleReshuffle}
+                disabled={isActing}
+              >
+                {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                Random
+              </Button>
+            </>
           )}
         </div>
       </div>
