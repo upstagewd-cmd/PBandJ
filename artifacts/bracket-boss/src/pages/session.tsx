@@ -1076,6 +1076,7 @@ export default function SessionPage() {
   }
 
   const isHost = !!hostToken;
+  const isClosed = session.status === "closed";
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
@@ -1085,75 +1086,179 @@ export default function SessionPage() {
         {/* Title */}
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <Activity className="w-5 h-5 text-orange-400" />
-            <EditableSessionTitle session={session} hostToken={hostToken} isHost={isHost} />
+            <Activity className={`w-5 h-5 ${isClosed ? "text-muted-foreground" : "text-orange-400"}`} />
+            <EditableSessionTitle session={session} hostToken={isClosed ? null : hostToken} isHost={isHost && !isClosed} />
           </div>
-          <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
-            Open Play · {session.players.length} {session.players.length === 1 ? "player" : "players"}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
+              {isClosed ? "Session Closed" : "Open Play"} · {session.players.length} {session.players.length === 1 ? "player" : "players"}
+            </p>
+            {isHost && (
+              <CloseSessionButton
+                sessionId={sessionId}
+                hostToken={hostToken!}
+                isClosed={isClosed}
+                onChanged={refetch}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Share card — always visible */}
-        <ShareCard sessionId={sessionId} />
+        {/* Closed banner for non-hosts */}
+        {isClosed && !isHost && (
+          <div className="bg-muted/60 border border-border/60 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <X className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-bold text-sm">This session has ended</p>
+              <p className="text-xs text-muted-foreground">The host has closed it. Scores and history are preserved below.</p>
+            </div>
+          </div>
+        )}
 
-        {/* Who's Here — visible to everyone */}
+        {/* Share card — only when active */}
+        {!isClosed && <ShareCard sessionId={sessionId} />}
+
+        {/* Who's Here — always visible, remove only when active */}
         <PlayerPool
           players={session.players}
           sessionId={session.id}
-          hostToken={hostToken}
+          hostToken={isClosed ? null : hostToken}
           onRemoved={refetch}
         />
 
-        {/* Host: add existing (Clerk) player */}
-        {isHost && (
-          <HostAddExistingPlayer
-            sessionId={sessionId}
-            players={session.players}
-            onAdded={() => refetch()}
-          />
+        {/* Host: add existing / quick-join / join form — active only */}
+        {!isClosed && (
+          <>
+            {isHost && (
+              <HostAddExistingPlayer
+                sessionId={sessionId}
+                players={session.players}
+                onAdded={() => refetch()}
+              />
+            )}
+
+            <Show when="signed-in">
+              <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
+            </Show>
+
+            <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
+
+            {isHost && session.players.length >= 2 && (
+              <PairingManager
+                sessionId={sessionId}
+                players={session.players}
+                hostToken={hostToken!}
+                onChanged={() => refetch()}
+              />
+            )}
+
+            {isHost && session.players.length >= 2 && (
+              <MatchLogger
+                sessionId={sessionId}
+                players={session.players}
+                hostToken={hostToken!}
+                onLogged={() => refetch()}
+              />
+            )}
+
+            {!isHost && session.players.length >= 2 && session.recentMatches.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm">
+                The host can record match results here.
+              </p>
+            )}
+          </>
         )}
 
-        {/* Quick join card for signed-in users (shown above the form) */}
-        <Show when="signed-in">
-          <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
-        </Show>
-
-        {/* Manual join form — always shown so guests and incomplete-profile users can join */}
-        <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
-
-        {/* Pairing manager — host only, needs at least 2 players */}
-        {isHost && session.players.length >= 2 && (
-          <PairingManager
-            sessionId={sessionId}
-            players={session.players}
-            hostToken={hostToken!}
-            onChanged={() => refetch()}
-          />
-        )}
-
-        {/* Match logger — host only, needs at least 2 players */}
-        {isHost && session.players.length >= 2 && (
-          <MatchLogger
-            sessionId={sessionId}
-            players={session.players}
-            hostToken={hostToken!}
-            onLogged={() => refetch()}
-          />
-        )}
-
-        {/* Non-host nudge when no matches yet */}
-        {!isHost && session.players.length >= 2 && session.recentMatches.length === 0 && (
-          <p className="text-center text-muted-foreground text-sm">
-            The host can record match results here.
-          </p>
-        )}
-
-        {/* Leaderboard */}
+        {/* Leaderboard + history — always visible */}
         <Leaderboard players={session.players} matchCount={session.recentMatches.length} />
-
-        {/* Match history */}
         <MatchHistory session={session} />
       </main>
     </div>
+  );
+}
+
+// ─── Close Session Button ──────────────────────────────────────────────────────
+
+function CloseSessionButton({
+  sessionId,
+  hostToken,
+  isClosed,
+  onChanged,
+}: {
+  sessionId: string;
+  hostToken: string;
+  isClosed: boolean;
+  onChanged: () => void;
+}) {
+  const updateSession = useUpdateSession();
+  const { toast } = useToast();
+  const [confirming, setConfirming] = useState(false);
+
+  const handleClose = () => {
+    updateSession.mutate(
+      { sessionId, data: { hostToken, status: "closed" } },
+      {
+        onSuccess: () => { onChanged(); setConfirming(false); toast({ title: "Session closed" }); },
+        onError: () => toast({ title: "Failed to close session", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleReopen = () => {
+    updateSession.mutate(
+      { sessionId, data: { hostToken, status: "active" } },
+      {
+        onSuccess: () => { onChanged(); toast({ title: "Session reopened" }); },
+        onError: () => toast({ title: "Failed to reopen session", variant: "destructive" }),
+      }
+    );
+  };
+
+  if (isClosed) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
+        onClick={handleReopen}
+        disabled={updateSession.isPending}
+      >
+        {updateSession.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
+        Reopen
+      </Button>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Close session?</span>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="h-7 text-xs font-bold uppercase tracking-wider"
+          onClick={handleClose}
+          disabled={updateSession.isPending}
+        >
+          {updateSession.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes, close"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setConfirming(false)}>
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-destructive font-bold uppercase tracking-wider"
+      onClick={() => setConfirming(true)}
+    >
+      <X className="w-3 h-3" /> Close Session
+    </Button>
   );
 }

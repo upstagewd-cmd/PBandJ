@@ -141,8 +141,11 @@ sessionsRouter.patch("/:sessionId", async (req: Request<{ sessionId: string }>, 
     if (!session) { res.status(404).json({ error: "Session not found" }); return; }
     if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
 
-    if (body.name !== undefined) {
-      await db.update(sessionsTable).set({ name: body.name.trim() }).where(eq(sessionsTable.id, sessionId));
+    const updates: Partial<{ name: string; status: string }> = {};
+    if (body.name !== undefined) updates.name = body.name.trim();
+    if (body.status !== undefined) updates.status = body.status;
+    if (Object.keys(updates).length > 0) {
+      await db.update(sessionsTable).set(updates).where(eq(sessionsTable.id, sessionId));
     }
 
     const full = await getSessionFull(sessionId);

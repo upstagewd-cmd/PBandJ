@@ -738,7 +738,7 @@ export const CreateSessionBody = zod.object({
 export const CreateSessionResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "hostToken": zod.string()
 })
@@ -751,7 +751,7 @@ export const GetSessionParams = zod.object({
 export const GetSessionResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -811,13 +811,14 @@ export const UpdateSessionParams = zod.object({
 
 export const UpdateSessionBody = zod.object({
   "name": zod.string().optional(),
+  "status": zod.enum(['active', 'closed']).optional(),
   "hostToken": zod.string()
 })
 
 export const UpdateSessionResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -886,7 +887,7 @@ export const AddSessionPlayerBody = zod.object({
 export const AddSessionPlayerResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -952,7 +953,7 @@ export const RemoveSessionPlayerBody = zod.object({
 export const RemoveSessionPlayerResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -1024,7 +1025,7 @@ export const LogSessionMatchBody = zod.object({
 export const LogSessionMatchResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -1091,7 +1092,7 @@ export const PairSessionPlayersBody = zod.object({
 export const PairSessionPlayersResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -1157,7 +1158,7 @@ export const UnpairSessionPlayerBody = zod.object({
 export const UnpairSessionPlayerResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -1222,7 +1223,7 @@ export const ReshuffleSessionBody = zod.object({
 export const ReshuffleSessionResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),
@@ -1287,7 +1288,7 @@ export const AutoPairSessionBody = zod.object({
 export const AutoPairSessionResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "status": zod.enum(['active', 'completed']),
+  "status": zod.enum(['active', 'completed', 'closed']),
   "createdAt": zod.coerce.date(),
   "players": zod.array(zod.object({
   "id": zod.string(),

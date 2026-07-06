@@ -1232,6 +1232,9 @@ components:
       properties:
         name:
           type: string
+        status:
+          type: string
+          enum: [active, closed]
         hostToken:
           type: string
 
@@ -1245,7 +1248,7 @@ components:
           type: string
         status:
           type: string
-          enum: [active, completed]
+          enum: [active, completed, closed]
         createdAt:
           type: string
           format: date-time
@@ -1316,7 +1319,7 @@ components:
           type: string
         status:
           type: string
-          enum: [active, completed]
+          enum: [active, completed, closed]
         createdAt:
           type: string
           format: date-time

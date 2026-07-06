@@ -368,8 +368,17 @@ export interface SessionInput {
   name?: string;
 }
 
+export type SessionUpdateStatus = typeof SessionUpdateStatus[keyof typeof SessionUpdateStatus];
+
+
+export const SessionUpdateStatus = {
+  active: 'active',
+  closed: 'closed',
+} as const;
+
 export interface SessionUpdate {
   name?: string;
+  status?: SessionUpdateStatus;
   hostToken: string;
 }
 
@@ -379,6 +388,7 @@ export type SessionWithTokenStatus = typeof SessionWithTokenStatus[keyof typeof 
 export const SessionWithTokenStatus = {
   active: 'active',
   completed: 'completed',
+  closed: 'closed',
 } as const;
 
 export interface SessionWithToken {
@@ -426,6 +436,7 @@ export type SessionFullStatus = typeof SessionFullStatus[keyof typeof SessionFul
 export const SessionFullStatus = {
   active: 'active',
   completed: 'completed',
+  closed: 'closed',
 } as const;
 
 export interface SessionFull {
