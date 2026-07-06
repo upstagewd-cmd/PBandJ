@@ -204,10 +204,24 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
     );
   }
 
+  // If the Clerk profile has no name, direct the user to fill in the form below
+  if (!user.firstName || !user.lastName) {
+    return (
+      <div className="bg-card border border-border/50 rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/20 shrink-0 flex items-center justify-center">
+          <User className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold">Signed in</p>
+          <p className="text-xs text-muted-foreground">Your account has no name — use the form below to join</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleQuickJoin = () => {
-    if (!user.firstName || !user.lastName) return;
     addPlayer.mutate(
-      { sessionId, data: { firstName: user.firstName, lastName: user.lastName, clerkUserId: user.id } },
+      { sessionId, data: { firstName: user.firstName!, lastName: user.lastName!, clerkUserId: user.id } },
       {
         onSuccess: () => { onJoined(); toast({ title: "You're in the pool! Start playing." }); },
         onError: (err: unknown) => {
@@ -229,7 +243,7 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate">{user.firstName} {user.lastName}</p>
+        <p className="text-sm font-bold truncate">Join as {user.firstName} {user.lastName}</p>
         <p className="text-xs text-muted-foreground">Signed in · your real ELO will be used</p>
       </div>
       <Button size="sm" className="shrink-0 font-bold" onClick={handleQuickJoin} disabled={addPlayer.isPending}>
@@ -993,13 +1007,13 @@ export default function SessionPage() {
         {/* Who's Here — visible to everyone */}
         <PlayerPool players={session.players} />
 
-        {/* Quick join for signed-in users; manual form for guests */}
+        {/* Quick join card for signed-in users (shown above the form) */}
         <Show when="signed-in">
           <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
         </Show>
-        <Show when="signed-out">
-          <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
-        </Show>
+
+        {/* Manual join form — always shown so guests and incomplete-profile users can join */}
+        <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
 
         {/* Pairing manager — host only, needs at least 2 players */}
         {isHost && session.players.length >= 2 && (
