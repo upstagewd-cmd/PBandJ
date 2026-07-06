@@ -529,38 +529,33 @@ function PairingManager({
 
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-          <Users className="w-4 h-4" /> Pairings
-        </h3>
-        <div className="flex items-center gap-1.5">
-          {canPair && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
-                onClick={handleAutoPair}
-                disabled={isActing}
-                title="Balance pairs by skill/ELO"
-              >
-                {autoPair.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
-                {pairs.length > 0 ? "Regenerate" : "Generate"} Balanced
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 text-xs gap-1.5 font-bold uppercase tracking-wider"
-                onClick={handleReshuffle}
-                disabled={isActing}
-              >
-                {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                Random
-              </Button>
-            </>
-          )}
+      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+        <Users className="w-4 h-4" /> Pairings
+      </h3>
+      {canPair && (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-8 text-xs gap-1.5 font-bold uppercase tracking-wider"
+            onClick={handleAutoPair}
+            disabled={isActing}
+          >
+            {autoPair.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shuffle className="w-3 h-3" />}
+            {pairs.length > 0 ? "Regenerate" : "Generate"} Balanced
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-1 h-8 text-xs gap-1.5 font-bold uppercase tracking-wider"
+            onClick={handleReshuffle}
+            disabled={isActing}
+          >
+            {reshuffle.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Random
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* Current pairs */}
       {pairs.length > 0 && (

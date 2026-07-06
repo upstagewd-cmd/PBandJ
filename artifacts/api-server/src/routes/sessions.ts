@@ -368,6 +368,20 @@ sessionsRouter.post("/:sessionId/reshuffle", async (req: Request<{ sessionId: st
 
     await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.sessionId, sessionId));
 
+    const players = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.sessionId, sessionId));
+    const shuffled = [...players];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const numPairs = Math.floor(shuffled.length / 2);
+    for (let i = 0; i < numPairs; i++) {
+      const p1 = shuffled[i * 2];
+      const p2 = shuffled[i * 2 + 1];
+      await db.update(sessionPlayersTable).set({ partnerId: p2.id }).where(eq(sessionPlayersTable.id, p1.id));
+      await db.update(sessionPlayersTable).set({ partnerId: p1.id }).where(eq(sessionPlayersTable.id, p2.id));
+    }
+
     const full = await getSessionFull(sessionId);
     res.json(full);
   } catch (err) {
