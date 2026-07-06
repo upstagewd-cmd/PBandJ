@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useUser, Show } from "@clerk/react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   TournamentFull,
@@ -35,6 +36,7 @@ import {
   RefreshCw,
   X,
   ArrowLeftRight,
+  User,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -72,6 +74,85 @@ function useCopyButton() {
 
 function getMyPlayerToken(tournamentId: string, playerId: string): string | null {
   return localStorage.getItem(`playerToken_${tournamentId}_${playerId}`);
+}
+
+// ─── Quick join card for signed-in users ──────────────────────────────────────
+
+function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; onJoined: () => void }) {
+  const { user } = useUser();
+  const joinTournament = useJoinTournament();
+  const { toast } = useToast();
+  const [alreadyAdded, setAlreadyAdded] = useState(false);
+
+  if (!user) return null;
+
+  const alreadyIn = tournament.players.some((p) => (p as any).clerkUserId === user.id);
+
+  if (alreadyIn) {
+    return (
+      <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+          <Check className="w-5 h-5 text-green-400" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-green-400">You're registered ✓</p>
+          <p className="text-xs text-muted-foreground">Your real ELO will be used in bracket seeding</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (alreadyAdded) {
+    return (
+      <div className="bg-muted/50 border border-border/50 rounded-2xl p-4 text-sm text-muted-foreground text-center">
+        You've already been added by the host — look for your name in the player list.
+      </div>
+    );
+  }
+
+  if (!user.firstName || !user.lastName) return null;
+
+  const handleQuickJoin = () => {
+    joinTournament.mutate(
+      {
+        tournamentId: tournament.id,
+        data: { firstName: user.firstName!, lastName: user.lastName!, skillLevel: "intermediate" },
+      },
+      {
+        onSuccess: (data: any) => {
+          if (data?.playerToken) {
+            localStorage.setItem(`playerToken_${tournament.id}_${data.id}`, data.playerToken);
+          }
+          onJoined();
+          toast({ title: "You're in! See you on the court." });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) { setAlreadyAdded(true); }
+          else { toast({ title: "Could not join", variant: "destructive" }); }
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="bg-card border border-primary/30 rounded-2xl p-4 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/20 shrink-0 flex items-center justify-center">
+        {user.imageUrl ? (
+          <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-5 h-5 text-primary" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold truncate">Join as {user.firstName} {user.lastName}</p>
+        <p className="text-xs text-muted-foreground">Signed in · your real ELO will be used</p>
+      </div>
+      <Button size="sm" className="shrink-0 font-bold" onClick={handleQuickJoin} disabled={joinTournament.isPending}>
+        {joinTournament.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+      </Button>
+    </div>
+  );
 }
 
 export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
@@ -288,6 +369,9 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           {!tournament.registrationLocked ? (
             <>
               <h2 className="text-2xl font-bold">Join Match</h2>
+              <Show when="signed-in">
+                <QuickJoinCard tournament={tournament} onJoined={refetch} />
+              </Show>
               <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
                 <Form {...joinForm}>
                   <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">

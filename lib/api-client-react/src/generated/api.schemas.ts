@@ -99,6 +99,8 @@ export interface Player {
   teamName?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /** @nullable */
+  clerkUserId?: string | null;
   eloRating: number;
   /** @nullable */
   rankTitle?: string | null;

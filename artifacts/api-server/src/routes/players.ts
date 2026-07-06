@@ -25,6 +25,7 @@ function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boo
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
     avatarUrl: p.avatarUrl ?? null,
+    clerkUserId: p.clerkUserId ?? null,
     eloRating: p.eloRating ?? 1200,
     rankTitle: rank.title,
     rankEmoji: rank.emoji,
@@ -47,6 +48,16 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
 
     const existingPlayers = await db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId));
     if (existingPlayers.length >= 64) { res.status(400).json({ error: "Tournament is full (max 64 players)" }); return; }
+
+    // Duplicate guard: prevent the same signed-in user from joining twice
+    const clerkUserIdForCheck = getAuth(req)?.userId ?? null;
+    if (clerkUserIdForCheck) {
+      const duplicate = existingPlayers.find((p) => p.clerkUserId === clerkUserIdForCheck);
+      if (duplicate) {
+        res.status(409).json({ error: "already_added" });
+        return;
+      }
+    }
 
     const id = randomUUID();
     const playerToken = randomUUID();

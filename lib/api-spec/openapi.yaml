@@ -812,6 +812,8 @@ components:
           type: ["string", "null"]
         avatarUrl:
           type: ["string", "null"]
+        clerkUserId:
+          type: ["string", "null"]
         eloRating:
           type: number
         rankTitle:
