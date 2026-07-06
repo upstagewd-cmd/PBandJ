@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -135,6 +136,106 @@ function UserBadge() {
         {user?.firstName ?? "Player"}
       </span>
     </button>
+  );
+}
+
+// ─── Who's Here pool list ─────────────────────────────────────────────────────
+
+const SKILL_EMOJI: Record<string, string> = { beginner: "🟢", intermediate: "🟡", advanced: "🔴" };
+
+function PlayerPool({ players }: { players: SessionPlayer[] }) {
+  return (
+    <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-3">
+      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+        <Users className="w-4 h-4" /> Who's Here
+        <span className="ml-auto text-xs font-normal normal-case">{players.length} {players.length === 1 ? "player" : "players"}</span>
+      </h3>
+      {players.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-2">No players yet — be the first to join!</p>
+      ) : (
+        <ul className="space-y-2">
+          {players.map((p) => (
+            <li key={p.id} className="flex items-center gap-3">
+              <PlayerAvatar player={p} size="sm" />
+              <span className="text-sm font-medium flex-1 truncate">
+                {p.teamName || `${p.firstName} ${p.lastName}`}
+              </span>
+              {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
+              <span className="text-xs text-muted-foreground shrink-0">{p.rankEmoji} {Math.round(p.eloRating)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Quick join for signed-in users ───────────────────────────────────────────
+
+function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; players: SessionPlayer[]; onJoined: () => void }) {
+  const { user } = useUser();
+  const addPlayer = useAddSessionPlayer();
+  const { toast } = useToast();
+  const [alreadyAdded, setAlreadyAdded] = useState(false);
+
+  if (!user) return null;
+
+  const alreadyIn = players.some((p) => p.clerkUserId === user.id);
+
+  if (alreadyIn) {
+    return (
+      <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+          <Check className="w-5 h-5 text-green-400" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-green-400">You're in ✓</p>
+          <p className="text-xs text-muted-foreground">You've been added to the pool</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (alreadyAdded) {
+    return (
+      <div className="bg-muted/50 border border-border/50 rounded-2xl p-4 text-sm text-muted-foreground text-center">
+        You've already been added by the host — look for your name in the list above.
+      </div>
+    );
+  }
+
+  const handleQuickJoin = () => {
+    if (!user.firstName || !user.lastName) return;
+    addPlayer.mutate(
+      { sessionId, data: { firstName: user.firstName, lastName: user.lastName, clerkUserId: user.id } },
+      {
+        onSuccess: () => { onJoined(); toast({ title: "You're in the pool! Start playing." }); },
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) { setAlreadyAdded(true); }
+          else { toast({ title: "Failed to join", variant: "destructive" }); }
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="bg-card border border-primary/30 rounded-2xl p-4 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/20 shrink-0 flex items-center justify-center">
+        {user.imageUrl ? (
+          <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-5 h-5 text-primary" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold truncate">{user.firstName} {user.lastName}</p>
+        <p className="text-xs text-muted-foreground">Signed in · your real ELO will be used</p>
+      </div>
+      <Button size="sm" className="shrink-0 font-bold" onClick={handleQuickJoin} disabled={addPlayer.isPending}>
+        {addPlayer.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+      </Button>
+    </div>
   );
 }
 
@@ -889,8 +990,16 @@ export default function SessionPage() {
         {/* Share card — always visible */}
         <ShareCard sessionId={sessionId} />
 
-        {/* Join form — always visible (anyone can add themselves) */}
-        <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
+        {/* Who's Here — visible to everyone */}
+        <PlayerPool players={session.players} />
+
+        {/* Quick join for signed-in users; manual form for guests */}
+        <Show when="signed-in">
+          <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
+        </Show>
+        <Show when="signed-out">
+          <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
+        </Show>
 
         {/* Pairing manager — host only, needs at least 2 players */}
         {isHost && session.players.length >= 2 && (

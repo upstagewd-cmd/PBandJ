@@ -1,7 +1,7 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
@@ -162,6 +162,18 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
 
     const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
     if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+
+    // Duplicate guard: prevent the same signed-in user from joining twice
+    if (body.clerkUserId) {
+      const [existing] = await db
+        .select({ id: sessionPlayersTable.id })
+        .from(sessionPlayersTable)
+        .where(and(eq(sessionPlayersTable.sessionId, sessionId), eq(sessionPlayersTable.clerkUserId, body.clerkUserId)));
+      if (existing) {
+        res.status(409).json({ error: "already_added" });
+        return;
+      }
+    }
 
     // Compute starting ELO: Clerk user history > skill level > default 1200
     let startingElo = 1200;
