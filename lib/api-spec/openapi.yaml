@@ -1177,7 +1177,7 @@ components:
           type: string
           enum: [beginner, intermediate, advanced]
         clerkUserId:
-          type: string
+          type: ["string", "null"]
 
     PlayerUpdate:
       type: object

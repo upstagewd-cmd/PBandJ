@@ -273,7 +273,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         data: {
           firstName: player.firstName,
           lastName: player.lastName,
-          clerkUserId: player.clerkUserId ?? undefined,
+          clerkUserId: player.clerkUserId ?? null,
         },
       },
       {

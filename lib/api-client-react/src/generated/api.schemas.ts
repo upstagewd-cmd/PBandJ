@@ -351,7 +351,8 @@ export interface PlayerInput {
   partnerName?: string;
   teamName?: string;
   skillLevel?: PlayerInputSkillLevel;
-  clerkUserId?: string;
+  /** @nullable */
+  clerkUserId?: string | null;
 }
 
 export interface PlayerUpdate {

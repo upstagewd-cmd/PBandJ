@@ -49,24 +49,17 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     const existingPlayers = await db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId));
     if (existingPlayers.length >= 64) { res.status(400).json({ error: "Tournament is full (max 64 players)" }); return; }
 
-    // Duplicate guard: prevent the same signed-in user from joining twice
-    const clerkUserIdForCheck = getAuth(req)?.userId ?? null;
-    if (clerkUserIdForCheck) {
-      const duplicate = existingPlayers.find((p) => p.clerkUserId === clerkUserIdForCheck);
-      if (duplicate) {
-        res.status(409).json({ error: "already_added" });
-        return;
-      }
-    }
-
     const id = randomUUID();
     const playerToken = randomUUID();
 
     const teamName = body.teamName || null;
 
     const auth = getAuth(req);
-    // Accept clerkUserId from body (host pre-adding a known player) or fall back to auth
-    const clerkUserId = body.clerkUserId ?? auth?.userId ?? null;
+    // If body explicitly includes clerkUserId (even null), use it — the host is adding a known
+    // player and has already resolved their identity. Fall back to the authenticated user's ID
+    // only for self-join requests where no clerkUserId is provided in the body.
+    const clerkUserId: string | null =
+      body.clerkUserId !== undefined ? (body.clerkUserId ?? null) : (auth?.userId ?? null);
 
     // Duplicate guard: prevent the same Clerk user from joining twice
     if (clerkUserId) {
@@ -77,6 +70,17 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       if (existing) {
         res.status(409).json({ error: "already_added" });
         return;
+      }
+    } else if (body.clerkUserId === undefined) {
+      // Self-join path: also check auth userId to catch the same person joining from
+      // a different device/flow before their clerkUserId was resolved
+      const authId = auth?.userId ?? null;
+      if (authId) {
+        const duplicate = existingPlayers.find((p) => p.clerkUserId === authId);
+        if (duplicate) {
+          res.status(409).json({ error: "already_added" });
+          return;
+        }
       }
     }
 
