@@ -202,11 +202,11 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 group">
+                  <div className="flex items-center gap-2">
                     <h1 className="text-2xl font-extrabold truncate">{displayName}</h1>
                     <button
                       onClick={startEditingName}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
+                      className="text-muted-foreground active:text-foreground shrink-0"
                       title="Edit name"
                     >
                       <Pencil className="w-4 h-4" />
