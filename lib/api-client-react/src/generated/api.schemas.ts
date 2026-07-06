@@ -437,6 +437,10 @@ export interface SessionFull {
   recentMatches: SessionMatchRecord[];
 }
 
+export interface RemoveSessionPlayerBody {
+  hostToken: string;
+}
+
 export type AddSessionPlayerBodySkillLevel = typeof AddSessionPlayerBodySkillLevel[keyof typeof AddSessionPlayerBodySkillLevel];
 
 

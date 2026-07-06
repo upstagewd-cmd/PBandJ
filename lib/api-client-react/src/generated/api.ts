@@ -36,6 +36,7 @@ import type {
   PlayerUpdate,
   PlayerWithToken,
   ProfileStats,
+  RemoveSessionPlayerBody,
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
   ReshuffleBody,
@@ -1695,6 +1696,73 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAddSessionPlayerMutationOptions(options));
+    }
+
+export const getRemoveSessionPlayerUrl = (sessionId: string,
+    playerId: string,) => {
+
+
+
+
+  return `/api/sessions/${sessionId}/players/${playerId}`
+}
+
+export const removeSessionPlayer = async (sessionId: string,
+    playerId: string,
+    removeSessionPlayerBody: RemoveSessionPlayerBody, options?: RequestInit): Promise<SessionFull> => {
+
+  return customFetch<SessionFull>(getRemoveSessionPlayerUrl(sessionId,playerId),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(removeSessionPlayerBody)
+  }
+);}
+
+
+
+
+export const getRemoveSessionPlayerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSessionPlayer>>, TError,{sessionId: string;playerId: string;data: BodyType<RemoveSessionPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeSessionPlayer>>, TError,{sessionId: string;playerId: string;data: BodyType<RemoveSessionPlayerBody>}, TContext> => {
+
+const mutationKey = ['removeSessionPlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeSessionPlayer>>, {sessionId: string;playerId: string;data: BodyType<RemoveSessionPlayerBody>}> = (props) => {
+          const {sessionId,playerId,data} = props ?? {};
+
+          return  removeSessionPlayer(sessionId,playerId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveSessionPlayerMutationResult = NonNullable<Awaited<ReturnType<typeof removeSessionPlayer>>>
+    export type RemoveSessionPlayerMutationBody = BodyType<RemoveSessionPlayerBody>
+    export type RemoveSessionPlayerMutationError = ErrorType<unknown>
+
+    export const useRemoveSessionPlayer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSessionPlayer>>, TError,{sessionId: string;playerId: string;data: BodyType<RemoveSessionPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeSessionPlayer>>,
+        TError,
+        {sessionId: string;playerId: string;data: BodyType<RemoveSessionPlayerBody>},
+        TContext
+      > => {
+      return useMutation(getRemoveSessionPlayerMutationOptions(options));
     }
 
 export const getLogSessionMatchUrl = (sessionId: string,) => {

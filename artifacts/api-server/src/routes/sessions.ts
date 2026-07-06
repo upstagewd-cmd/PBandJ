@@ -2,7 +2,7 @@ import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable } from "@workspace/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody } from "@workspace/api-zod";
+import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 
@@ -352,6 +352,34 @@ sessionsRouter.delete("/:sessionId/pair", async (req: Request<{ sessionId: strin
   } catch (err) {
     req.log.error({ err }, "Failed to unpair player");
     res.status(500).json({ error: "Failed to unpair player" });
+  }
+});
+
+// ─── DELETE /api/sessions/:sessionId/players/:playerId ───────────────────────
+
+sessionsRouter.delete("/:sessionId/players/:playerId", async (req: Request<{ sessionId: string; playerId: string }>, res) => {
+  try {
+    const body = RemoveSessionPlayerBody.parse(req.body);
+    const { sessionId, playerId } = req.params;
+
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
+    if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.hostToken !== session.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const [player] = await db.select().from(sessionPlayersTable).where(eq(sessionPlayersTable.id, playerId));
+    if (!player) { res.status(404).json({ error: "Player not found" }); return; }
+
+    // Clear their partner link
+    if (player.partnerId) {
+      await db.update(sessionPlayersTable).set({ partnerId: null }).where(eq(sessionPlayersTable.id, player.partnerId));
+    }
+    await db.delete(sessionPlayersTable).where(eq(sessionPlayersTable.id, playerId));
+
+    const full = await getSessionFull(sessionId);
+    res.json(full);
+  } catch (err) {
+    req.log.error({ err }, "Failed to remove session player");
+    res.status(500).json({ error: "Failed to remove player" });
   }
 });
 

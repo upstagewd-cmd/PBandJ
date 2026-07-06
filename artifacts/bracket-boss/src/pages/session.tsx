@@ -10,6 +10,7 @@ import {
   useUnpairSessionPlayer,
   useReshuffleSession,
   useAutoPairSession,
+  useRemoveSessionPlayer,
   SessionFull,
   SessionPlayer,
   KnownPlayer,
@@ -33,6 +34,7 @@ import {
   Pencil,
   Shuffle,
   RefreshCw,
+  UserMinus,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
@@ -146,7 +148,31 @@ function UserBadge() {
 
 const SKILL_EMOJI: Record<string, string> = { beginner: "🟢", intermediate: "🟡", advanced: "🔴" };
 
-function PlayerPool({ players }: { players: SessionPlayer[] }) {
+function PlayerPool({
+  players,
+  sessionId,
+  hostToken,
+  onRemoved,
+}: {
+  players: SessionPlayer[];
+  sessionId: string;
+  hostToken: string | null;
+  onRemoved: () => void;
+}) {
+  const removePlayer = useRemoveSessionPlayer();
+  const { toast } = useToast();
+
+  const handleRemove = (playerId: string, name: string) => {
+    if (!hostToken) return;
+    removePlayer.mutate(
+      { sessionId, playerId, data: { hostToken } },
+      {
+        onSuccess: onRemoved,
+        onError: () => toast({ title: `Couldn't remove ${name}`, variant: "destructive" }),
+      }
+    );
+  };
+
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-3">
       <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -157,16 +183,26 @@ function PlayerPool({ players }: { players: SessionPlayer[] }) {
         <p className="text-sm text-muted-foreground text-center py-2">No players yet — be the first to join!</p>
       ) : (
         <ul className="space-y-2">
-          {players.map((p) => (
-            <li key={p.id} className="flex items-center gap-3">
-              <PlayerAvatar player={p} size="sm" />
-              <span className="text-sm font-medium flex-1 truncate">
-                {p.teamName || `${p.firstName} ${p.lastName}`}
-              </span>
-              {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
-              <span className="text-xs text-muted-foreground shrink-0">{p.rankEmoji} {Math.round(p.eloRating)}</span>
-            </li>
-          ))}
+          {players.map((p) => {
+            const name = p.teamName || `${p.firstName} ${p.lastName}`;
+            return (
+              <li key={p.id} className="flex items-center gap-3">
+                <PlayerAvatar player={p} size="sm" />
+                <span className="text-sm font-medium flex-1 truncate">{name}</span>
+                {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
+                <span className="text-xs text-muted-foreground shrink-0">{p.rankEmoji} {Math.round(p.eloRating)}</span>
+                {hostToken && (
+                  <button
+                    onClick={() => handleRemove(p.id, name)}
+                    disabled={removePlayer.isPending}
+                    className="shrink-0 p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <UserMinus className="w-4 h-4" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -1061,7 +1097,12 @@ export default function SessionPage() {
         <ShareCard sessionId={sessionId} />
 
         {/* Who's Here — visible to everyone */}
-        <PlayerPool players={session.players} />
+        <PlayerPool
+          players={session.players}
+          sessionId={session.id}
+          hostToken={hostToken}
+          onRemoved={refetch}
+        />
 
         {/* Host: add existing (Clerk) player */}
         {isHost && (

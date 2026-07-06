@@ -940,6 +940,72 @@ export const AddSessionPlayerResponse = zod.object({
 })
 
 
+export const RemoveSessionPlayerParams = zod.object({
+  "sessionId": zod.coerce.string(),
+  "playerId": zod.coerce.string()
+})
+
+export const RemoveSessionPlayerBody = zod.object({
+  "hostToken": zod.string()
+})
+
+export const RemoveSessionPlayerResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['active', 'completed']),
+  "createdAt": zod.coerce.date(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "recentMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "winnerTeam": zod.number(),
+  "scoreOne": zod.number().nullish(),
+  "scoreTwo": zod.number().nullish(),
+  "team1Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "team2Players": zod.array(zod.object({
+  "id": zod.string(),
+  "sessionId": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "skillLevel": zod.string().nullish(),
+  "clerkUserId": zod.string().nullish(),
+  "partnerId": zod.string().nullish(),
+  "eloRating": zod.number(),
+  "rankTitle": zod.string(),
+  "rankEmoji": zod.string(),
+  "joinedAt": zod.coerce.date()
+})),
+  "playedAt": zod.coerce.date()
+}))
+})
+
+
 export const LogSessionMatchParams = zod.object({
   "sessionId": zod.coerce.string()
 })
