@@ -4,7 +4,8 @@ import { useUser, useClerk, Show } from "@clerk/react";
 import { useGetMyProfile } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, Users, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
@@ -23,6 +24,10 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [savingSkill, setSavingSkill] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameFirst, setNameFirst] = useState("");
+  const [nameLast, setNameLast] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useGetMyProfile({
@@ -77,6 +82,31 @@ export default function ProfilePage() {
 
   const handleCropCancel = () => {
     setCropSrc(null);
+  };
+
+  const startEditingName = () => {
+    setNameFirst(user?.firstName ?? "");
+    setNameLast(user?.lastName ?? "");
+    setEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setEditingName(false);
+  };
+
+  const saveName = async () => {
+    if (!user || !nameFirst.trim() || !nameLast.trim()) return;
+    setSavingName(true);
+    try {
+      await user.update({ firstName: nameFirst.trim(), lastName: nameLast.trim() });
+      await user.reload();
+      setEditingName(false);
+      toast({ title: "Name updated!" });
+    } catch {
+      toast({ title: "Couldn't save name", variant: "destructive" });
+    } finally {
+      setSavingName(false);
+    }
   };
 
   return (
@@ -143,9 +173,47 @@ export default function ProfilePage() {
                 onChange={handleFileSelected}
               />
 
-              <div className="min-w-0">
-                <h1 className="text-2xl font-extrabold truncate">{displayName}</h1>
-                {user?.emailAddresses?.[0]?.emailAddress && (
+              <div className="min-w-0 flex-1">
+                {editingName ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={nameFirst}
+                        onChange={(e) => setNameFirst(e.target.value)}
+                        placeholder="First"
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      <Input
+                        value={nameLast}
+                        onChange={(e) => setNameLast(e.target.value)}
+                        placeholder="Last"
+                        className="h-8 text-sm"
+                        onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEditingName(); }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-7 px-3 text-xs gap-1" onClick={saveName} disabled={savingName || !nameFirst.trim() || !nameLast.trim()}>
+                        <Check className="w-3 h-3" /> Save
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-3 text-xs gap-1" onClick={cancelEditingName} disabled={savingName}>
+                        <X className="w-3 h-3" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 group">
+                    <h1 className="text-2xl font-extrabold truncate">{displayName}</h1>
+                    <button
+                      onClick={startEditingName}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
+                      title="Edit name"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                {!editingName && user?.emailAddresses?.[0]?.emailAddress && (
                   <p className="text-muted-foreground text-sm truncate">
                     {user.emailAddresses[0].emailAddress}
                   </p>
