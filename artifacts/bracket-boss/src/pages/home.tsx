@@ -23,11 +23,13 @@ function RecentGames() {
       if (e.status === "active") return "In Progress";
       return "Lobby";
     }
-    return e.status === "completed" ? "Finished" : "Active";
+    if (e.status === "completed") return "Finished";
+    if (e.status === "closed") return "Closed";
+    return "Active";
   };
 
   const statusColor = (e: HistoryEntry) =>
-    e.status === "completed"
+    e.status === "completed" || e.status === "closed"
       ? "text-muted-foreground/60"
       : e.status === "active"
       ? "text-green-500"
