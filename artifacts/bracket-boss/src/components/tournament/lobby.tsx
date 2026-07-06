@@ -576,15 +576,15 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
       {/* Teams Section — host only, active only */}
       {isHost && !isCancelled && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <ArrowLeftRight className="w-6 h-6 text-primary" />
-              Teams
-              {hasTeams && (
-                <span className="text-muted-foreground ml-1">({tournament.teams?.length})</span>
-              )}
-            </h2>
+          <div>
             <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <ArrowLeftRight className="w-6 h-6 text-primary" />
+                Teams
+                {hasTeams && (
+                  <span className="text-muted-foreground ml-1">({tournament.teams?.length})</span>
+                )}
+              </h2>
               {hasTeams && (
                 <Button
                   variant="outline" size="sm"
@@ -595,6 +595,8 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                   <X className="w-3 h-3 mr-1.5" /> Reset
                 </Button>
               )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <Button
                 variant="outline" size="sm"
                 onClick={() => handleGenerateTeams("balanced")}
