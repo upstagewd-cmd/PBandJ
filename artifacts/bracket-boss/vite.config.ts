@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 const rawPort = process.env.PORT;
 
@@ -32,6 +33,54 @@ export default defineConfig({
     react(),
     tailwindcss({ optimize: false }),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      scope: `${basePath}/`,
+      base: `${basePath}/`,
+      includeAssets: ["favicon.svg", "logo.svg", "icons/*.png"],
+      manifest: {
+        name: "PB&J",
+        short_name: "PB&J",
+        description:
+          "A men's pickleball community app for tournaments, open play, rankings, and fellowship.",
+        theme_color: "#0a0a0f",
+        background_color: "#0a0a0f",
+        display: "standalone",
+        orientation: "portrait",
+        start_url: `${basePath}/`,
+        scope: `${basePath}/`,
+        icons: [
+          {
+            src: `${basePath}/icons/icon-192.png`,
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: `${basePath}/icons/icon-512.png`,
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: `${basePath}/icons/icon-maskable-512.png`,
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        navigateFallback: `${basePath}/offline.html`,
+        navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
+        runtimeCaching: [],
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

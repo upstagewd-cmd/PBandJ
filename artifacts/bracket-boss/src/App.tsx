@@ -6,6 +6,7 @@ import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { InstallBanner } from "@/components/ui/install-banner";
 import { ThemeProvider } from "next-themes";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -184,6 +185,7 @@ function ClerkProviderWithRoutes() {
         <TooltipProvider>
           <Router />
           <Toaster />
+          <InstallBanner />
         </TooltipProvider>
       </QueryClientProvider>
     </ClerkProvider>
