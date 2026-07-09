@@ -11,7 +11,7 @@ export function InstallBanner() {
       <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex items-start gap-3 p-4">
           <img
-            src="/logo.svg"
+            src={`${import.meta.env.BASE_URL}logo.svg`}
             alt="PB&J"
             className="w-12 h-12 rounded-xl shrink-0"
           />
