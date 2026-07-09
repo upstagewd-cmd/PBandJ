@@ -55,7 +55,13 @@ function markInstalled(): void {
 
 export function useInstallPrompt() {
   const platform = getPlatform();
-  const [isPWA] = useState(() => isRunningAsPWA());
+  const [isPWA] = useState(() => {
+    const pwa = isRunningAsPWA();
+    // If already running as a PWA (e.g., iOS standalone launch), persist the
+    // installed flag immediately so future browser-tab visits stay suppressed.
+    if (pwa) markInstalled();
+    return pwa;
+  });
   const [dismissed, setDismissed] = useState(() => wasDismissedRecently());
   const [installed, setInstalled] = useState(() => wasInstalled());
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
