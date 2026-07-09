@@ -27,6 +27,9 @@ if (!basePath) {
   );
 }
 
+// Normalize: strip trailing slash, collapse "/" → "" so we never produce "//foo"
+const basePrefix = basePath === "/" ? "" : basePath.replace(/\/$/, "");
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -36,8 +39,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      scope: `${basePath}/`,
-      base: `${basePath}/`,
+      scope: `${basePrefix}/`,
+      base: `${basePrefix}/`,
       includeAssets: ["favicon.svg", "logo.svg", "icons/*.png"],
       manifest: {
         name: "PB&J",
@@ -48,23 +51,23 @@ export default defineConfig({
         background_color: "#0a0a0f",
         display: "standalone",
         orientation: "portrait",
-        start_url: `${basePath}/`,
-        scope: `${basePath}/`,
+        start_url: `${basePrefix}/`,
+        scope: `${basePrefix}/`,
         icons: [
           {
-            src: `${basePath}/icons/icon-192.png`,
+            src: `${basePrefix}/icons/icon-192.png`,
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `${basePath}/icons/icon-512.png`,
+            src: `${basePrefix}/icons/icon-512.png`,
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `${basePath}/icons/icon-maskable-512.png`,
+            src: `${basePrefix}/icons/icon-maskable-512.png`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
@@ -73,7 +76,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        navigateFallback: `${basePath}/offline.html`,
+        navigateFallback: `${basePrefix}/offline.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
         runtimeCaching: [],
       },

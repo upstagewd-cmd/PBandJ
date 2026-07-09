@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 const DISMISSED_KEY = "pbj_install_prompt_dismissed";
+const INSTALLED_KEY = "pbj_app_installed";
 const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export type Platform = "ios" | "android" | "desktop" | "unknown";
@@ -36,12 +37,28 @@ function wasDismissedRecently(): boolean {
   }
 }
 
+function wasInstalled(): boolean {
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markInstalled(): void {
+  try {
+    localStorage.setItem(INSTALLED_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
 export function useInstallPrompt() {
   const platform = getPlatform();
   const [isPWA] = useState(() => isRunningAsPWA());
   const [dismissed, setDismissed] = useState(() => wasDismissedRecently());
+  const [installed, setInstalled] = useState(() => wasInstalled());
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -50,7 +67,10 @@ export function useInstallPrompt() {
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    const installedHandler = () => setInstalled(true);
+    const installedHandler = () => {
+      markInstalled();
+      setInstalled(true);
+    };
     window.addEventListener("appinstalled", installedHandler);
 
     return () => {
@@ -73,6 +93,7 @@ export function useInstallPrompt() {
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
     if (choice.outcome === "accepted") {
+      markInstalled();
       setInstalled(true);
     }
     setDeferredPrompt(null);
