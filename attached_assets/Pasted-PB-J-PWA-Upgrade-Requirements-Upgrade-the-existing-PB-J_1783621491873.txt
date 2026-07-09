@@ -1,0 +1,235 @@
+PB&J PWA Upgrade Requirements
+
+Upgrade the existing PB&J web application into a fully installable Progressive Web App (PWA) that provides a native-app-like experience on iPhone and Android devices.
+
+Do not rebuild the application. Keep the existing React frontend, backend APIs, database, and current functionality intact. This is an enhancement layer focused on mobile installation, app behavior, and user experience.
+
+1. Progressive Web App Setup
+
+Convert the application into a valid PWA.
+
+Implement:
+	•	Web App Manifest (manifest.json)
+	•	Service worker
+	•	App icons
+	•	Apple touch icons
+	•	Mobile browser metadata
+	•	Offline asset caching
+
+The PWA should be installable from:
+	•	iPhone Safari → Share → Add to Home Screen
+	•	Android Chrome → Install App
+
+2. App Branding
+
+Use the PB&J branding throughout the PWA installation experience.
+
+Configure:
+
+App Name:
+PB&J
+
+Short Name:
+PB&J
+
+Description:
+A men’s pickleball community app for tournaments, open play, rankings, and fellowship.
+
+Create required app icons:
+	•	192x192 PNG
+	•	512x512 PNG
+	•	Apple Touch Icon
+
+Use the existing PB&J logo as the launcher icon.
+
+The launcher icon should appear on:
+	•	iPhone Home Screen
+	•	Android Home Screen
+	•	App shortcuts where supported
+
+3. Full Screen App Experience
+
+When users launch PB&J from their phone home screen, it should behave like a native app.
+
+Configure:
+
+Manifest:
+
+“display”: “standalone”
+
+The app should:
+	•	Hide browser address bars
+	•	Hide Safari/Chrome navigation controls
+	•	Open in its own application window
+	•	Use the full available screen
+
+For iOS, add:
+	•	apple-mobile-web-app-capable
+	•	apple-mobile-web-app-status-bar-style
+	•	apple-mobile-web-app-title
+	•	apple-touch-icon
+
+The user experience should feel like they opened an installed mobile app.
+
+4. Detect Browser vs Installed PWA
+
+Implement logic to detect whether PB&J is running as:
+
+A. Normal browser session:
+	•	Safari
+	•	Chrome
+	•	Mobile browser
+
+B. Installed PWA:
+	•	Launched from Home Screen
+
+Create a reusable utility function:
+
+isPWAInstalled()
+
+This should detect:
+	•	display-mode: standalone
+	•	iOS navigator.standalone
+
+Example behavior:
+
+IF running as installed PWA:
+	•	Do not show installation instructions
+	•	Use full app experience
+	•	Do not show install prompts
+
+IF running in browser:
+	•	Show install instructions
+
+5. Create Mobile Installation Banner
+
+When a user opens PB&J in a browser and has not installed the app, show a mobile-friendly installation banner.
+
+Requirements:
+
+Banner title:
+“Install PB&J”
+
+Message:
+“Add PB&J to your home screen for one-tap access to tournaments, rankings, and open play.”
+
+For iPhone show:
+	1.	Tap Share ⬆️
+	2.	Tap Add to Home Screen
+	3.	Tap Add
+
+For Android show:
+
+“Tap Install App or use your browser menu to install PB&J.”
+
+The banner should:
+	•	Look like a native mobile card
+	•	Match PB&J branding
+	•	Include the PB&J logo
+	•	Be dismissible
+	•	Remember dismissal using local storage
+	•	Not appear again after installation
+
+6. Installation Banner Logic
+
+Create rules:
+
+Show banner:
+	•	User is on mobile device
+	•	User is NOT running as PWA
+	•	User has not dismissed the banner recently
+
+Hide banner:
+	•	User installed PWA
+	•	User dismissed banner
+	•	User is on desktop
+
+Store dismissal state:
+
+localStorage:
+
+pbj_install_prompt_dismissed
+
+Allow the banner to reappear after a configurable amount of time (example: 30 days).
+
+7. Mobile Optimization
+
+Review the entire application for mobile-first behavior.
+
+Ensure:
+	•	Buttons are touch-friendly
+	•	Forms work well on phones
+	•	Tables become mobile-friendly cards where needed
+	•	Tournament brackets are scrollable and readable
+	•	Player profiles work well on small screens
+	•	Open play tracking works easily courtside
+
+Optimize for:
+	•	iPhone Safari
+	•	Android Chrome
+
+8. App Loading Experience
+
+Create a polished app startup experience.
+
+Add:
+	•	PB&J splash screen
+	•	Logo loading state
+	•	Smooth transition into the application
+
+The experience should feel closer to a native application than a website.
+
+9. Offline Support
+
+Implement basic offline caching.
+
+Cache:
+	•	App shell
+	•	CSS
+	•	JavaScript bundles
+	•	Images/icons
+
+Do not cache sensitive user data.
+
+If offline:
+Show a friendly message:
+
+“PB&J is temporarily offline. Please reconnect to continue.”
+
+10. Future Capacitor Compatibility
+
+Structure the PWA implementation so the application can later be wrapped with Capacitor for:
+	•	iOS App Store
+	•	Google Play Store
+
+Avoid solutions that prevent future native packaging.
+
+11. Testing Requirements
+
+Test:
+
+iPhone:
+	•	Safari installation flow
+	•	Home screen launch
+	•	Full-screen mode
+	•	Icon display
+	•	Banner behavior
+
+Android:
+	•	Chrome installation flow
+	•	App launch
+	•	Full-screen mode
+
+Desktop:
+	•	Ensure normal website behavior remains unchanged
+
+Final Goal
+
+The finished PB&J application should allow users to:
+	1.	Visit the PB&J website.
+	2.	Receive an install suggestion.
+	3.	Add PB&J to their phone home screen.
+	4.	Open PB&J from the icon like a normal app.
+	5.	Use the full-screen tournament and pickleball experience without browser controls.
+
+Do not change existing tournament logic, player logic, rankings, admin functionality, or backend functionality unless required for PWA support.
