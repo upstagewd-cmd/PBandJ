@@ -1,0 +1,268 @@
+Attached Files
+
+I've included the following assets:
+
+Primary Logo – Main logo for app splash screens, marketing, and primary branding.
+Secondary Logo – Alternative lockup for situations where the primary logo doesn't fit the layout.
+Simplified Logo – Horizontal lockup for headers & such.
+Favicon / App Icon – For the mobile app icon, browser favicon, and other small-format applications.
+Brand Font – Blackiron Demo, which is the custom display font used in the logo. & Inter, which is the rest of the typography (headings, body, buttons, navigation & caption)
+Please use these assets consistently throughout the application.
+
+Overall Brand Direction
+
+The brand should feel:
+
+Premium
+Modern
+Clean
+Athletic
+Lifestyle-focused
+Faith-centered without feeling overly traditional
+Inspired by premium brands like Nike, Malbon Golf, Kith, TravisMathew, and Lululemon
+The interface should rely heavily on whitespace and clean layouts. The signature lime green should be used intentionally as an accent rather than dominating the interface.
+
+Brand Color Palette
+
+Role	Hex
+Rich Black	#111111
+White	#FFFFFF
+Electric Lime	#B7E334
+Charcoal	#2A2A2A
+Warm Stone Gray	#E9E7E1
+Color Usage
+
+Backgrounds
+
+Primary screens: White
+Secondary sections/cards: Warm Stone Gray
+Dark experiences (if applicable): Rich Black
+Primary Buttons
+
+Examples:
+
+Join League
+Create Match
+Register
+Save
+Use:
+
+Background: Electric Lime
+Text: Rich Black
+Secondary Buttons
+
+White background
+Charcoal border
+Charcoal text
+Typography
+
+Although Blackiron Demo is our signature brand font, it should only be used for branding and display purposes.
+
+For the app interface, please use Inter as the primary UI typeface.
+
+Typography hierarchy should be:
+
+Blackiron Demo
+
+Logo
+Splash screen
+Hero graphics
+Marketing banners
+Large promotional headlines only
+Inter
+
+H1 — Bold
+H2 — SemiBold
+H3 — SemiBold
+Body — Regular
+Buttons — SemiBold
+Navigation — Medium
+Labels/Captions — Medium
+Using Inter throughout the UI will keep the experience clean, modern, and highly readable while allowing Blackiron Demo to remain distinctive and recognizable.
+
+Cards
+
+White background
+Rounded corners
+Light shadows
+Optional Warm Stone Gray border
+Featured cards can include an Electric Lime accent line or badge.
+
+Navigation
+
+Icons:
+
+Inactive:
+
+Charcoal
+Active:
+
+Electric Lime
+Forms
+
+Input background:
+
+White
+Border:
+
+Warm Stone Gray
+Focused border:
+
+Electric Lime
+Cursor:
+
+Electric Lime
+Charts & Statistics
+
+Primary data:
+
+Electric Lime
+Secondary data:
+
+Charcoal
+Background:
+
+White
+Logo Usage
+
+Please use:
+
+Black logo on light backgrounds
+White logo on dark backgrounds
+The lime green should primarily be reserved for:
+
+Buttons
+Active navigation
+Progress indicators
+Badges
+Selected states
+Important statistics
+Calls to action
+Avoid using the lime green version of the logo unless it's specifically for merchandise or promotional graphics.
+
+Our goal is to create an experience that feels premium, simple, and instantly recognizable. The Electric Lime should become one of the defining visual elements of the brand while maintaining a sophisticated, uncluttered interface.
+
+Please let me know if you have any questions before implementation.
+
+Thanks!
+
+Pickleball & Jesus Brand Guide (Version 1.0)
+
+Brand Overview
+
+Brand Name
+Pickleball & Jesus
+
+Brand Mission
+
+To build a community where faith, fellowship, and pickleball come together. We exist to create meaningful relationships on and off the court through competition, encouragement, and Christ-centered living.
+
+Brand Personality
+
+Authentic
+Welcoming
+Competitive
+Joyful
+Modern
+Bold
+Community-driven
+Premium
+Hopeful
+Brand Values
+
+Faith First
+Community Always
+Integrity On & Off the Court
+Excellence
+Joy
+Service
+Visual Identity
+
+Primary Colors
+
+Color	Hex
+Rich Black	#111111
+White	#FFFFFF
+Electric Lime	#B7E334
+Charcoal	#2A2A2A
+Warm Stone Gray	#E9E7E1
+Color Ratio
+
+60% White / Warm Stone Gray
+25% Black / Charcoal
+15% Electric Lime
+Typography
+
+Display Font
+
+Blackiron Demo
+
+Use only for:
+
+Logos
+Campaigns
+Merchandise
+Hero graphics
+Promotional materials
+UI Font
+
+Inter
+
+Style	Weight
+H1	Bold
+H2	SemiBold
+H3	SemiBold
+Body	Regular
+Buttons	SemiBold
+Navigation	Medium
+Caption	Medium
+Photography Style
+
+Use authentic photography featuring:
+
+Pickleball courts
+Real people
+Genuine smiles
+Community gatherings
+Prayer before matches
+Worship moments
+Competition
+Families
+Outdoor courts
+Golden hour lighting
+Natural light
+Avoid overly staged stock imagery whenever possible.
+
+Iconography
+
+Icons should be:
+
+Simple
+Rounded
+Modern
+Minimal
+Consistent line weight
+Tone of Voice
+
+The brand should communicate in a way that is:
+
+Encouraging
+Friendly
+Confident
+Hope-filled
+Authentic
+Humble
+Avoid sounding preachy or exclusive. The voice should invite people into the community, regardless of where they are in their faith journey.
+
+Design Principles
+
+Keep layouts clean and spacious.
+Use whitespace generously.
+Let photography tell the story.
+Use the Electric Lime strategically to guide attention.
+Keep branding subtle but memorable.
+Prioritize accessibility and readability.
+Every design should feel welcoming, energetic, and premium.
+Brand Promise
+
+More than a game. More than a community. A place to play, belong, and grow in faith.
