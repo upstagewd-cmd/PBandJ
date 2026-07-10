@@ -21,6 +21,17 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+packages = ["nano"]
 
 [objectStorage]
 defaultBucketID = "replit-objstore-0b36f4ea-3cf6-48d3-954a-06353550ef4f"
+
+[[ports]]
+localPort = 5000
+
+[[ports]]
+localPort = 5173
+externalPort = 80
+
+[workflows.Project]
+run = "./start.sh"
