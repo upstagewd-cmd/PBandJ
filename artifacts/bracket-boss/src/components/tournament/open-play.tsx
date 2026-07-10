@@ -152,7 +152,7 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                           onClick={() => usePair(1)}
                           disabled={pairSelected && !onT1}
                           className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
-                            onT1 ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
+                            onT1 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
                           }`}
                         >→ T1</button>
                         <button
@@ -198,7 +198,7 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                       disabled={!teamOneIds.includes(p.id) && (selectedIds.has(p.id) || teamOneIds.length >= 2)}
                       className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
                         teamOneIds.includes(p.id)
-                          ? "bg-primary text-white border-primary"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
                       }`}
                     >T1</button>

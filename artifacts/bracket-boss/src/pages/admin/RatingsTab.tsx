@@ -84,19 +84,19 @@ export function RatingsTab({ code }: { code: string }) {
   return (
     <div className="space-y-4">
       {pendingReset && (
-        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-bold text-orange-400">Reset {pendingReset.name}'s rating to 1200?</p>
+        <div className="bg-primary/10 border border-primary/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-primary">Reset {pendingReset.name}'s rating to 1200?</p>
           <div className="flex gap-2">
-            <Button size="sm" onClick={confirmReset} className="bg-orange-500 hover:bg-orange-600 text-white">Reset</Button>
+            <Button size="sm" onClick={confirmReset} className="bg-primary hover:bg-primary/90 text-primary-foreground">Reset</Button>
             <Button size="sm" variant="ghost" onClick={() => setPendingReset(null)}>Cancel</Button>
           </div>
         </div>
       )}
       {pendingRecalc && (
-        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-bold text-orange-400">Recalculate ALL ratings from match history? Current ratings will be overwritten.</p>
+        <div className="bg-primary/10 border border-primary/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-primary">Recalculate ALL ratings from match history? Current ratings will be overwritten.</p>
           <div className="flex gap-2">
-            <Button size="sm" onClick={recalculate} disabled={recalculating} className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button size="sm" onClick={recalculate} disabled={recalculating} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <RefreshCw className={`w-3 h-3 mr-1 ${recalculating ? "animate-spin" : ""}`} /> Confirm
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setPendingRecalc(false)}>Cancel</Button>

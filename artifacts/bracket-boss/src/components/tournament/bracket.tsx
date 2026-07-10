@@ -272,8 +272,8 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
       {/* ── Open Play ───────────────────────────────────────────────────────── */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-orange-400" />
-          <h2 className="text-sm font-bold uppercase tracking-widest text-orange-400">
+          <Activity className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-bold uppercase tracking-widest text-primary">
             Open Play
           </h2>
         </div>

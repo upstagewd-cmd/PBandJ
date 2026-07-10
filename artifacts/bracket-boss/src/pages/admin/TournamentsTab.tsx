@@ -77,8 +77,8 @@ export function TournamentsTab({ code }: { code: string }) {
   return (
     <div className="space-y-4">
       {pendingAction && (
-        <div className={`border rounded-xl p-4 space-y-3 ${pendingAction.type === "delete" ? "bg-red-500/10 border-red-500/40" : "bg-orange-500/10 border-orange-500/40"}`}>
-          <p className={`text-sm font-bold ${pendingAction.type === "delete" ? "text-red-400" : "text-orange-400"}`}>
+        <div className={`border rounded-xl p-4 space-y-3 ${pendingAction.type === "delete" ? "bg-red-500/10 border-red-500/40" : "bg-primary/10 border-primary/40"}`}>
+          <p className={`text-sm font-bold ${pendingAction.type === "delete" ? "text-red-400" : "text-primary"}`}>
             {pendingAction.type === "delete"
               ? `Delete "${pendingAction.name}" and ALL its data? This cannot be undone.`
               : `Force-complete "${pendingAction.name}"?`}

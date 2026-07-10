@@ -33,8 +33,8 @@ function RecentGames() {
     e.status === "completed" || e.status === "closed" || e.status === "cancelled"
       ? "text-muted-foreground/60"
       : e.status === "active"
-      ? "text-green-500"
-      : "text-orange-400";
+      ? "text-green-600"
+      : "text-primary";
 
   return (
     <div className="w-full space-y-3">
@@ -56,7 +56,7 @@ function RecentGames() {
                 {entry.type === "tournament" ? (
                   <Trophy className="w-3.5 h-3.5 text-primary" />
                 ) : (
-                  <Activity className="w-3.5 h-3.5 text-orange-400" />
+                  <Activity className="w-3.5 h-3.5 text-primary" />
                 )}
               </div>
               <div className="min-w-0 text-left">
@@ -119,7 +119,7 @@ export default function Home() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
 
       {/* Account bar */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
@@ -170,18 +170,19 @@ export default function Home() {
       </div>
 
       <div className="relative z-10 space-y-6 max-w-md w-full py-20 sm:py-8">
-        <div className="mx-auto w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 shadow-[0_0_40px_rgba(255,100,50,0.2)]">
-          <Trophy className="w-12 h-12 text-primary" />
+        <div className="mx-auto w-28 h-28 bg-[#111111] rounded-3xl flex items-center justify-center overflow-hidden shadow-xl">
+          <img
+            src={`${import.meta.env.BASE_URL}logo-main-transparent.png`}
+            alt="PB&J"
+            className="w-24 h-24 object-contain"
+          />
         </div>
 
-        <div className="space-y-2">
-          <h1 className="text-5xl font-extrabold tracking-tight italic">
-            PB<span className="text-primary">&amp;J</span>
-          </h1>
-          <p className="text-muted-foreground text-lg font-medium">
+        <div className="space-y-1.5">
+          <p className="text-foreground text-xl font-bold tracking-tight">
             Faith. Fellowship. Friendly Competition.
           </p>
-          <p className="text-muted-foreground/60 text-sm">
+          <p className="text-muted-foreground text-sm">
             A Fellowship of Christian Competitors
           </p>
         </div>
@@ -211,7 +212,7 @@ export default function Home() {
         <Button
           size="lg"
           variant="outline"
-          className="w-full h-14 text-base font-bold rounded-2xl transition-transform active:scale-95 border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/50"
+          className="w-full h-14 text-base font-bold rounded-2xl transition-transform active:scale-95 border-[#2A2A2A] text-[#2A2A2A] hover:bg-[#2A2A2A]/5"
           onClick={handleCreateSession}
           disabled={createTournament.isPending || createSession.isPending}
         >

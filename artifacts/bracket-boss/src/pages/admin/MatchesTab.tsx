@@ -125,7 +125,7 @@ export function MatchesTab({ code }: { code: string }) {
       <div className="flex gap-2">
         {(["bracket", "open"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === t ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             {t === "bracket" ? `Bracket (${bracket.length})` : `Open Play (${openPlay.length})`}
           </button>
         ))}

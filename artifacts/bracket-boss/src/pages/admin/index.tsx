@@ -122,7 +122,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab(t.id)}
               className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
                 activeTab === t.id
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >

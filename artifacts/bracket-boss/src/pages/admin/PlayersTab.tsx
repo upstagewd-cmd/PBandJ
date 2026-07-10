@@ -165,15 +165,15 @@ export function PlayersTab({ code }: { code: string }) {
     <div className="space-y-4">
       {/* Inline merge confirmation */}
       {pendingMerge && keepPlayer && mergePlayer && (
-        <div className="bg-orange-500/10 border border-orange-500/40 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-bold text-orange-400">Confirm Merge</p>
+        <div className="bg-primary/10 border border-primary/40 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-primary">Confirm Merge</p>
           <p className="text-sm text-muted-foreground">
             Merge <span className="font-bold text-foreground">{mergePlayer.firstName} {mergePlayer.lastName}</span> into{" "}
             <span className="font-bold text-foreground">{keepPlayer.firstName} {keepPlayer.lastName}</span>?
             All matches and badges will transfer. The merged player will be deleted.
           </p>
           <div className="flex gap-2">
-            <Button size="sm" onClick={confirmMerge} className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button size="sm" onClick={confirmMerge} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Check className="w-3 h-3 mr-1" /> Confirm Merge
             </Button>
             <Button size="sm" variant="ghost" onClick={cancelAll}>Cancel</Button>
@@ -214,7 +214,7 @@ export function PlayersTab({ code }: { code: string }) {
       </div>
 
       {mergeMode && (
-        <p className="text-sm text-orange-400 font-medium">
+        <p className="text-sm text-primary font-medium">
           {mergeA ? "Now tap a second player — they will be merged INTO the first." : "Tap the player to KEEP."}
         </p>
       )}
@@ -224,7 +224,7 @@ export function PlayersTab({ code }: { code: string }) {
           const isEditTarget = editId === p.id;
           const isMergeA = mergeA === p.id;
           return (
-            <div key={p.id} className={`bg-card border rounded-xl p-3 space-y-2 transition-colors ${isMergeA ? "border-orange-500" : "border-border/50"}`}>
+            <div key={p.id} className={`bg-card border rounded-xl p-3 space-y-2 transition-colors ${isMergeA ? "border-primary" : "border-border/50"}`}>
               {isEditTarget ? (
                 <div className="space-y-2">
                   {/* Avatar picker */}
@@ -241,8 +241,8 @@ export function PlayersTab({ code }: { code: string }) {
                         className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
                       >
                         {uploadingAvatar
-                          ? <Loader2 className="w-5 h-5 text-white animate-spin" />
-                          : <Camera className="w-5 h-5 text-white" />}
+                          ? <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
+                          : <Camera className="w-5 h-5 text-primary-foreground" />}
                       </button>
                       <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                     </div>

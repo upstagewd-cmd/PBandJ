@@ -41,14 +41,14 @@ export default defineConfig({
       injectRegister: "auto",
       scope: `${basePrefix}/`,
       base: `${basePrefix}/`,
-      includeAssets: ["favicon.svg", "logo.svg", "icons/*.png"],
+      includeAssets: ["logo-favicon.png", "logo-main-transparent.png", "logo-simplified-transparent.png", "logo-secondary-transparent.png", "icons/*.png", "fonts/*.ttf"],
       manifest: {
         name: "PB&J",
         short_name: "PB&J",
         description:
           "A men's pickleball community app for tournaments, open play, rankings, and fellowship.",
-        theme_color: "#0a0a0f",
-        background_color: "#0a0a0f",
+        theme_color: "#111111",
+        background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait",
         start_url: `${basePrefix}/`,
@@ -75,7 +75,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,ttf}"],
         navigateFallback: `${basePrefix}/offline.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
         runtimeCaching: [],

@@ -81,7 +81,7 @@ export function SettingsTab({ code }: { code: string }) {
                   type="number"
                   value={local[key] ?? ""}
                   onChange={(e) => setLocal((l) => ({ ...l, [key]: e.target.value }))}
-                  className={`w-28 text-right ${local[key] !== settings[key] ? "border-orange-500" : ""}`}
+                  className={`w-28 text-right ${local[key] !== settings[key] ? "border-primary" : ""}`}
                 />
               )}
             </div>

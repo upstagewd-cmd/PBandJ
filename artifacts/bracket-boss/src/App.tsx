@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
-import { dark } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -44,49 +43,48 @@ if (!clerkPubKey) {
 }
 
 const clerkAppearance = {
-  baseTheme: dark,
   cssLayerName: "clerk",
   options: {
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/logo-favicon.png`,
   },
   variables: {
-    colorPrimary: "#f96422",
-    colorForeground: "#fafafa",
-    colorMutedForeground: "#a1a1aa",
+    colorPrimary: "#B7E334",
+    colorForeground: "#111111",
+    colorMutedForeground: "#737373",
     colorDanger: "#ef4444",
-    colorBackground: "#0a0a0f",
-    colorInput: "#18181b",
-    colorInputForeground: "#fafafa",
-    colorNeutral: "#3f3f46",
+    colorBackground: "#ffffff",
+    colorInput: "#f5f4f0",
+    colorInputForeground: "#111111",
+    colorNeutral: "#E9E7E1",
     fontFamily: "Inter, sans-serif",
     borderRadius: "0.75rem",
   },
   elements: {
     rootBox: "w-full flex justify-center",
-    cardBox: "bg-zinc-950 border border-zinc-800 rounded-2xl w-[440px] max-w-full overflow-hidden shadow-2xl",
+    cardBox: "bg-white border border-[#E9E7E1] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none",
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "text-white font-bold",
-    headerSubtitle: "text-zinc-400",
-    socialButtonsBlockButtonText: "text-white",
-    formFieldLabel: "text-zinc-300",
-    footerActionLink: "text-orange-400 hover:text-orange-300",
-    footerActionText: "text-zinc-400",
-    dividerText: "text-zinc-500",
-    identityPreviewEditButton: "text-orange-400",
-    formFieldSuccessText: "text-green-400",
-    alertText: "text-white",
+    headerTitle: "text-[#111111] font-bold",
+    headerSubtitle: "text-[#737373]",
+    socialButtonsBlockButtonText: "text-[#111111]",
+    formFieldLabel: "text-[#2A2A2A]",
+    footerActionLink: "text-[#111111] hover:text-[#2A2A2A]",
+    footerActionText: "text-[#737373]",
+    dividerText: "text-[#9ca3af]",
+    identityPreviewEditButton: "text-[#111111]",
+    formFieldSuccessText: "text-green-600",
+    alertText: "text-[#111111]",
     logoBox: "flex justify-center",
-    logoImage: "h-12 w-12",
-    socialButtonsBlockButton: "border-zinc-700 bg-zinc-900 hover:bg-zinc-800",
-    formButtonPrimary: "bg-orange-500 hover:bg-orange-400 text-white font-bold",
-    formFieldInput: "bg-zinc-900 border-zinc-700 text-white",
-    footerAction: "bg-zinc-900",
-    dividerLine: "bg-zinc-800",
-    alert: "bg-zinc-900 border-zinc-700",
-    otpCodeFieldInput: "bg-zinc-900 border-zinc-700 text-white",
+    logoImage: "h-14 w-14 rounded-xl",
+    socialButtonsBlockButton: "border-[#E9E7E1] bg-white hover:bg-[#f5f4f0]",
+    formButtonPrimary: "!bg-[#B7E334] hover:!bg-[#a5cc2a] !text-[#111111] font-bold",
+    formFieldInput: "bg-white border-[#E9E7E1] text-[#111111] focus:border-[#B7E334]",
+    footerAction: "bg-[#f5f4f0]",
+    dividerLine: "bg-[#E9E7E1]",
+    alert: "bg-[#f5f4f0] border-[#E9E7E1]",
+    otpCodeFieldInput: "bg-white border-[#E9E7E1] text-[#111111]",
     formFieldRow: "",
     main: "",
   },
@@ -194,7 +192,7 @@ function ClerkProviderWithRoutes() {
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <WouterRouter base={basePath}>
         <ClerkProviderWithRoutes />
       </WouterRouter>

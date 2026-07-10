@@ -867,7 +867,7 @@ function MatchLogger({
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button onClick={() => toggle(p.id, 1)} disabled={!t1Ids.includes(p.id) && (selectedIds.has(p.id) || t1Ids.length >= 2)}
-                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${t1Ids.includes(p.id) ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"}`}>T1</button>
+                  className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${t1Ids.includes(p.id) ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"}`}>T1</button>
                 <button onClick={() => toggle(p.id, 2)} disabled={!t2Ids.includes(p.id) && (selectedIds.has(p.id) || t2Ids.length >= 2)}
                   className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${t2Ids.includes(p.id) ? "bg-blue-500 text-white border-blue-500" : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"}`}>T2</button>
               </div>
@@ -1086,7 +1086,7 @@ export default function SessionPage() {
         {/* Title */}
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <Activity className={`w-5 h-5 ${isClosed ? "text-muted-foreground" : "text-orange-400"}`} />
+            <Activity className={`w-5 h-5 ${isClosed ? "text-muted-foreground" : "text-primary"}`} />
             <EditableSessionTitle session={session} hostToken={isClosed ? null : hostToken} isHost={isHost && !isClosed} />
           </div>
           <div className="flex items-center justify-between gap-2">

@@ -5,7 +5,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Local Fonts ─────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Blackiron';
+  src: url('/fonts/Blackiron.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter_24pt-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter_28pt-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter_24pt-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter_24pt-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Blackiron', serif;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-border: hsl(var(--border));
@@ -41,53 +81,78 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Light Theme (default) ───────────────────────────────────── */
+/* Brand palette:
+   Electric Lime  #B7E334  → HSL 75 74% 55%
+   Rich Black     #111111  → HSL 0  0%  7%
+   White          #FFFFFF  → HSL 0  0%  100%
+   Charcoal       #2A2A2A  → HSL 0  0%  16%
+   Warm Stone     #E9E7E1  → HSL 45 15% 90%
+*/
 :root {
-  --background: 240 10% 98%;
-  --foreground: 240 10% 3.9%;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 7%;
+
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --card-border: 240 5.9% 90%;
+  --card-foreground: 0 0% 7%;
+  --card-border: 45 15% 88%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --popover-border: 240 5.9% 90%;
-  --primary: 15 100% 55%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
+  --popover-foreground: 0 0% 7%;
+  --popover-border: 45 15% 88%;
+
+  --primary: 75 74% 55%;
+  --primary-foreground: 0 0% 7%;
+
+  --secondary: 45 15% 92%;
+  --secondary-foreground: 0 0% 16%;
+
+  --muted: 45 15% 92%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 75 74% 55%;
+  --accent-foreground: 0 0% 7%;
+
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 15 100% 55%;
+
+  --border: 45 15% 88%;
+  --input: 45 15% 88%;
+  --ring: 75 74% 55%;
   --radius: 0.75rem;
 }
 
+/* ── Dark Theme ──────────────────────────────────────────────── */
 .dark {
-  --background: 240 10% 3.9%;
+  --background: 0 0% 7%;
   --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+
+  --card: 0 0% 10%;
   --card-foreground: 0 0% 98%;
-  --card-border: 240 3.7% 15.9%;
-  --popover: 240 10% 3.9%;
+  --card-border: 0 0% 18%;
+
+  --popover: 0 0% 10%;
   --popover-foreground: 0 0% 98%;
-  --popover-border: 240 3.7% 15.9%;
-  --primary: 15 100% 55%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 3.7% 15.9%;
+  --popover-border: 0 0% 18%;
+
+  --primary: 75 74% 55%;
+  --primary-foreground: 0 0% 7%;
+
+  --secondary: 0 0% 16%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
+
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 60%;
+
+  --accent: 75 74% 55%;
+  --accent-foreground: 0 0% 7%;
+
+  --destructive: 0 62% 31%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 15 100% 55%;
+
+  --border: 0 0% 18%;
+  --input: 0 0% 18%;
+  --ring: 75 74% 55%;
 }
 
 @layer base {
