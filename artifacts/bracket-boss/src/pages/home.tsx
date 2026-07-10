@@ -37,43 +37,45 @@ function RecentGames() {
       : "text-primary";
 
   return (
-    <div className="w-full space-y-3">
-      <div className="flex items-center gap-2">
-        <Clock className="w-3.5 h-3.5 text-muted-foreground/50" />
-        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
-          Recent Games
-        </span>
-      </div>
-      <div className="space-y-1.5">
-        {entries.slice(0, 5).map((entry) => (
-          <button
-            key={entry.id}
-            onClick={() => setLocation(entry.type === "tournament" ? `/t/${entry.id}` : `/s/${entry.id}`)}
-            className="w-full flex items-center justify-between gap-3 bg-card/50 hover:bg-card border border-border/30 hover:border-border/60 rounded-xl px-4 py-3 transition-all group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                {entry.type === "tournament" ? (
-                  <Trophy className="w-3.5 h-3.5 text-primary" />
-                ) : (
-                  <Activity className="w-3.5 h-3.5 text-primary" />
-                )}
+    <div className="w-full">
+      <div className="bg-muted rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Recent Games
+          </span>
+        </div>
+        <div className="space-y-2">
+          {entries.slice(0, 5).map((entry) => (
+            <button
+              key={entry.id}
+              onClick={() => setLocation(entry.type === "tournament" ? `/t/${entry.id}` : `/s/${entry.id}`)}
+              className="w-full flex items-center justify-between gap-3 bg-background hover:bg-background/80 border border-border rounded-xl px-4 py-3 transition-all group shadow-sm"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                  {entry.type === "tournament" ? (
+                    <Trophy className="w-3.5 h-3.5 text-primary" />
+                  ) : (
+                    <Activity className="w-3.5 h-3.5 text-primary" />
+                  )}
+                </div>
+                <div className="min-w-0 text-left">
+                  <p className="text-sm font-bold text-foreground truncate">{entry.name}</p>
+                  <p className={`text-xs font-semibold ${statusColor(entry)}`}>
+                    {statusLabel(entry)}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 text-left">
-                <p className="text-sm font-bold text-foreground truncate">{entry.name}</p>
-                <p className={`text-xs font-semibold ${statusColor(entry)}`}>
-                  {statusLabel(entry)}
-                </p>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {formatVisitedAt(entry.visitedAt)}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
               </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs text-muted-foreground/50 hidden sm:block">
-                {formatVisitedAt(entry.visitedAt)}
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
-            </div>
-          </button>
-        ))}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
