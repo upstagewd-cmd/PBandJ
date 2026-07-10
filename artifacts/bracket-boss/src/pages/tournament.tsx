@@ -111,7 +111,7 @@ export default function TournamentPage() {
     <div className="min-h-[100dvh] w-full flex flex-col">
       <header className="h-14 border-b border-border/40 flex items-center justify-between px-4 md:px-6 bg-background/95 backdrop-blur z-50 sticky top-0">
         <div
-          className="font-extrabold italic tracking-tight text-xl cursor-pointer"
+          className="font-display text-xl cursor-pointer"
           onClick={() => setLocation("/")}
         >
           PB<span className="text-primary">&amp;J</span>
