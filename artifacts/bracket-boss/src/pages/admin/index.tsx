@@ -104,7 +104,7 @@ export default function AdminPage() {
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-extrabold">PB&J Admin</h1>
+          <h1 className="font-display text-xl">PB&J Admin</h1>
         </div>
         <button
           className="text-xs text-muted-foreground hover:text-foreground"

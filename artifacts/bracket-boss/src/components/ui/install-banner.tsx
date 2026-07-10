@@ -16,7 +16,7 @@ export function InstallBanner() {
             className="w-12 h-12 rounded-xl shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-[#111111]">Install PB&amp;J</p>
+            <p className="font-display text-base text-[#111111]">Install PB&amp;J</p>
             <p className="text-xs text-[#737373] mt-0.5 leading-relaxed">
               Add to your home screen for one-tap access to tournaments, rankings, and open play.
             </p>
