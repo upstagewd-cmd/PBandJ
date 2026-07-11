@@ -1,4 +1,6 @@
 import express, { type Express } from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -48,5 +50,19 @@ app.use(
 );
 
 app.use("/api", router);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const frontendPath = path.resolve(
+  __dirname,
+  "../../bracket-boss/dist"
+);
+
+app.use(express.static(frontendPath));
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
 export default app;
