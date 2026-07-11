@@ -154,8 +154,6 @@ function ClerkProviderWithRoutes() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       appearance={clerkAppearance}
-      afterSignInUrl={window.location.origin}
-      afterSignUpUrl={window.location.origin}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
