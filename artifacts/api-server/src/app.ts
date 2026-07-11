@@ -56,7 +56,7 @@ const __dirname = path.dirname(__filename);
 
 const frontendPath = path.resolve(
   __dirname,
-  "../../bracket-boss/dist"
+  "../../bracket-boss/dist/public"
 );
 
 app.use(express.static(frontendPath));
