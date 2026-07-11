@@ -6,7 +6,9 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "PORT=5173 BASE_PATH=/ pnpm run typecheck && PORT=5173 BASE_PATH=/ pnpm --filter @workspace/bracket-boss run build && pnpm --filter @workspace/api-server run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+"start": "pnpm --filter @workspace/api-server start",
+"build:prod": "pnpm --filter @workspace/bracket-boss build && pnpm --filter @workspace/api-server build"
   },
   "private": true,
   "devDependencies": {
