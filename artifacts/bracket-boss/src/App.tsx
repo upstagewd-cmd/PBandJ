@@ -91,7 +91,7 @@ function SignInPage() {
         routing="path"
         path={`${basePath}/sign-in`}
         signUpUrl={`${basePath}/sign-up`}
-        fallbackRedirectUrl={basePath || "/"}
+fallbackRedirectUrl={window.location.origin}
         appearance={clerkAppearance}
       />
     </div>
@@ -105,7 +105,7 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
-        fallbackRedirectUrl={basePath || "/"}
+fallbackRedirectUrl={window.location.origin}
         appearance={clerkAppearance}
       />
     </div>
@@ -156,6 +156,8 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+  signInFallbackRedirectUrl={basePath || "/"}
+  signUpFallbackRedirectUrl={basePath || "/"}
       localization={{
         signIn: {
           start: {
