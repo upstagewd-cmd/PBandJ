@@ -61,8 +61,7 @@ const frontendPath = path.resolve(
 
 app.use(express.static(frontendPath));
 
-app.get("*", (_req, res) => {
+app.get("/{*splat}", (_req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
-
 export default app;
