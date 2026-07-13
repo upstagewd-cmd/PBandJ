@@ -89,7 +89,12 @@ export default function Home() {
   const createSession = useCreateSession();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { platform, manualShow } = useInstallPrompt();
+  const { platform, manualShow, deferredPrompt } = useInstallPrompt();
+
+  // Show install button if:
+  // - On iOS (all browsers support PWA via share menu), or
+  // - On Android/Desktop AND browser supports beforeinstallprompt (deferredPrompt available)
+  const canShowInstallButton = platform === "ios" || !!deferredPrompt;
 
   const handleCreateTournament = () => {
     createTournament.mutate(
@@ -125,12 +130,12 @@ export default function Home() {
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
 
-      {/* Install App button (desktop only) */}
-      {platform === "desktop" && (
+      {/* Install App button (mobile & desktop where supported) */}
+      {canShowInstallButton && (
         <Button
           variant="ghost"
           size="sm"
-          className="absolute top-4 left-4 text-muted-foreground hover:text-foreground font-semibold hidden sm:flex"
+          className="absolute top-4 left-4 text-muted-foreground hover:text-foreground font-semibold"
           onClick={manualShow}
         >
           <Download className="w-4 h-4 mr-2" />
