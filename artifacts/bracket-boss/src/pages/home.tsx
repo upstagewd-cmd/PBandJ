@@ -181,8 +181,16 @@ export default function Home() {
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em]">
-            Pickleball & Jesus
+          <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em] uppercase">
+            <span className="block">PICKLEBALL &</span>
+            <span className="inline-flex items-center gap-2">
+              <span className="text-primary">JESUS</span>
+              <img
+                src={`${import.meta.env.BASE_URL}logo-simplified-transparent.png`}
+                alt=""
+                className="h-5 w-5 sm:h-6 sm:w-6 object-contain inline-block"
+              />
+            </span>
           </p>
           <p className="text-muted-foreground text-base sm:text-lg italic">
             As a man Dinketh
