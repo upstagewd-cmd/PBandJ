@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, Download } from "lucide-react";
 import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { InstallBanner } from "@/components/ui/install-banner";
 
 function RecentGames() {
   const [, setLocation] = useLocation();
@@ -203,7 +204,7 @@ export default function Home() {
         <div className="space-y-1.5">
           <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em] uppercase">
             <span className="block">PICKLEBALL &</span>
-            <span className="inline-flex items-end gap-0.5">
+            <span className="inline-flex items-baseline gap-0.5">
               <span className="text-primary">JESUS</span>
               <img
                 src={`${import.meta.env.BASE_URL}logo-favicon.png`}
@@ -286,6 +287,9 @@ export default function Home() {
           Admin
         </button>
       </div>
+
+      {/* Install Banner Modal */}
+      <InstallBanner />
     </div>
   );
 }
