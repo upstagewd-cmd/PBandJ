@@ -289,7 +289,7 @@ const SKILL_LEVELS = [
   { value: "advanced", label: "Advanced", emoji: "🔴", elo: "~1500" },
 ] as const;
 
-function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => void }) {
+function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined: () => void; isHost?: boolean }) {
   const { user } = useUser();
   const [first, setFirst] = useState(() => user?.firstName ?? "");
   const [last, setLast] = useState(() => user?.lastName ?? "");
@@ -319,7 +319,7 @@ function JoinForm({ sessionId, onJoined }: { sessionId: string; onJoined: () => 
           lastName: last.trim(),
           teamName: team.trim() || undefined,
           skillLevel: !isLoggedIn ? (skill as "beginner" | "intermediate" | "advanced") : undefined,
-          clerkUserId: isLoggedIn ? user.id : undefined,
+          clerkUserId: isHost ? undefined : (isLoggedIn ? user.id : undefined),
         },
       },
       {
@@ -1204,7 +1204,7 @@ export default function SessionPage() {
               <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
             </Show>
 
-            <JoinForm sessionId={sessionId} onJoined={() => refetch()} />
+            <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
 
             {isHost && session.players.length >= 2 && (
               <PairingManager

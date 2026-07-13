@@ -160,6 +160,7 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
 
 export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   const { toast } = useToast();
+  const { user } = useUser();
   const isHost = !!hostToken;
   const isCancelled = tournament.status === "cancelled";
   const queryClient = useQueryClient();
@@ -219,6 +220,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
           lastName: values.lastName,
           teamName: values.teamName || undefined,
           skillLevel: values.skillLevel,
+          clerkUserId: isHost ? null : (user?.id ?? undefined),
         },
       },
       {
