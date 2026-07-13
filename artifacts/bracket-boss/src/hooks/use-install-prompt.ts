@@ -120,7 +120,7 @@ export function useInstallPrompt() {
     setAutoShowReady(false);
   };
 
-  const shouldShow = (autoShowReady || manuallyTriggered) && !isPWA && !installed && !dismissed;
+  const shouldShow = !isPWA && !installed && ((autoShowReady && !dismissed) || manuallyTriggered);
 
   const manualShow = () => {
     setManuallyTriggered(true);
