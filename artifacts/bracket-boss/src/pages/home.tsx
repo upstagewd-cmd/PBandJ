@@ -203,7 +203,7 @@ export default function Home() {
         <div className="space-y-1.5">
           <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em] uppercase">
             <span className="block">PICKLEBALL &</span>
-            <span className="inline-flex items-center gap-0.5">
+            <span className="inline-flex items-end gap-0.5">
               <span className="text-primary">JESUS</span>
               <img
                 src={`${import.meta.env.BASE_URL}logo-favicon.png`}
