@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, AuthenticateWithRedirectCallback, Show, useClerk, useUser } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -112,9 +112,6 @@ fallbackRedirectUrl={window.location.origin}
   );
 }
 
-function SSOCallbackPage() {
-  return <AuthenticateWithRedirectCallback />;
-}
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
@@ -139,9 +136,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/sign-in/*?" component={SignInPage} />
-<Route path="/sign-up/sso-callback" component={SSOCallbackPage} />     
- <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/sign-in/*?" component={SignInPage} />     
+<Route path="/sign-up/*?" component={SignUpPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
@@ -177,8 +173,8 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+routerPush={(to) => window.location.assign(to)}
+routerReplace={(to) => window.location.replace(to)}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
