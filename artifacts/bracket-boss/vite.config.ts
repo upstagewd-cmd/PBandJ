@@ -71,8 +71,8 @@ export default defineConfig({
         globPatterns: [
           "**/*.{js,css,html,ico,png,svg,woff2,ttf}",
         ],
-        navigateFallback: `${basePrefix}/offline.html`,
-        navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
+navigateFallback: `${basePrefix}/index.html`,
+navigateFallbackDenylist: [/^\/api\//, /^\/ws/, /^\/sign-up\/sso-callback/],
         runtimeCaching: [],
       },
 
