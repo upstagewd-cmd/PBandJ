@@ -98,6 +98,10 @@ playerStatsRouter.get("/", async (_req, res) => {
   }
 });
 
+playerStatsRouter.get("/:playerId/stats", async (req: Request<{ playerId: string }>, res) => {
+  res.redirect(307, `/api/players/${req.params.playerId}`);
+});
+
 playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, res) => {
   try {
     const { playerId } = req.params;

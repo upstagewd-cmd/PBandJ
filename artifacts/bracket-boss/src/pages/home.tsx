@@ -186,7 +186,7 @@ export default function Home() {
             <span className="inline-flex items-center gap-2">
               <span className="text-primary">JESUS</span>
               <img
-                src={`${import.meta.env.BASE_URL}logo-simplified-transparent.png`}
+                src={`${import.meta.env.BASE_URL}logo-favicon.png`}
                 alt=""
                 className="h-5 w-5 sm:h-6 sm:w-6 object-contain inline-block"
               />
@@ -247,7 +247,7 @@ export default function Home() {
 
         <button
           onClick={() => setLocation("/players")}
-          className="w-full rounded-2xl border border-border/50 bg-card/80 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-card"
+          className="w-full rounded-2xl border border-[#111111] bg-[#111111] px-4 py-3 text-sm font-semibold text-[#f5f4f0] transition-colors hover:bg-[#2A2A2A]"
         >
           Browse players & leaderboard
         </button>
