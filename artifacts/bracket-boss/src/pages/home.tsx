@@ -181,10 +181,10 @@ export default function Home() {
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-foreground text-xl font-bold tracking-tight">
+          <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em]">
             Pickleball & Jesus
           </p>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-base sm:text-lg italic">
             As a man Dinketh
           </p>
         </div>
