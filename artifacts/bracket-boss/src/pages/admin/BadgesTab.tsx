@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { adminGet, adminPatch, adminPost, adminDelete } from "./useAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
 import { Pencil, Trash2, Plus, Check, ToggleLeft, ToggleRight, UserPlus, UserMinus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,7 @@ export function BadgesTab({ code }: { code: string }) {
   const [adding, setAdding] = useState(false);
   const [newForm, setNewForm] = useState({ name: "", description: "", ruleType: "wins", threshold: 1, icon: "🏅", enabled: true });
   const [grantPlayerId, setGrantPlayerId] = useState<Record<string, string>>({});
+  const [grantPlayerSelection, setGrantPlayerSelection] = useState<Record<string, { id: string; firstName: string; lastName: string } | null>>({});
 
   const load = async () => {
     try {
@@ -81,6 +83,11 @@ export function BadgesTab({ code }: { code: string }) {
     setPendingDelete(null);
   };
 
+  const selectGrantPlayer = (badgeId: string, player: { id: string; firstName: string; lastName: string }) => {
+    setGrantPlayerId((prev) => ({ ...prev, [badgeId]: player.id }));
+    setGrantPlayerSelection((prev) => ({ ...prev, [badgeId]: player }));
+  };
+
   const grantBadge = async (badgeId: string) => {
     const playerId = grantPlayerId[badgeId]?.trim();
     if (!playerId) return;
@@ -88,6 +95,7 @@ export function BadgesTab({ code }: { code: string }) {
       await adminPost(code, `/badges/${badgeId}/grants`, { playerId });
       toast({ title: "Badge granted" });
       setGrantPlayerId((prev) => ({ ...prev, [badgeId]: "" }));
+      setGrantPlayerSelection((prev) => ({ ...prev, [badgeId]: null }));
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
@@ -205,11 +213,18 @@ export function BadgesTab({ code }: { code: string }) {
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2 pt-1">
-                  <Input placeholder="Player ID to grant…" value={grantPlayerId[b.id] ?? ""} onChange={(e) => setGrantPlayerId((prev) => ({ ...prev, [b.id]: e.target.value }))} className="h-7 text-xs" />
-                  <Button size="sm" className="h-7 px-2" onClick={() => grantBadge(b.id)}>
-                    <UserPlus className="w-3 h-3" />
-                  </Button>
+                <div className="space-y-2 pt-1">
+                  <KnownPlayerPicker onSelect={(player) => selectGrantPlayer(b.id, player)} />
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground flex-1">
+                      {grantPlayerSelection[b.id]
+                        ? `Selected: ${grantPlayerSelection[b.id]?.firstName} ${grantPlayerSelection[b.id]?.lastName}`
+                        : "Choose a player to grant this badge to."}
+                    </p>
+                    <Button size="sm" className="h-7 px-2" onClick={() => grantBadge(b.id)} disabled={!grantPlayerId[b.id]}>
+                      <UserPlus className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
