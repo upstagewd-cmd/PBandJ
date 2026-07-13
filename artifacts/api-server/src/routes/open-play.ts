@@ -10,8 +10,8 @@ import { getTournamentFull } from "../lib/tournament-helpers";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
-function serializePlayer(p: typeof playersTable.$inferSelect) {
-  const rank = getRank(p.eloRating ?? 1200);
+async function serializePlayer(p: typeof playersTable.$inferSelect) {
+  const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
@@ -56,35 +56,35 @@ async function getOpenPlayState(tournamentId: string) {
     : [];
   const allPlayerMap = new Map(allPlayers.map((p) => [p.id, p]));
 
-  const recentMatches = recentMatchRows
+  const recentMatches = await Promise.all(recentMatchRows
     .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
     .slice(0, 10)
-    .map((m) => ({
+    .map(async (m) => ({
       id: m.id,
       winnerTeam: m.winnerTeam,
       scoreOne: m.scoreOne,
       scoreTwo: m.scoreTwo,
-      teamOnePlayers: [m.teamOnePOneId, m.teamOnePTwoId]
+      teamOnePlayers: await Promise.all([m.teamOnePOneId, m.teamOnePTwoId]
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map(serializePlayer),
-      teamTwoPlayers: [m.teamTwoPOneId, m.teamTwoPTwoId]
+        .map((player) => serializePlayer(player!))),
+      teamTwoPlayers: await Promise.all([m.teamTwoPOneId, m.teamTwoPTwoId]
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map(serializePlayer),
+        .map((player) => serializePlayer(player!))),
       playedAt: m.playedAt.toISOString(),
-    }));
+    })));
 
   return {
-    pool: pool
-      .map((e) => {
+    pool: await Promise.all(pool
+      .map(async (e) => {
         const p = playerMap.get(e.playerId);
         if (!p) return null;
-        return { ...serializePlayer(p), partnerId: e.partnerId ?? null };
+        return { ...(await serializePlayer(p)), partnerId: e.partnerId ?? null };
       })
-      .filter(Boolean),
+      .filter(Boolean)),
     recentMatches,
   };
 }

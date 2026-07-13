@@ -78,6 +78,72 @@ export function generateSingleEliminationBracket(
   const n = players.length;
   if (n < 2) return [];
 
+  if (n === 6) {
+    const sorted = [...players].sort((a, b) => a.seed - b.seed);
+    const bracketSize = 8;
+    const wbRounds = Math.log2(bracketSize);
+    const wb: MatchSlot[][] = [[]];
+    for (let r = 1; r <= wbRounds; r++) {
+      const count = bracketSize / Math.pow(2, r);
+      wb.push(Array.from({ length: count }, (_, i) => makeMatch(tournamentId, "winner", r, i + 1)));
+    }
+
+    const matchMap = new Map<string, MatchSlot>();
+    for (const round of wb) for (const match of round) matchMap.set(match.id, match);
+
+    const quarterFinals = wb[1];
+    const semis = wb[2];
+    const finals = wb[3];
+
+    const [topSeed, secondSeed, thirdSeed, fourthSeed, fifthSeed, sixthSeed] = sorted.map((p) => p.id);
+    quarterFinals[0].playerOneId = topSeed;
+    quarterFinals[0].playerTwoId = fourthSeed;
+    quarterFinals[0].status = "active";
+    quarterFinals[1].playerOneId = secondSeed;
+    quarterFinals[1].playerTwoId = thirdSeed;
+    quarterFinals[1].status = "active";
+    quarterFinals[2].playerOneId = fifthSeed;
+    quarterFinals[2].playerTwoId = sixthSeed;
+    quarterFinals[2].status = "active";
+
+    semis[0].playerOneId = quarterFinals[0].id;
+    semis[0].playerTwoId = quarterFinals[1].id;
+    semis[0].status = "active";
+    semis[1].playerOneId = null;
+    semis[1].playerTwoId = null;
+    semis[1].status = "bye";
+    semis[1].isBye = true;
+    semis[1].winnerId = topSeed;
+
+    finals[0].playerOneId = semis[0].id;
+    finals[0].playerTwoId = semis[1].id;
+    finals[0].status = "active";
+
+    for (let r = 1; r <= wbRounds; r++) {
+      wb[r].forEach((match, i) => {
+        const m = i + 1;
+        if (r < wbRounds) {
+          const nextM = Math.ceil(m / 2);
+          match.nextWinnerMatchId = wb[r + 1][nextM - 1].id;
+          match.nextWinnerSlot = m % 2 === 1 ? "one" : "two";
+        }
+      });
+    }
+
+    const allMatches: MatchSlot[] = [];
+    for (let r = 1; r <= wbRounds; r++) allMatches.push(...wb[r]);
+
+    for (const match of allMatches) {
+      if (match.playerOneId && match.playerTwoId) {
+        match.status = "active";
+      } else if (match.playerOneId || match.playerTwoId) {
+        applyBye(match, matchMap);
+      }
+    }
+
+    return allMatches;
+  }
+
   const bracketSize = Math.max(4, nextPowerOf2(n));
   const wbRounds = Math.log2(bracketSize);
 

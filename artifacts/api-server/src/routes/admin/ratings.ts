@@ -17,12 +17,12 @@ adminRatingsRouter.get("/", async (req, res) => {
     .from(playersTable)
     .orderBy(playersTable.eloRating);
 
-  res.json(
-    players.map((p) => ({
-      ...p,
-      rank: getRank(p.eloRating),
-    })),
-  );
+  const ranked = await Promise.all(players.map(async (p) => ({
+    ...p,
+    rank: await getRank(p.eloRating),
+  })));
+
+  res.json(ranked);
 });
 
 adminRatingsRouter.patch("/:playerId", async (req, res) => {
@@ -44,7 +44,7 @@ adminRatingsRouter.patch("/:playerId", async (req, res) => {
     res.status(404).json({ error: "Player not found" });
     return;
   }
-  res.json({ ...updated, rank: getRank(updated.eloRating) });
+  res.json({ ...updated, rank: await getRank(updated.eloRating) });
 });
 
 adminRatingsRouter.post("/reset/:playerId", async (req, res) => {
@@ -59,7 +59,7 @@ adminRatingsRouter.post("/reset/:playerId", async (req, res) => {
     res.status(404).json({ error: "Player not found" });
     return;
   }
-  res.json({ ...updated, rank: getRank(updated.eloRating) });
+  res.json({ ...updated, rank: await getRank(updated.eloRating) });
 });
 
 adminRatingsRouter.post("/recalculate", async (req, res) => {

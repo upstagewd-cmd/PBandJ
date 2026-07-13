@@ -3,15 +3,23 @@ import { db } from "@workspace/db";
 import { rankTiersTable, playersTable } from "@workspace/db/schema";
 import { eq, gte, lt, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { RANKS } from "../../lib/ranks.js";
+
+const DEFAULT_RANK_TIERS = [
+  { title: "New Seed", emoji: "🌱", minElo: 0 },
+  { title: "Rising Player", emoji: "🔥", minElo: 1300 },
+  { title: "Battle Tested", emoji: "⚔️", minElo: 1450 },
+  { title: "Court General", emoji: "🏛️", minElo: 1600 },
+  { title: "Lion Heart", emoji: "🦁", minElo: 1800 },
+  { title: "Kingdom Competitor", emoji: "👑", minElo: 2000 },
+] as const;
 
 export const adminRanksRouter = Router();
 
 async function ensureSeeded() {
   const existing = await db.select().from(rankTiersTable);
   if (existing.length > 0) return;
-  for (let i = 0; i < RANKS.length; i++) {
-    const r = RANKS[i];
+  for (let i = 0; i < DEFAULT_RANK_TIERS.length; i++) {
+    const r = DEFAULT_RANK_TIERS[i];
     await db.insert(rankTiersTable).values({
       id: nanoid(8),
       title: r.title,

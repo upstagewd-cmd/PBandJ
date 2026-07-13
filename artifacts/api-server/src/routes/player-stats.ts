@@ -69,7 +69,7 @@ playerStatsRouter.get("/", async (_req, res) => {
           .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
           .where(and(eq(playerBadgesTable.playerId, player.id), eq(badgesTable.enabled, true)));
 
-        const rank = getRank(player.eloRating ?? 1200);
+        const rank = await getRank(player.eloRating ?? 1200);
 
         return {
           id: player.id,
@@ -177,7 +177,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       };
     });
 
-    const rank = getRank(player.eloRating ?? 1200);
+    const rank = await getRank(player.eloRating ?? 1200);
 
     res.json({
       player: {

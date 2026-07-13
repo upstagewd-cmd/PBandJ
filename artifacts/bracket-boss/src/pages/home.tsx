@@ -183,12 +183,12 @@ export default function Home() {
         <div className="space-y-1.5">
           <p className="text-foreground font-display text-3xl sm:text-4xl leading-none tracking-[0.02em] uppercase">
             <span className="block">PICKLEBALL &</span>
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-0.5">
               <span className="text-primary">JESUS</span>
               <img
                 src={`${import.meta.env.BASE_URL}logo-favicon.png`}
                 alt=""
-                className="h-5 w-5 sm:h-6 sm:w-6 object-contain inline-block"
+                className="h-4 w-4 sm:h-5 sm:w-5 object-contain inline-block"
               />
             </span>
           </p>

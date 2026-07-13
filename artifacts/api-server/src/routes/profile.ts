@@ -94,7 +94,7 @@ profileRouter.get("/me", async (req, res) => {
     const winPct = completedMatches.length > 0 ? Math.round((totalWins / completedMatches.length) * 100) : 0;
 
     const eloRating = Math.max(...players.map((p) => p.eloRating ?? 1200));
-    const rank = getRank(eloRating);
+    const rank = await getRank(eloRating);
     const tournamentsPlayed = new Set(players.map((p) => p.tournamentId)).size;
 
     // Re-use the teams fetched earlier

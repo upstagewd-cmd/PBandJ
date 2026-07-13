@@ -5,12 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
-
-const SKILL_ELO: Record<string, number> = {
-  beginner: 900,
-  intermediate: 1200,
-  advanced: 1500,
-};
+import { getStartingEloForSkill } from "../lib/settings";
 
 export const sessionsRouter = Router();
 
@@ -31,8 +26,8 @@ function generateSessionId(): string {
 
 type PlayerRow = typeof sessionPlayersTable.$inferSelect;
 
-function serializePlayer(p: PlayerRow) {
-  const rank = getRank(p.eloRating);
+async function serializePlayer(p: PlayerRow) {
+  const rank = await getRank(p.eloRating);
   return {
     id: p.id,
     sessionId: p.sessionId,
@@ -68,33 +63,33 @@ async function getSessionFull(sessionId: string) {
 
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
-  const recentMatches = [...matchRows]
+  const recentMatches = await Promise.all([...matchRows]
     .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
     .slice(0, 20)
-    .map((m) => ({
+    .map(async (m) => ({
       id: m.id,
       winnerTeam: m.winnerTeam,
       scoreOne: m.scoreOne ?? null,
       scoreTwo: m.scoreTwo ?? null,
-      team1Players: [m.team1P1Id, m.team1P2Id]
+      team1Players: await Promise.all([m.team1P1Id, m.team1P2Id]
         .filter(Boolean)
         .map((id) => playerMap.get(id!))
         .filter(Boolean)
-        .map(serializePlayer),
-      team2Players: [m.team2P1Id, m.team2P2Id]
+        .map((player) => serializePlayer(player!))),
+      team2Players: await Promise.all([m.team2P1Id, m.team2P2Id]
         .filter(Boolean)
         .map((id) => playerMap.get(id!))
         .filter(Boolean)
-        .map(serializePlayer),
+        .map((player) => serializePlayer(player!))),
       playedAt: m.playedAt.toISOString(),
-    }));
+    })));
 
   return {
     id: session.id,
     name: session.name,
     status: session.status,
     createdAt: session.createdAt.toISOString(),
-    players: players.map(serializePlayer),
+    players: await Promise.all(players.map((player) => serializePlayer(player))),
     recentMatches,
   };
 }
@@ -179,16 +174,12 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
     }
 
     // Compute starting ELO: Clerk user history > skill level > default 1200
-    let startingElo = 1200;
+    let startingElo = await getStartingEloForSkill(body.skillLevel);
     if (body.clerkUserId) {
       const userPlayers = await db.select().from(playersTable).where(eq(playersTable.clerkUserId, body.clerkUserId));
       if (userPlayers.length > 0) {
         startingElo = Math.round(userPlayers.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / userPlayers.length);
-      } else if (body.skillLevel) {
-        startingElo = SKILL_ELO[body.skillLevel] ?? 1200;
       }
-    } else if (body.skillLevel) {
-      startingElo = SKILL_ELO[body.skillLevel] ?? 1200;
     }
 
     await db.insert(sessionPlayersTable).values({

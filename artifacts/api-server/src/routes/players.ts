@@ -12,11 +12,12 @@ import {
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getRank } from "../lib/ranks";
+import { getStartingEloForSkill } from "../lib/settings";
 
 export const playersRouter = Router({ mergeParams: true });
 
-function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boolean) {
-  const rank = getRank(p.eloRating ?? 1200);
+async function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boolean) {
+  const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
@@ -85,9 +86,8 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     }
 
     // Determine starting ELO: carry over existing rating for returning Clerk users,
-    // otherwise seed from self-reported skill level
-    const SKILL_ELO: Record<string, number> = { beginner: 1000, intermediate: 1500, advanced: 2000 };
-    let startingElo = body.skillLevel ? (SKILL_ELO[body.skillLevel] ?? 1200) : 1200;
+    // otherwise use the admin-configured skill seed values.
+    let startingElo = await getStartingEloForSkill(body.skillLevel);
 
     if (clerkUserId) {
       const previous = await db
@@ -125,7 +125,7 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     if (full) broadcastTournamentUpdate(tournamentId, full);
 
     res.status(201).json({
-      ...serializePlayer({ ...playerRow, joinedAt: new Date(), teamId: null }),
+      ...(await serializePlayer({ ...playerRow, joinedAt: new Date(), teamId: null })),
       playerToken,
     });
   } catch (err) {
@@ -165,7 +165,7 @@ playersRouter.patch("/:playerId", async (req: Request<{ tournamentId: string; pl
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
 
-    res.json(serializePlayer(updated));
+    res.json(await serializePlayer(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update player");
     res.status(500).json({ error: "Failed to update player" });
@@ -200,7 +200,7 @@ playersRouter.post("/shuffle", async (req: Request<{ tournamentId: string }>, re
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-    res.json(ordered.map((p, i) => serializePlayer({ ...p, seed: i + 1 })));
+    res.json(await Promise.all(ordered.map(async (p, i) => serializePlayer({ ...p, seed: i + 1 }))));
   } catch (err) {
     req.log.error({ err }, "Failed to shuffle players");
     res.status(500).json({ error: "Failed to shuffle players" });
@@ -229,7 +229,7 @@ playersRouter.delete("/:playerId", async (req: Request<{ tournamentId: string; p
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-    res.json(serializePlayer(player));
+    res.json(await serializePlayer(player));
   } catch (err) {
     req.log.error({ err }, "Failed to remove player");
     res.status(500).json({ error: "Failed to remove player" });

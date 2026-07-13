@@ -2,8 +2,8 @@ import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@w
 import { eq } from "drizzle-orm";
 import { getRank } from "./ranks";
 
-function serializePlayer(p: typeof playersTable.$inferSelect) {
-  const rank = getRank(p.eloRating ?? 1200);
+async function serializePlayer(p: typeof playersTable.$inferSelect) {
+  const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
@@ -44,7 +44,7 @@ export async function getTournamentFull(tournamentId: string) {
     createdAt: tournament.createdAt.toISOString(),
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
-    players: players.map(serializePlayer),
+    players: await Promise.all(players.map((player) => serializePlayer(player))),
     teams: teams.map((t) => ({
       id: t.id,
       tournamentId: t.tournamentId,
