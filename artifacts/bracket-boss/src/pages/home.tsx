@@ -182,10 +182,10 @@ export default function Home() {
 
         <div className="space-y-1.5">
           <p className="text-foreground text-xl font-bold tracking-tight">
-            Faith. Fellowship. Friendly Competition.
+            Pickleball & Jesus
           </p>
           <p className="text-muted-foreground text-sm">
-            A Fellowship of Christian Competitors
+            As a man Dinketh
           </p>
         </div>
 
