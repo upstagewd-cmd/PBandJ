@@ -32,6 +32,7 @@ import {
   Check,
   Shield,
   Link,
+  Sparkles,
   Pencil,
   Camera,
   Shuffle,
@@ -297,20 +298,57 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* Header */}
-      <div className="text-center space-y-2">
-        {isHost && !isCancelled ? (
-          <input
-            className="text-4xl font-extrabold tracking-tight bg-transparent text-center border-none outline-none w-full focus:ring-0 text-primary"
-            value={tournamentName}
-            onChange={(e) => setTournamentName(e.target.value)}
-            onFocus={() => setIsEditingName(true)}
-            onBlur={handleNameBlur}
-          />
-        ) : (
-          <h1 className={`text-4xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
-        )}
-        <div className="flex items-center justify-center gap-3">
+      <div className="rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              {isCancelled ? "Cancelled" : tournament.registrationLocked ? "Registration locked" : "Matchday lobby"}
+            </div>
+            <div className="space-y-2">
+              {isHost && !isCancelled ? (
+                <input
+                  className="w-full border-none bg-transparent text-center text-4xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
+                  value={tournamentName}
+                  onChange={(e) => setTournamentName(e.target.value)}
+                  onFocus={() => setIsEditingName(true)}
+                  onBlur={handleNameBlur}
+                />
+              ) : (
+                <h1 className={`text-4xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
+              )}
+              <p className="text-sm text-muted-foreground sm:text-base">
+                {isCancelled
+                  ? "This tournament is paused. The roster is still visible below."
+                  : tournament.players.length > 0
+                    ? `${tournament.players.length} player${tournament.players.length === 1 ? "" : "s"} are already here.`
+                    : "Invite players and get the field ready for the first serve."}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3 text-right shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Players</p>
+            <p className="text-2xl font-bold text-foreground">{tournament.players.length}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {[
+            { title: "Invite", description: "Share the link", active: true },
+            { title: "Build teams", description: "Pair players by skill", active: tournament.players.length >= 2 },
+            { title: "Start", description: "Launch the bracket", active: canStart },
+          ].map((step) => (
+            <div
+              key={step.title}
+              className={`rounded-2xl border px-3 py-3 ${step.active ? "border-primary/20 bg-primary/10" : "border-border/40 bg-background/50"}`}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">{step.title}</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{step.description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
           <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
             {isCancelled ? "Cancelled" : "Lobby"}
           </p>
@@ -338,45 +376,59 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         </div>
       )}
 
-      {/* QR + Links */}
-      <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl flex flex-col items-center space-y-5">
-        <div className="bg-white p-4 rounded-2xl shadow-sm">
-          <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
-        </div>
-        <div className="w-full space-y-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-            <Link className="w-3 h-3" /> Player Link
-          </p>
-          <div className="flex items-center gap-2">
-            <Input readOnly value={playerUrl} className="font-mono text-xs bg-muted border-none h-11" />
-            <Button
-              size="icon" variant="secondary"
-              className="h-11 w-11 shrink-0 rounded-xl"
-              onClick={() => { playerCopy.copy(playerUrl); toast({ title: "Player link copied!" }); }}
-            >
-              {playerCopy.copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
+      <div className="rounded-[32px] border border-border/50 bg-card/90 p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Invite players</p>
+            <h2 className="mt-2 text-xl font-semibold text-foreground">Share the court and get the field moving</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Use the player link for guests or the host link for co-hosts.</p>
+          </div>
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+            <Link className="h-5 w-5" />
           </div>
         </div>
-        {isHost && hostUrl && (
-          <div className="w-full space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
-              <Shield className="w-3 h-3" /> Host Link
-              <span className="text-muted-foreground font-normal normal-case tracking-normal ml-1">
-                — share with co-hosts
-              </span>
-            </p>
-            <div className="flex items-center gap-2">
-              <Input readOnly value={hostUrl} className="font-mono text-xs bg-primary/5 border border-primary/20 h-11" />
-              <Button
-                size="icon" className="h-11 w-11 shrink-0 rounded-xl"
-                onClick={() => { hostCopy.copy(hostUrl); toast({ title: "Host link copied!" }); }}
-              >
-                {hostCopy.copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
+
+        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+          <div className="rounded-[24px] border border-border/50 bg-background/70 p-4 lg:min-w-[188px]">
+            <div className="mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
+              <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
             </div>
           </div>
-        )}
+
+          <div className="flex-1 space-y-3">
+            <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Player link</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="rounded-full px-3 py-1 text-xs font-semibold"
+                  onClick={() => { playerCopy.copy(playerUrl); toast({ title: "Player link copied!" }); }}
+                >
+                  {playerCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                  {playerCopy.copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <Input readOnly value={playerUrl} className="mt-3 h-11 font-mono text-xs bg-muted border-none" />
+            </div>
+            {isHost && hostUrl && (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Host link</p>
+                  <Button
+                    size="sm"
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    onClick={() => { hostCopy.copy(hostUrl); toast({ title: "Host link copied!" }); }}
+                  >
+                    {hostCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                    {hostCopy.copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <Input readOnly value={hostUrl} className="mt-3 h-11 font-mono text-xs bg-background border-primary/20" />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -428,7 +480,11 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         <div className="space-y-4">
           {isCancelled ? null : !tournament.registrationLocked ? (
             <>
-              <h2 className="text-2xl font-bold">Join Match</h2>
+              <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
+                <h2 className="mt-1 text-xl font-semibold text-foreground">Join the field</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Register in seconds and get seeded into the bracket with your skill level.</p>
+              </div>
 
               {isHost && (
                 <KnownPlayerPicker
