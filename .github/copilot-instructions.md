@@ -55,3 +55,29 @@ PB&J focuses on:
 - Rankings
 - Badges
 - Community engagement
+
+## AI Development Workflow
+
+When proposing changes:
+
+1. First inspect existing patterns.
+2. Identify all impacted files.
+3. Explain the implementation approach before editing.
+4. Prefer small incremental changes.
+5. Preserve existing working functionality.
+6. Do not rewrite working systems unnecessarily.
+
+For UI changes:
+- Maintain mobile-first design.
+- Consider PWA usage.
+- Prioritize simple user flows.
+- Optimize for non-technical users.
+
+For database changes:
+- Explain schema impacts before modifying.
+- Prefer migrations over destructive changes.
+- Preserve existing data.
+
+For production changes:
+- Assume Railway is production.
+- Do not change environment variables without explaining why.
