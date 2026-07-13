@@ -7,8 +7,8 @@ export function InstallBanner() {
   if (!shouldShow) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-safe">
-      <div className="bg-white border border-[#E9E7E1] rounded-2xl shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white border border-[#E9E7E1] rounded-2xl shadow-xl overflow-hidden max-w-sm w-full">
         <div className="flex items-start gap-3 p-4">
           <img
             src={`${import.meta.env.BASE_URL}logo-favicon.png`}

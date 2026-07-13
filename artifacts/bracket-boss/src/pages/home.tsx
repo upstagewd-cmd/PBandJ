@@ -4,8 +4,9 @@ import { Show, useUser, useClerk } from "@clerk/react";
 import { useCreateTournament, useCreateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield } from "lucide-react";
+import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, Download } from "lucide-react";
 import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 
 function RecentGames() {
   const [, setLocation] = useLocation();
@@ -88,6 +89,7 @@ export default function Home() {
   const createSession = useCreateSession();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { platform, manualShow } = useInstallPrompt();
 
   const handleCreateTournament = () => {
     createTournament.mutate(
@@ -122,6 +124,19 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
+
+      {/* Install App button (desktop only) */}
+      {platform === "desktop" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-4 left-4 text-muted-foreground hover:text-foreground font-semibold hidden sm:flex"
+          onClick={manualShow}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Install App
+        </Button>
+      )}
 
       {/* Account bar */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-50">

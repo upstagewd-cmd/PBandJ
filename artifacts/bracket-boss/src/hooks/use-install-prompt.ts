@@ -65,6 +65,8 @@ export function useInstallPrompt() {
   const [dismissed, setDismissed] = useState(() => wasDismissedRecently());
   const [installed, setInstalled] = useState(() => wasInstalled());
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [manuallyTriggered, setManuallyTriggered] = useState(false);
+  const [autoShowReady, setAutoShowReady] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -85,6 +87,15 @@ export function useInstallPrompt() {
     };
   }, []);
 
+  // Auto-show after 2 seconds on mobile (but not if desktop)
+  useEffect(() => {
+    if (platform !== "desktop" && !isPWA && !installed && !dismissed) {
+      const timer = setTimeout(() => setAutoShowReady(true), 2000);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [platform, isPWA, installed, dismissed]);
+
   const dismiss = () => {
     try {
       localStorage.setItem(DISMISSED_KEY, String(Date.now()));
@@ -92,6 +103,8 @@ export function useInstallPrompt() {
       // ignore
     }
     setDismissed(true);
+    setManuallyTriggered(false);
+    setAutoShowReady(false);
   };
 
   const triggerInstall = async () => {
@@ -103,13 +116,15 @@ export function useInstallPrompt() {
       setInstalled(true);
     }
     setDeferredPrompt(null);
+    setManuallyTriggered(false);
+    setAutoShowReady(false);
   };
 
-  const shouldShow =
-    !isPWA &&
-    !installed &&
-    !dismissed &&
-    platform !== "desktop";
+  const shouldShow = (autoShowReady || manuallyTriggered) && !isPWA && !installed && !dismissed;
 
-  return { shouldShow, platform, dismiss, triggerInstall, deferredPrompt };
+  const manualShow = () => {
+    setManuallyTriggered(true);
+  };
+
+  return { shouldShow, platform, dismiss, triggerInstall, deferredPrompt, manualShow };
 }
