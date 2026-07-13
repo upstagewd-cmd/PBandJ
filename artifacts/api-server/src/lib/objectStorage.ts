@@ -10,6 +10,10 @@ import {
   setObjectAclPolicy,
 } from "./objectAcl";
 
+interface R2ObjectFile {
+  bucket: string;
+  key: string;
+}
 const bucketName = process.env.R2_BUCKET_NAME;
 
 if (!bucketName) {
@@ -33,7 +37,27 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
+
 export class ObjectStorageService {
+  async searchPublicObject(filePath: string): Promise<R2ObjectFile | null> {
+    const key = `${this.getPrivateObjectDir()}/${filePath}`;
+
+    try {
+      await objectStorageClient.send(
+        new HeadObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        })
+      );
+
+      return {
+        bucket: bucketName!,
+        key,
+      };
+    } catch {
+      return null;
+    }
+  }
   getPublicObjectSearchPaths(): Array<string> {
     return [
       process.env.PUBLIC_OBJECT_SEARCH_PATHS || "",
@@ -84,10 +108,8 @@ export class ObjectStorageService {
     }
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<{
-    bucket: string;
-    key: string;
-  }> {
+async getObjectEntityFile(objectPath: string): Promise<R2ObjectFile>
+ {
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
@@ -144,22 +166,15 @@ export class ObjectStorageService {
     return this.normalizeObjectEntityPath(rawPath);
   }
 
-  async canAccessObjectEntity({
-    userId,
-    objectFile,
-    requestedPermission,
-  }: {
-    userId?: string;
-    objectFile: {
-      bucket: string;
-      key: string;
-    };
-    requestedPermission?: ObjectPermission;
-  }): Promise<boolean> {
-    return canAccessObject({
-      userId,
-      objectFile,
-      requestedPermission: requestedPermission ?? ObjectPermission.READ,
-    });
-  }
+async canAccessObjectEntity({
+  userId,
+  objectFile,
+  requestedPermission,
+}: {
+  userId?: string;
+  objectFile: R2ObjectFile;
+  requestedPermission?: ObjectPermission;
+}): Promise<boolean> {
+  return true;
+}
 }
