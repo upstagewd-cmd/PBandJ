@@ -208,7 +208,7 @@ export default function Home() {
               <img
                 src={`${import.meta.env.BASE_URL}logo-favicon.png`}
                 alt=""
-                className="h-4 w-4 sm:h-5 sm:w-5 object-contain inline-block"
+                className="h-2 w-2 sm:h-2 sm:w-2 object-contain inline-block"
               />
             </span>
           </p>
