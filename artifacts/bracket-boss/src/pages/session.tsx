@@ -36,6 +36,7 @@ import {
   RefreshCw,
   UserMinus,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
@@ -160,6 +161,7 @@ function PlayerPool({
   hostToken: string | null;
   onRemoved: () => void;
 }) {
+  const [, setLocation] = useLocation();
   const removePlayer = useRemoveSessionPlayer();
   const { toast } = useToast();
 
@@ -191,6 +193,14 @@ function PlayerPool({
                 <PlayerAvatar player={p} size="sm" />
                 <span className="text-sm font-medium flex-1 truncate">{name}</span>
                 {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
+                <button
+                  type="button"
+                  onClick={() => setLocation(`/player/${p.id}`)}
+                  className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                  title="View player profile"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
                 <span className="text-xs text-muted-foreground shrink-0">{p.rankEmoji} {Math.round(p.eloRating)}</span>
                 {hostToken && (
                   <button
@@ -318,7 +328,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
           firstName: first.trim(),
           lastName: last.trim(),
           teamName: team.trim() || undefined,
-          skillLevel: !isLoggedIn ? (skill as "beginner" | "intermediate" | "advanced") : undefined,
+          skillLevel: skill as "beginner" | "intermediate" | "advanced",
           clerkUserId: isHost ? undefined : (isLoggedIn ? user.id : undefined),
         },
       },
@@ -376,35 +386,34 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
           onKeyDown={(e) => e.key === "Enter" && handleJoin()}
         />
       </div>
-      {isLoggedIn ? (
-        <p className="text-xs text-muted-foreground bg-muted/30 rounded-xl px-3 py-2.5">
-          ✓ Signed in — your real ELO rating will be used for skill-based pairing
-        </p>
-      ) : (
-        <div>
-          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block mb-2">
-            Skill Level
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {SKILL_LEVELS.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => setSkill(s.value)}
-                className={`rounded-xl px-2 py-2.5 border text-center transition-all ${
-                  skill === s.value
-                    ? "border-primary bg-primary/10 ring-1 ring-primary"
-                    : "border-border bg-muted/20 hover:border-primary/40"
-                }`}
-              >
-                <div className="text-lg">{s.emoji}</div>
-                <div className="text-xs font-bold mt-0.5">{s.label}</div>
-                <div className="text-[10px] text-muted-foreground">{s.elo}</div>
-              </button>
-            ))}
-          </div>
+      <div>
+        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block mb-2">
+          Skill Level
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {SKILL_LEVELS.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setSkill(s.value)}
+              className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
+                skill === s.value
+                  ? "border-primary bg-primary/10"
+                  : "border-border/50 bg-muted/30 hover:border-border"
+              }`}
+            >
+              <span className="text-xl">{s.emoji}</span>
+              <span className="text-xs font-bold">{s.label}</span>
+              <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.elo}</span>
+            </button>
+          ))}
         </div>
-      )}
+        {isLoggedIn && (
+          <p className="mt-2 text-xs text-muted-foreground bg-muted/30 rounded-xl px-3 py-2.5">
+            ✓ Signed in — your real ELO will be used when available, and this skill level will be used as a fallback.
+          </p>
+        )}
+      </div>
       <Button
         className="w-full font-bold"
         onClick={handleJoin}

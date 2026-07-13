@@ -245,6 +245,13 @@ export default function Home() {
           </p>
         </Show>
 
+        <button
+          onClick={() => setLocation("/players")}
+          className="w-full rounded-2xl border border-border/50 bg-card/80 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-card"
+        >
+          Browse players & leaderboard
+        </button>
+
         {/* Recent Games */}
         <RecentGames />
       </div>

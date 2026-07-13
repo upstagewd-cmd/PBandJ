@@ -40,10 +40,12 @@ import {
   X,
   ArrowLeftRight,
   User,
+  ExternalLink,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useLocation } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 
@@ -869,6 +871,7 @@ interface PlayerRowProps {
 }
 
 function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, onRemove }: PlayerRowProps) {
+  const [, setLocation] = useLocation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
   const [uploading, setUploading] = useState(false);
@@ -995,9 +998,19 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
         </div>
       </div>
 
-      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-        {player.rankEmoji} {Math.round(player.eloRating)}
-      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => setLocation(`/player/${player.id}`)}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+          title="View player profile"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </button>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {player.rankEmoji} {Math.round(player.eloRating)}
+        </span>
+      </div>
 
       {isHost && (
         <button

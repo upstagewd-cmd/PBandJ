@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import TournamentPage from "@/pages/tournament";
 import SessionPage from "@/pages/session";
 import PlayerStatsPage from "@/pages/player-stats";
+import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
 
@@ -142,6 +143,7 @@ function Router() {
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
       <Route path="/s/:sessionId" component={SessionPage} />
+      <Route path="/players" component={PlayersPage} />
       <Route path="/player/:playerId" component={PlayerStatsPage} />
       <Route component={NotFound} />
     </Switch>

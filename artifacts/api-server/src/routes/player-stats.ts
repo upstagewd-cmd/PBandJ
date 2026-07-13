@@ -44,6 +44,60 @@ playerStatsRouter.get("/known", async (_req, res) => {
   }
 });
 
+playerStatsRouter.get("/", async (_req, res) => {
+  try {
+    const allPlayers = await db
+      .select()
+      .from(playersTable)
+      .orderBy(desc(playersTable.eloRating));
+
+    const summaries = await Promise.all(
+      allPlayers.map(async (player) => {
+        const allMatches = await db
+          .select()
+          .from(matchesTable)
+          .where(or(eq(matchesTable.playerOneId, player.id), eq(matchesTable.playerTwoId, player.id)));
+
+        const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
+        const wins = completedMatches.filter((m) => m.winnerId === player.id).length;
+        const losses = completedMatches.length - wins;
+        const winPct = completedMatches.length > 0 ? Math.round((wins / completedMatches.length) * 100) : 0;
+
+        const badgeRows = await db
+          .select({ badge: badgesTable })
+          .from(playerBadgesTable)
+          .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
+          .where(and(eq(playerBadgesTable.playerId, player.id), eq(badgesTable.enabled, true)));
+
+        const rank = getRank(player.eloRating ?? 1200);
+
+        return {
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          teamName: player.teamName ?? null,
+          avatarUrl: player.avatarUrl ?? null,
+          eloRating: player.eloRating ?? 1200,
+          rankTitle: rank.title,
+          rankEmoji: rank.emoji,
+          skillLevel: player.skillLevel ?? null,
+          wins,
+          losses,
+          matchesPlayed: completedMatches.length,
+          winPct,
+          badgeCount: badgeRows.length,
+          joinedAt: player.joinedAt.toISOString(),
+        };
+      })
+    );
+
+    res.json(summaries);
+  } catch (err) {
+    _req.log.error({ err }, "Failed to get players list");
+    res.status(500).json({ error: "Failed to get players list" });
+  }
+});
+
 playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, res) => {
   try {
     const { playerId } = req.params;
@@ -98,7 +152,9 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     ]);
 
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
-    const oppMap = new Map(opponentPlayers.map((p) => [p.id, p]));
+    const oppMap = new Map<string, { firstName: string; lastName: string; teamName: string | null }>(
+      opponentPlayers.map((p: any) => [p.id, p])
+    );
 
     const recentMatchesResult = recentCompleted.map((m) => {
       const opp = oppMap.get(m.playerOneId === playerId ? (m.playerTwoId ?? "") : (m.playerOneId ?? ""));
@@ -140,7 +196,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       winPct,
       tournamentWins,
       recentMatches: recentMatchesResult,
-      badges: badgeRows.map((r) => ({
+      badges: badgeRows.map((r: any) => ({
         id: r.badge.id,
         name: r.badge.name,
         icon: r.badge.icon,
