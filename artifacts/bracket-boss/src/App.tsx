@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
+import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import NotFound from "@/pages/not-found";
@@ -86,30 +88,68 @@ const clerkAppearance = {
 };
 
 function SignInPage() {
+  const [, setLocation] = useLocation();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    setLocation("/");
+  };
+
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignIn
-        routing="path"
-        path={`${basePath}/sign-in`}
-        signUpUrl={`${basePath}/sign-up`}
-fallbackRedirectUrl={window.location.origin}
-        appearance={clerkAppearance}
-      />
+    <div className="flex min-h-[100dvh] flex-col bg-background px-4 py-4">
+      <div className="mx-auto w-full max-w-[440px]">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4 gap-2 px-0 text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
+      <div className="flex flex-1 items-center justify-center">
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          fallbackRedirectUrl={window.location.origin}
+          appearance={clerkAppearance}
+        />
+      </div>
     </div>
   );
 }
 
 function SignUpPage() {
+  const [, setLocation] = useLocation();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    setLocation("/");
+  };
+
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignUp
-        routing="path"
-        path={`${basePath}/sign-up`}
-        signInUrl={`${basePath}/sign-in`}
-        forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
-fallbackRedirectUrl={window.location.origin}
-        appearance={clerkAppearance}
-      />
+    <div className="flex min-h-[100dvh] flex-col bg-background px-4 py-4">
+      <div className="mx-auto w-full max-w-[440px]">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4 gap-2 px-0 text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
+      <div className="flex flex-1 items-center justify-center">
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+          forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
+          fallbackRedirectUrl={window.location.origin}
+          appearance={clerkAppearance}
+        />
+      </div>
     </div>
   );
 }
@@ -153,8 +193,6 @@ function Router() {
 }
 
 function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
-
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
