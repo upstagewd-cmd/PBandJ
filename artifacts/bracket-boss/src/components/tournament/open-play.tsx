@@ -3,7 +3,7 @@ import { useGetOpenPlayPool, useLogOpenPlayMatch } from "@workspace/api-client-r
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { useToast } from "@/hooks/use-toast";
-import { getPlayerDisplayName } from "@/lib/display-name";
+import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 import { Users, Plus, Trophy, Loader2, X } from "lucide-react";
 
 interface OpenPlayProps {
@@ -15,6 +15,7 @@ type PoolPlayer = {
   id: string;
   firstName: string;
   lastName: string;
+  nickname?: string | null;
   teamName?: string | null;
   avatarUrl?: string | null;
   eloRating?: number;
@@ -172,7 +173,10 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                         {j === 1 && <span className="text-muted-foreground text-xs">&amp;</span>}
                         <PlayerAvatar player={p} size="sm" />
                         <div className="min-w-0">
-                          <p className="font-bold text-sm truncate">{`${p.firstName} ${p.lastName.charAt(0)}.`}</p>
+                          <p className="font-bold text-sm truncate">{getPlayerDisplayName(p)}</p>
+                          {getPlayerDisplaySubtext(p) && (
+                            <p className="text-[10px] text-muted-foreground truncate">{getPlayerDisplaySubtext(p)}</p>
+                          )}
                           {p.rankTitle && <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {Math.round(p.eloRating ?? 1200)}</p>}
                         </div>
                       </div>
@@ -187,7 +191,10 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
               <div key={p.id} className={`flex items-center gap-3 rounded-xl p-2.5 transition-colors ${selectedIds.has(p.id) ? "bg-primary/10" : "bg-muted/30"}`}>
                 <PlayerAvatar player={p} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{`${p.firstName} ${p.lastName.charAt(0)}.`}</p>
+                  <p className="font-bold text-sm truncate">{getPlayerDisplayName(p)}</p>
+                  {getPlayerDisplaySubtext(p) && (
+                    <p className="text-[10px] text-muted-foreground truncate">{getPlayerDisplaySubtext(p)}</p>
+                  )}
                   {p.rankTitle && (
                     <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle} · {Math.round(p.eloRating ?? 1200)} ELO</p>
                   )}

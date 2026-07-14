@@ -26,10 +26,5 @@ export function getPlayerDisplaySubtext(person: PersonLike) {
     return `${person.firstName} ${lastInitial ? `${lastInitial}.` : ""}`.trim();
   }
 
-  const teamName = trimText(person.teamName);
-  if (teamName) {
-    return `${person.firstName} ${person.lastName}`.trim();
-  }
-
   return null;
 }

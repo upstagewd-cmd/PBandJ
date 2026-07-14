@@ -49,7 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
-import { getPlayerDisplayName } from "@/lib/display-name";
+import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 
 interface LobbyProps {
   tournament: TournamentFull;
@@ -828,6 +828,9 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
                 <PlayerAvatar player={player} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate">{getPlayerDisplayName(player)}</p>
+                  {getPlayerDisplaySubtext(player) && (
+                    <p className="text-[10px] text-muted-foreground truncate">{getPlayerDisplaySubtext(player)}</p>
+                  )}
                   {(player as any).skillLevel && (
                     <p className="text-[10px] text-muted-foreground">
                       {(player as any).skillLevel === "advanced" ? "🔴" : (player as any).skillLevel === "intermediate" ? "🔵" : "🟢"}{" "}
@@ -849,9 +852,10 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
                 {otherPlayerOptions.map((op) => {
                   const inTeam = tournament.teams?.find((t) => t.player1Id === op.id || t.player2Id === op.id);
                   const teamIdx = inTeam ? tournament.teams?.indexOf(inTeam) : -1;
+                  const subtext = getPlayerDisplaySubtext(op);
                   return (
                     <option key={op.id} value={op.id}>
-                      {getPlayerDisplayName(op)}{inTeam && teamIdx !== undefined && teamIdx >= 0 ? ` (T${teamIdx + 1})` : ""}
+                      {getPlayerDisplayName(op)}{subtext ? ` - ${subtext}` : ""}{inTeam && teamIdx !== undefined && teamIdx >= 0 ? ` (T${teamIdx + 1})` : ""}
                     </option>
                   );
                 })}
@@ -991,6 +995,9 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
                   </button>
                 )}
               </div>
+              {getPlayerDisplaySubtext(player) && (
+                <p className="text-[10px] text-muted-foreground truncate">{getPlayerDisplaySubtext(player)}</p>
+              )}
               {(player as any).skillLevel && (
                 <p className="text-[10px] text-muted-foreground">
                   {(player as any).skillLevel === "advanced" ? "🔴" : (player as any).skillLevel === "intermediate" ? "🔵" : "🟢"}{" "}
