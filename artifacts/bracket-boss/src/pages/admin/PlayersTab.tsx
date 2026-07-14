@@ -214,17 +214,34 @@ export function PlayersTab({ code }: { code: string }) {
       </div>
 
       {mergeMode && (
-        <p className="text-sm text-primary font-medium">
-          {mergeA ? "Now tap a second player — they will be merged INTO the first." : "Tap the player to KEEP."}
-        </p>
+        <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 space-y-2">
+          <p className="text-sm font-bold text-primary flex items-center gap-2">
+            <GitMerge className="w-4 h-4" /> Merge mode active
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {mergeA
+              ? "First player selected. Tap a second player to merge into the first, then confirm."
+              : "Tap the player you want to keep first, then tap the player you want to merge into them."}
+          </p>
+        </div>
       )}
 
       <div className="space-y-2">
         {filtered.map((p) => {
           const isEditTarget = editId === p.id;
           const isMergeA = mergeA === p.id;
+          const isMergeTarget = mergeMode && !isMergeA;
           return (
-            <div key={p.id} className={`bg-card border rounded-xl p-3 space-y-2 transition-colors ${isMergeA ? "border-primary" : "border-border/50"}`}>
+            <div
+              key={p.id}
+              className={`bg-card border rounded-xl p-3 space-y-2 transition-all ${
+                isMergeA
+                  ? "border-primary ring-2 ring-primary/20"
+                  : isMergeTarget
+                    ? "border-primary/20 hover:border-primary/40"
+                    : "border-border/50"
+              }`}
+            >
               {isEditTarget ? (
                 <div className="space-y-2">
                   {/* Avatar picker */}
@@ -306,7 +323,12 @@ export function PlayersTab({ code }: { code: string }) {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {mergeMode ? (
-                      <Button size="sm" variant={isMergeA ? "default" : "outline"} onClick={() => handleMergeClick(p.id)}>
+                      <Button
+                        size="sm"
+                        variant={isMergeA ? "default" : "outline"}
+                        onClick={() => handleMergeClick(p.id)}
+                        className={`min-w-10 ${isMergeA ? "shadow-md shadow-primary/20" : ""}`}
+                      >
                         <GitMerge className="w-3 h-3" />
                       </Button>
                     ) : (
