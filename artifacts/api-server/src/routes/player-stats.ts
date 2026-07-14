@@ -3,6 +3,7 @@ import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db"
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
+import { getNicknameMap } from "../lib/user-display";
 
 export const playerStatsRouter = Router();
 
@@ -28,12 +29,15 @@ playerStatsRouter.get("/known", async (_req, res) => {
       return true;
     });
 
+    const nicknameMap = await getNicknameMap(known.map((player) => player.clerkUserId));
+
     res.json(
       known.map((p) => ({
         id: p.id,
         clerkUserId: p.clerkUserId ?? null,
         firstName: p.firstName,
         lastName: p.lastName,
+        nickname: nicknameMap.get(p.clerkUserId ?? "") ?? null,
         avatarUrl: p.avatarUrl ?? null,
         eloRating: p.eloRating ?? 1200,
       }))
@@ -155,21 +159,28 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
         .where(and(eq(playerBadgesTable.playerId, playerId), eq(badgesTable.enabled, true))),
     ]);
 
+    const playerNicknameMap = await getNicknameMap([player.clerkUserId]);
+    const opponentNicknameMap = await getNicknameMap(opponentPlayers.map((opponent) => opponent.clerkUserId));
+
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
-    const oppMap = new Map<string, { firstName: string; lastName: string; teamName: string | null }>(
-      opponentPlayers.map((p: any) => [p.id, p])
+    const oppMap = new Map<string, { id: string; firstName: string; lastName: string; teamName: string | null }>(
+      opponentPlayers.map((p) => [p.id, p])
     );
 
     const recentMatchesResult = recentCompleted.map((m) => {
-      const opp = oppMap.get(m.playerOneId === playerId ? (m.playerTwoId ?? "") : (m.playerOneId ?? ""));
+      const oppId = m.playerOneId === playerId ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
+      const opp = oppMap.get(oppId);
       const tourney = tourneyMap.get(m.tournamentId);
+      const opponentName = opp
+        ? (opponentNicknameMap.get(oppId) ?? opp.teamName ?? `${opp.firstName} ${opp.lastName}`)
+        : "Unknown";
       return {
         matchId: m.id,
         tournamentId: m.tournamentId,
         tournamentName: tourney?.name ?? "Unknown",
         bracket: m.bracket,
         round: m.round,
-        opponentName: opp ? `${opp.teamName ?? `${opp.firstName} ${opp.lastName}`}` : "Unknown",
+        opponentName,
         won: m.winnerId === playerId,
         scoreOne: m.scoreOne ?? null,
         scoreTwo: m.scoreTwo ?? null,
@@ -185,6 +196,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
         tournamentId: player.tournamentId,
         firstName: player.firstName,
         lastName: player.lastName,
+        nickname: playerNicknameMap.get(player.clerkUserId ?? "") ?? null,
         partnerName: player.partnerName ?? null,
         teamName: player.teamName ?? null,
         avatarUrl: player.avatarUrl ?? null,

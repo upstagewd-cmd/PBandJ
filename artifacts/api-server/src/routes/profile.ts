@@ -33,6 +33,7 @@ profileRouter.get("/me", async (req, res) => {
       .select()
       .from(userProfilesTable)
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+    const nickname = userProfile?.nickname ?? null;
     const skillLevel = userProfile?.skillLevel ?? null;
 
     if (competitivePlayers.length === 0) {
@@ -40,6 +41,7 @@ profileRouter.get("/me", async (req, res) => {
         eloRating: 1200,
         rankTitle: "New Seed",
         rankEmoji: "🌱",
+        nickname,
         skillLevel,
         totalWins: 0,
         totalLosses: 0,
@@ -272,6 +274,7 @@ profileRouter.get("/me", async (req, res) => {
       eloRating,
       rankTitle: rank.title,
       rankEmoji: rank.emoji,
+      nickname,
       skillLevel,
       totalWins,
       totalLosses,
@@ -365,5 +368,49 @@ profileRouter.put("/me/skill", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to set skill level");
     res.status(500).json({ error: "Failed to set skill level" });
+  }
+});
+
+profileRouter.put("/me/nickname", async (req, res) => {
+  try {
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    if (!clerkUserId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const nicknameInput = req.body?.nickname;
+    if (nicknameInput !== undefined && typeof nicknameInput !== "string") {
+      res.status(400).json({ error: "nickname must be a string" });
+      return;
+    }
+
+    const nickname = nicknameInput?.trim() || null;
+
+    const [existing] = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+
+    if (existing) {
+      await db
+        .update(userProfilesTable)
+        .set({ nickname, updatedAt: new Date() })
+        .where(eq(userProfilesTable.clerkUserId, clerkUserId));
+    } else {
+      await db.insert(userProfilesTable).values({
+        id: randomUUID(),
+        clerkUserId,
+        nickname,
+        skillLevel: "beginner",
+        updatedAt: new Date(),
+      });
+    }
+
+    res.json({ nickname });
+  } catch (err) {
+    req.log.error({ err }, "Failed to set nickname");
+    res.status(500).json({ error: "Failed to set nickname" });
   }
 });

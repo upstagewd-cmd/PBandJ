@@ -41,6 +41,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getPlayerDisplayName } from "@/lib/display-name";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -187,7 +188,7 @@ function PlayerPool({
       ) : (
         <ul className="space-y-2">
           {players.map((p) => {
-            const name = p.teamName || `${p.firstName} ${p.lastName}`;
+            const name = getPlayerDisplayName(p);
             return (
               <li key={p.id} className="flex items-center gap-3">
                 <PlayerAvatar player={p} size="sm" />
@@ -518,7 +519,7 @@ function PairingManager({
 
   const pairs = derivePairs(players);
   const freeAgents = players.filter((p) => !p.partnerId);
-  const pName = (p: SessionPlayer) => p.teamName || `${p.firstName} ${p.lastName}`;
+  const pName = (p: SessionPlayer) => getPlayerDisplayName(p);
 
   const handleTap = (playerId: string) => {
     if (selecting === null) {
@@ -755,7 +756,7 @@ function MatchLogger({
     );
   }
 
-  const pName = (p: SessionPlayer) => p.teamName || `${p.firstName} ${p.lastName}`;
+  const pName = (p: SessionPlayer) => getPlayerDisplayName(p);
 
   // ── PAIRS MODE ──────────────────────────────────────────────────────────────
   if (hasPairs) {
@@ -994,7 +995,7 @@ function Leaderboard({ players, matchCount }: { players: SessionPlayer[]; matchC
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm truncate">
-                {p.teamName || `${p.firstName} ${p.lastName}`}
+                {getPlayerDisplayName(p)}
               </p>
               <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle}</p>
             </div>
@@ -1010,7 +1011,7 @@ function Leaderboard({ players, matchCount }: { players: SessionPlayer[]; matchC
 
 function MatchHistory({ session }: { session: SessionFull }) {
   if (session.recentMatches.length === 0) return null;
-  const pName = (p: SessionPlayer) => p.teamName || `${p.firstName} ${p.lastName}`;
+  const pName = (p: SessionPlayer) => getPlayerDisplayName(p);
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recent Games</h3>

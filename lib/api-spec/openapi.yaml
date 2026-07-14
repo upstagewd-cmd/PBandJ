@@ -849,6 +849,8 @@ components:
           type: string
         lastName:
           type: string
+        nickname:
+          type: ["string", "null"]
         partnerName:
           type: ["string", "null"]
         teamName:
@@ -881,6 +883,8 @@ components:
           type: string
         lastName:
           type: string
+        nickname:
+          type: ["string", "null"]
         partnerName:
           type: ["string", "null"]
         teamName:
@@ -903,8 +907,10 @@ components:
 
     ProfileStats:
       type: object
-      required: [eloRating, rankTitle, rankEmoji, totalWins, totalLosses, matchesPlayed, winPct, tournamentWins, tournamentsPlayed, recentMatches, partnerStats]
+      required: [nickname, eloRating, rankTitle, rankEmoji, totalWins, totalLosses, matchesPlayed, winPct, tournamentWins, tournamentsPlayed, recentMatches, partnerStats]
       properties:
+        nickname:
+          type: ["string", "null"]
         eloRating:
           type: number
         rankTitle:
@@ -1052,6 +1058,8 @@ components:
           type: string
         lastName:
           type: string
+        nickname:
+          type: ["string", "null"]
         teamName:
           type: ["string", "null"]
         avatarUrl:
@@ -1154,6 +1162,8 @@ components:
           type: string
         lastName:
           type: string
+        nickname:
+          type: ["string", "null"]
         avatarUrl:
           type: ["string", "null"]
         eloRating:
@@ -1270,6 +1280,8 @@ components:
           type: string
         lastName:
           type: string
+        nickname:
+          type: ["string", "null"]
         teamName:
           type: ["string", "null"]
         skillLevel:

@@ -1,14 +1,16 @@
 import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getRank } from "./ranks";
+import { getNicknameMap } from "./user-display";
 
-async function serializePlayer(p: typeof playersTable.$inferSelect) {
+async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: string | null) {
   const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
     firstName: p.firstName,
     lastName: p.lastName,
+    nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
     avatarUrl: p.avatarUrl ?? null,
@@ -35,6 +37,7 @@ export async function getTournamentFull(tournamentId: string) {
     db.select().from(teamsTable).where(eq(teamsTable.tournamentId, tournamentId)).orderBy(teamsTable.seed, teamsTable.createdAt),
     db.select().from(matchesTable).where(eq(matchesTable.tournamentId, tournamentId)).orderBy(matchesTable.round, matchesTable.matchNumber),
   ]);
+  const nicknameMap = await getNicknameMap(players.map((player) => player.clerkUserId));
 
   return {
     id: tournament.id,
@@ -44,7 +47,7 @@ export async function getTournamentFull(tournamentId: string) {
     createdAt: tournament.createdAt.toISOString(),
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
-    players: await Promise.all(players.map((player) => serializePlayer(player))),
+    players: await Promise.all(players.map((player) => serializePlayer(player, nicknameMap.get(player.clerkUserId ?? "") ?? null))),
     teams: teams.map((t) => ({
       id: t.id,
       tournamentId: t.tournamentId,

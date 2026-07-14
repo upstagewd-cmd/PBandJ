@@ -13,6 +13,7 @@ import {
   useGenerateTeams,
   useResetTeams,
   useUpdateTeam,
+  useGetMyProfile,
   getGetTournamentQueryKey,
 } from "@workspace/api-client-react";
 import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
@@ -48,6 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getPlayerDisplayName } from "@/lib/display-name";
 
 interface LobbyProps {
   tournament: TournamentFull;
@@ -88,6 +90,9 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
   const joinTournament = useJoinTournament();
   const { toast } = useToast();
   const [alreadyAdded, setAlreadyAdded] = useState(false);
+  const { data: profile } = useGetMyProfile({
+    query: { retry: false, queryKey: ["myProfile"], enabled: !!user },
+  });
 
   if (!user) return null;
 
@@ -116,6 +121,8 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
   }
 
   if (!user.firstName || !user.lastName) return null;
+  const nickname = ((profile as any)?.nickname ?? "").trim();
+  const displayName = nickname || `${user.firstName} ${user.lastName}`;
 
   const handleQuickJoin = () => {
     joinTournament.mutate(
@@ -150,7 +157,8 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate">Join as {user.firstName} {user.lastName}</p>
+        <p className="text-sm font-bold truncate">Join as {displayName}</p>
+        {nickname && <p className="text-xs text-muted-foreground truncate">{user.firstName} {user.lastName?.[0] ? `${user.lastName[0]}.` : ""}</p>}
         <p className="text-xs text-muted-foreground">Signed in · your real ELO will be used</p>
       </div>
       <Button size="sm" className="shrink-0 font-bold" onClick={handleQuickJoin} disabled={joinTournament.isPending}>
@@ -753,7 +761,7 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
   const p2 = getPlayer(team.player2Id);
 
   const teamLabel = team.teamName
-    || (p1 && p2 ? `${p1.firstName} & ${p2.firstName}` : `Team ${index + 1}`);
+    || (p1 && p2 ? `${getPlayerDisplayName(p1)} & ${getPlayerDisplayName(p2)}` : `Team ${index + 1}`);
 
   const handleSwapSlot = (slot: "player1Id" | "player2Id", newPlayerId: string) => {
     if (!isHost) return;
@@ -819,9 +827,7 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
               <>
                 <PlayerAvatar player={player} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">
-                    {player.firstName} {player.lastName}
-                  </p>
+                  <p className="text-sm font-semibold truncate">{getPlayerDisplayName(player)}</p>
                   {(player as any).skillLevel && (
                     <p className="text-[10px] text-muted-foreground">
                       {(player as any).skillLevel === "advanced" ? "🔴" : (player as any).skillLevel === "intermediate" ? "🔵" : "🟢"}{" "}
@@ -845,7 +851,7 @@ function TeamCard({ team, index, tournament, hostToken }: TeamCardProps) {
                   const teamIdx = inTeam ? tournament.teams?.indexOf(inTeam) : -1;
                   return (
                     <option key={op.id} value={op.id}>
-                      {op.firstName} {op.lastName}{inTeam && teamIdx !== undefined && teamIdx >= 0 ? ` (T${teamIdx + 1})` : ""}
+                      {getPlayerDisplayName(op)}{inTeam && teamIdx !== undefined && teamIdx >= 0 ? ` (T${teamIdx + 1})` : ""}
                     </option>
                   );
                 })}
@@ -975,9 +981,7 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
           ) : (
             <div>
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-semibold text-sm truncate">
-                  {player.firstName} {player.lastName}
-                </span>
+                <span className="font-semibold text-sm truncate">{getPlayerDisplayName(player)}</span>
                 {player.teamName && (
                   <span className="text-xs text-muted-foreground truncate">· {player.teamName}</span>
                 )}

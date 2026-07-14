@@ -4,12 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 import { ArrowLeft, Search, Trophy, TrendingUp, Users } from "lucide-react";
 
 type PlayerSummary = {
   id: string;
   firstName: string;
   lastName: string;
+  nickname: string | null;
   teamName: string | null;
   avatarUrl: string | null;
   eloRating: number;
@@ -44,7 +46,7 @@ export default function PlayersPage() {
     const query = search.trim().toLowerCase();
     const filtered = query
       ? players.filter((player) => {
-          const name = `${player.firstName} ${player.lastName}`.toLowerCase();
+          const name = `${getPlayerDisplayName(player)} ${getPlayerDisplaySubtext(player) ?? ""}`.toLowerCase();
           const teamName = (player.teamName ?? "").toLowerCase();
           return name.includes(query) || teamName.includes(query);
         })
@@ -117,8 +119,8 @@ export default function PlayersPage() {
       ) : (
         <div className="space-y-3">
           {visiblePlayers.map((player, index) => {
-            const displayName = player.teamName || `${player.firstName} ${player.lastName}`;
-            const fullName = `${player.firstName} ${player.lastName}`;
+            const displayName = getPlayerDisplayName(player);
+            const subtext = getPlayerDisplaySubtext(player);
             return (
               <button
                 key={player.id}
@@ -134,7 +136,7 @@ export default function PlayersPage() {
                     <PlayerAvatar player={player as any} size="md" />
                     <div className="min-w-0">
                       <p className="text-base font-bold truncate">{displayName}</p>
-                      {player.teamName && <p className="text-sm text-muted-foreground truncate">{fullName}</p>}
+                      {subtext && <p className="text-sm text-muted-foreground truncate">{subtext}</p>}
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{player.rankEmoji} {player.rankTitle}</span>
                         <span>· {Math.round(player.eloRating)} ELO</span>

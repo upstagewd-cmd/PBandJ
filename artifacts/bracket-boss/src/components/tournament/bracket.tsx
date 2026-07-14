@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getPlayerDisplayName } from "@/lib/display-name";
 import { Undo2, Crown, Trophy, Clock, Activity, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OpenPlaySection } from "./open-play";
@@ -43,8 +44,8 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
     if (team.teamName) return team.teamName;
     const p1 = getPlayer(team.player1Id);
     const p2 = getPlayer(team.player2Id);
-    if (p1 && p2) return `${p1.firstName} & ${p2.firstName}`;
-    if (p1) return `${p1.firstName} ${p1.lastName.charAt(0)}.`;
+    if (p1 && p2) return `${getPlayerDisplayName(p1)} & ${getPlayerDisplayName(p2)}`;
+    if (p1) return getPlayerDisplayName(p1);
     return null;
   };
 

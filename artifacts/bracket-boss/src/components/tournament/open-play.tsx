@@ -3,6 +3,7 @@ import { useGetOpenPlayPool, useLogOpenPlayMatch } from "@workspace/api-client-r
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { useToast } from "@/hooks/use-toast";
+import { getPlayerDisplayName } from "@/lib/display-name";
 import { Users, Plus, Trophy, Loader2, X } from "lucide-react";
 
 interface OpenPlayProps {
@@ -23,7 +24,7 @@ type PoolPlayer = {
 };
 
 function displayName(p: PoolPlayer) {
-  return p.teamName || `${p.firstName} ${p.firstName.charAt(0)}.`;
+  return getPlayerDisplayName(p);
 }
 
 export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
@@ -235,7 +236,7 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                 ? <p className="text-muted-foreground italic text-xs">Select players above</p>
                 : teamOneIds.map((id) => {
                     const p = pool.find((x) => x.id === id);
-                    return p ? <p key={id} className="font-bold truncate">{p.teamName || `${p.firstName} ${p.lastName}`}</p> : null;
+                    return p ? <p key={id} className="font-bold truncate">{getPlayerDisplayName(p)}</p> : null;
                   })
               }
             </div>
@@ -245,7 +246,7 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                 ? <p className="text-muted-foreground italic text-xs">Select players above</p>
                 : teamTwoIds.map((id) => {
                     const p = pool.find((x) => x.id === id);
-                    return p ? <p key={id} className="font-bold truncate">{p.teamName || `${p.firstName} ${p.lastName}`}</p> : null;
+                    return p ? <p key={id} className="font-bold truncate">{getPlayerDisplayName(p)}</p> : null;
                   })
               }
             </div>
@@ -295,8 +296,8 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
             {recentMatches.map((m: any) => {
               const winners = m.winnerTeam === 1 ? m.teamOnePlayers : m.teamTwoPlayers;
               const losers = m.winnerTeam === 1 ? m.teamTwoPlayers : m.teamOnePlayers;
-              const winnerNames = winners.map((p: PoolPlayer) => p.teamName || `${p.firstName} ${p.lastName}`).join(" & ");
-              const loserNames = losers.map((p: PoolPlayer) => p.teamName || `${p.firstName} ${p.lastName}`).join(" & ");
+              const winnerNames = winners.map((p: PoolPlayer) => getPlayerDisplayName(p)).join(" & ");
+              const loserNames = losers.map((p: PoolPlayer) => getPlayerDisplayName(p)).join(" & ");
               return (
                 <div key={m.id} className="px-4 py-3 flex items-center gap-3">
                   <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />

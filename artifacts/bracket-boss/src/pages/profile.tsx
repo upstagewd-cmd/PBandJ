@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useUser, useClerk, Show } from "@clerk/react";
 import { useGetMyProfile } from "@workspace/api-client-react";
@@ -28,6 +28,9 @@ export default function ProfilePage() {
   const [nameFirst, setNameFirst] = useState("");
   const [nameLast, setNameLast] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useGetMyProfile({
@@ -57,6 +60,15 @@ export default function ProfilePage() {
     user?.firstName ??
     user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] ??
     "Player";
+  const profileNickname = ((profile as any)?.nickname ?? "").trim();
+  const profilePrimaryName = profileNickname || displayName;
+  const profileSubtext = profileNickname
+    ? [user?.firstName ?? "", user?.lastName ? `${user.lastName[0]}.` : ""].filter(Boolean).join(" ")
+    : null;
+
+  useEffect(() => {
+    setNickname((profile as any)?.nickname ?? "");
+  }, [profile]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -92,6 +104,35 @@ export default function ProfilePage() {
 
   const cancelEditingName = () => {
     setEditingName(false);
+  };
+
+  const startEditingNickname = () => {
+    setNickname((profile as any)?.nickname ?? "");
+    setEditingNickname(true);
+  };
+
+  const cancelEditingNickname = () => {
+    setEditingNickname(false);
+    setNickname((profile as any)?.nickname ?? "");
+  };
+
+  const saveNickname = async () => {
+    setSavingNickname(true);
+    try {
+      const res = await fetch("/api/profile/me/nickname", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await queryClient.invalidateQueries({ queryKey: ["myProfile"] });
+      setEditingNickname(false);
+      toast({ title: nickname.trim() ? "Nickname saved!" : "Nickname cleared!" });
+    } catch {
+      toast({ title: "Couldn't save nickname", variant: "destructive" });
+    } finally {
+      setSavingNickname(false);
+    }
   };
 
   const saveName = async () => {
@@ -207,15 +248,20 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-extrabold truncate">{displayName}</h1>
-                    <button
-                      onClick={startEditingName}
-                      className="text-muted-foreground active:text-foreground shrink-0"
-                      title="Edit name"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h1 className="text-2xl font-extrabold truncate">{profilePrimaryName}</h1>
+                      <button
+                        onClick={startEditingName}
+                        className="text-muted-foreground active:text-foreground shrink-0"
+                        title="Edit Clerk name"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {profileSubtext && (
+                      <p className="text-sm text-muted-foreground truncate">{profileSubtext}</p>
+                    )}
                   </div>
                 )}
                 {!editingName && user?.emailAddresses?.[0]?.emailAddress && (
@@ -252,6 +298,57 @@ export default function ProfilePage() {
               Tap your photo to change it
             </p>
           </div>
+
+          {/* Nickname */}
+          {!isLoading && profile && (
+            <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Nickname</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    This becomes your primary name across PB&J.
+                  </p>
+                </div>
+                {!editingNickname && (
+                  <Button size="sm" variant="ghost" className="h-8 px-3" onClick={startEditingNickname}>
+                    {profileNickname ? "Edit" : "Add"}
+                  </Button>
+                )}
+              </div>
+
+              {editingNickname ? (
+                <div className="space-y-2">
+                  <Input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="Nickname"
+                    className="h-10"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="h-8 px-3" onClick={saveNickname} disabled={savingNickname}>
+                      Save
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 px-3" onClick={cancelEditingNickname} disabled={savingNickname}>
+                      Cancel
+                    </Button>
+                    {profileNickname && (
+                      <Button size="sm" variant="ghost" className="h-8 px-3 text-muted-foreground" onClick={() => setNickname("") } disabled={savingNickname}>
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : profileNickname ? (
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                  <p className="text-base font-bold truncate">{profileNickname}</p>
+                  {profileSubtext && <p className="text-xs text-muted-foreground truncate">{profileSubtext}</p>}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No nickname set yet.</p>
+              )}
+            </div>
+          )}
 
           {/* Skill Level */}
           {!isLoading && profile && (

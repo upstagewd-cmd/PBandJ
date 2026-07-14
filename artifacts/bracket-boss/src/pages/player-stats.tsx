@@ -2,6 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useGetPlayerStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 import { ArrowLeft, Trophy, Target, TrendingUp, Star } from "lucide-react";
 
 export default function PlayerStatsPage() {
@@ -44,11 +45,9 @@ export default function PlayerStatsPage() {
         <div className="flex items-center gap-4">
           <PlayerAvatar player={player} size="lg" />
           <div>
-            <h1 className="text-2xl font-extrabold">
-              {player.teamName || `${player.firstName} ${player.lastName}`}
-            </h1>
-            {player.teamName && (
-              <p className="text-muted-foreground text-sm">{player.firstName} {player.lastName}</p>
+            <h1 className="text-2xl font-extrabold">{getPlayerDisplayName(player)}</h1>
+            {getPlayerDisplaySubtext(player) && (
+              <p className="text-muted-foreground text-sm">{getPlayerDisplaySubtext(player)}</p>
             )}
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-lg">{rankEmoji}</span>

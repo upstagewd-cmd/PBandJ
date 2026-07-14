@@ -1,6 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
-import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable } from "@workspace/db";
+import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable, userProfilesTable } from "@workspace/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
@@ -26,13 +26,14 @@ function generateSessionId(): string {
 
 type PlayerRow = typeof sessionPlayersTable.$inferSelect;
 
-async function serializePlayer(p: PlayerRow) {
+async function serializePlayer(p: PlayerRow, nickname?: string | null) {
   const rank = await getRank(p.eloRating);
   return {
     id: p.id,
     sessionId: p.sessionId,
     firstName: p.firstName,
     lastName: p.lastName,
+    nickname: nickname ?? null,
     teamName: p.teamName ?? null,
     skillLevel: p.skillLevel ?? null,
     clerkUserId: p.clerkUserId ?? null,
@@ -62,6 +63,13 @@ async function getSessionFull(sessionId: string) {
     .where(eq(sessionMatchesTable.sessionId, sessionId));
 
   const playerMap = new Map(players.map((p) => [p.id, p]));
+  const nicknameRows = players.length
+    ? await db
+        .select({ clerkUserId: userProfilesTable.clerkUserId, nickname: userProfilesTable.nickname })
+        .from(userProfilesTable)
+        .where(inArray(userProfilesTable.clerkUserId, [...new Set(players.map((player) => player.clerkUserId).filter((id): id is string => !!id))]))
+    : [];
+  const nicknameMap = new Map(nicknameRows.map((row) => [row.clerkUserId, row.nickname ?? null]));
 
   const recentMatches = await Promise.all([...matchRows]
     .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
@@ -75,12 +83,12 @@ async function getSessionFull(sessionId: string) {
         .filter(Boolean)
         .map((id) => playerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!))),
+        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
       team2Players: await Promise.all([m.team2P1Id, m.team2P2Id]
         .filter(Boolean)
         .map((id) => playerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!))),
+        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
       playedAt: m.playedAt.toISOString(),
     })));
 
@@ -89,7 +97,7 @@ async function getSessionFull(sessionId: string) {
     name: session.name,
     status: session.status,
     createdAt: session.createdAt.toISOString(),
-    players: await Promise.all(players.map((player) => serializePlayer(player))),
+    players: await Promise.all(players.map((player) => serializePlayer(player, nicknameMap.get(player.clerkUserId ?? "") ?? null))),
     recentMatches,
   };
 }

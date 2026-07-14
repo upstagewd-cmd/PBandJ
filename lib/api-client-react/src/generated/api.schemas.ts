@@ -97,6 +97,8 @@ export interface Player {
   firstName: string;
   lastName: string;
   /** @nullable */
+  nickname?: string | null;
+  /** @nullable */
   partnerName?: string | null;
   /** @nullable */
   teamName?: string | null;
@@ -192,6 +194,8 @@ export interface PlayerWithToken {
   firstName: string;
   lastName: string;
   /** @nullable */
+  nickname?: string | null;
+  /** @nullable */
   partnerName?: string | null;
   /** @nullable */
   teamName?: string | null;
@@ -234,6 +238,8 @@ export interface PartnerStat {
 }
 
 export interface ProfileStats {
+  /** @nullable */
+  nickname?: string | null;
   eloRating: number;
   rankTitle: string;
   rankEmoji: string;
@@ -261,6 +267,8 @@ export interface OpenPlayPoolPlayer {
   id: string;
   firstName: string;
   lastName: string;
+  /** @nullable */
+  nickname?: string | null;
   /** @nullable */
   teamName?: string | null;
   /** @nullable */
@@ -329,6 +337,8 @@ export interface KnownPlayer {
   clerkUserId?: string | null;
   firstName: string;
   lastName: string;
+  /** @nullable */
+  nickname?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
   eloRating: number;
@@ -419,6 +429,8 @@ export interface SessionPlayer {
   sessionId: string;
   firstName: string;
   lastName: string;
+  /** @nullable */
+  nickname?: string | null;
   /** @nullable */
   teamName?: string | null;
   /** @nullable */

@@ -1,7 +1,7 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { getAuth } from "@clerk/express";
-import { db, tournamentsTable, playersTable, openPlayPoolTable, userProfilesTable } from "@workspace/db";
+import { db, tournamentsTable, playersTable, openPlayPoolTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import {
   JoinTournamentBody,
@@ -13,16 +13,18 @@ import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getRank } from "../lib/ranks";
 import { getStartingEloForSkill } from "../lib/settings";
+import { getNicknameMap } from "../lib/user-display";
 
 export const playersRouter = Router({ mergeParams: true });
 
-async function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boolean) {
+async function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boolean, nickname?: string | null) {
   const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
     firstName: p.firstName,
     lastName: p.lastName,
+    nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
     avatarUrl: p.avatarUrl ?? null,
@@ -120,12 +122,13 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     };
 
     await db.insert(playersTable).values(playerRow);
+    const nicknameMap = await getNicknameMap([playerRow.clerkUserId]);
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
 
     res.status(201).json({
-      ...(await serializePlayer({ ...playerRow, joinedAt: new Date(), teamId: null })),
+      ...(await serializePlayer({ ...playerRow, joinedAt: new Date(), teamId: null }, false, nicknameMap.get(playerRow.clerkUserId ?? "") ?? null)),
       playerToken,
     });
   } catch (err) {
@@ -165,7 +168,8 @@ playersRouter.patch("/:playerId", async (req: Request<{ tournamentId: string; pl
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
 
-    res.json(await serializePlayer(updated));
+    const nicknameMap = await getNicknameMap([player.clerkUserId]);
+    res.json(await serializePlayer(updated, false, nicknameMap.get(player.clerkUserId ?? "") ?? null));
   } catch (err) {
     req.log.error({ err }, "Failed to update player");
     res.status(500).json({ error: "Failed to update player" });
@@ -200,7 +204,8 @@ playersRouter.post("/shuffle", async (req: Request<{ tournamentId: string }>, re
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-    res.json(await Promise.all(ordered.map(async (p, i) => serializePlayer({ ...p, seed: i + 1 }))));
+    const nicknameMap = await getNicknameMap(ordered.map((player) => player.clerkUserId));
+    res.json(await Promise.all(ordered.map(async (p, i) => serializePlayer({ ...p, seed: i + 1 }, false, nicknameMap.get(p.clerkUserId ?? "") ?? null))));
   } catch (err) {
     req.log.error({ err }, "Failed to shuffle players");
     res.status(500).json({ error: "Failed to shuffle players" });
@@ -229,7 +234,8 @@ playersRouter.delete("/:playerId", async (req: Request<{ tournamentId: string; p
 
     const full = await getTournamentFull(tournamentId);
     if (full) broadcastTournamentUpdate(tournamentId, full);
-    res.json(await serializePlayer(player));
+    const nicknameMap = await getNicknameMap([player.clerkUserId]);
+    res.json(await serializePlayer(player, false, nicknameMap.get(player.clerkUserId ?? "") ?? null));
   } catch (err) {
     req.log.error({ err }, "Failed to remove player");
     res.status(500).json({ error: "Failed to remove player" });

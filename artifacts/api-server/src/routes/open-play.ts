@@ -7,16 +7,18 @@ import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getTournamentFull } from "../lib/tournament-helpers";
+import { getNicknameMap } from "../lib/user-display";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
-async function serializePlayer(p: typeof playersTable.$inferSelect) {
+async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: string | null) {
   const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
     tournamentId: p.tournamentId,
     firstName: p.firstName,
     lastName: p.lastName,
+    nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
     avatarUrl: p.avatarUrl ?? null,
@@ -38,6 +40,7 @@ async function getOpenPlayState(tournamentId: string) {
   const players = playerIds.length
     ? await db.select().from(playersTable).where(inArray(playersTable.id, playerIds))
     : [];
+  const nicknameMap = await getNicknameMap(players.map((player) => player.clerkUserId));
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
   const recentMatchRows = await db
@@ -68,12 +71,12 @@ async function getOpenPlayState(tournamentId: string) {
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!))),
+        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
       teamTwoPlayers: await Promise.all([m.teamTwoPOneId, m.teamTwoPTwoId]
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!))),
+        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
       playedAt: m.playedAt.toISOString(),
     })));
 
@@ -82,7 +85,7 @@ async function getOpenPlayState(tournamentId: string) {
       .map(async (e) => {
         const p = playerMap.get(e.playerId);
         if (!p) return null;
-        return { ...(await serializePlayer(p)), partnerId: e.partnerId ?? null };
+        return { ...(await serializePlayer(p, nicknameMap.get(p.clerkUserId ?? "") ?? null)), partnerId: e.partnerId ?? null };
       })
       .filter(Boolean)),
     recentMatches,
