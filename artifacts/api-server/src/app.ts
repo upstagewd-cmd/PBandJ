@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import {
   CLERK_PROXY_PATH,
@@ -12,6 +12,7 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { ensureUserHasPlayerRecord } from "./lib/player-bootstrap";
 
 const app: Express = express();
 
@@ -48,6 +49,18 @@ app.use(
     ),
   })),
 );
+
+app.use("/api", async (req, _res, next) => {
+  try {
+    const auth = getAuth(req);
+    if (auth?.userId) {
+      await ensureUserHasPlayerRecord(auth.userId);
+    }
+  } catch (err) {
+    req.log.warn({ err }, "Failed to ensure player bootstrap record");
+  }
+  next();
+});
 
 app.use("/api", router);
 

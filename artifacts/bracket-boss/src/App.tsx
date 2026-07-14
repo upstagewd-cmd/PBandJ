@@ -14,6 +14,7 @@ import PlayerStatsPage from "@/pages/player-stats";
 import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
+import OnboardingSkillPage from "@/pages/onboarding-skill";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +107,7 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
+        forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
 fallbackRedirectUrl={window.location.origin}
         appearance={clerkAppearance}
       />
@@ -139,6 +141,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/sign-in/*?" component={SignInPage} />     
 <Route path="/sign-up/*?" component={SignUpPage} />
+  <Route path="/onboarding/skill" component={OnboardingSkillPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
@@ -161,6 +164,7 @@ function ClerkProviderWithRoutes() {
       signUpUrl={`${basePath}/sign-up`}
   signInFallbackRedirectUrl={basePath || "/"}
   signUpFallbackRedirectUrl={basePath || "/"}
+  signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
       localization={{
         signIn: {
           start: {

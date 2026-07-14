@@ -5,6 +5,8 @@ import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable } f
 import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
 import { eq, or, and, inArray } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
+import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
+import { getStartingEloForSkill } from "../lib/settings";
 
 export const profileRouter = Router();
 
@@ -22,6 +24,10 @@ profileRouter.get("/me", async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.clerkUserId, clerkUserId));
 
+    const competitivePlayers = players.filter(
+      (player) => player.tournamentId !== USER_REGISTRY_TOURNAMENT_ID
+    );
+
     // Fetch stored skill preference
     const [userProfile] = await db
       .select()
@@ -29,7 +35,7 @@ profileRouter.get("/me", async (req, res) => {
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
     const skillLevel = userProfile?.skillLevel ?? null;
 
-    if (players.length === 0) {
+    if (competitivePlayers.length === 0) {
       res.json({
         eloRating: 1200,
         rankTitle: "New Seed",
@@ -48,7 +54,7 @@ profileRouter.get("/me", async (req, res) => {
       return;
     }
 
-    const playerIds = players.map((p) => p.id);
+    const playerIds = competitivePlayers.map((p) => p.id);
 
     // Fetch all teams this user belongs to (need team IDs for match lookup)
     const userTeamsEarly = playerIds.length
@@ -93,9 +99,9 @@ profileRouter.get("/me", async (req, res) => {
     const totalLosses = completedMatches.length - totalWins;
     const winPct = completedMatches.length > 0 ? Math.round((totalWins / completedMatches.length) * 100) : 0;
 
-    const eloRating = Math.max(...players.map((p) => p.eloRating ?? 1200));
+    const eloRating = Math.max(...competitivePlayers.map((p) => p.eloRating ?? 1200));
     const rank = await getRank(eloRating);
-    const tournamentsPlayed = new Set(players.map((p) => p.tournamentId)).size;
+    const tournamentsPlayed = new Set(competitivePlayers.map((p) => p.tournamentId)).size;
 
     // Re-use the teams fetched earlier
     const userTeams = userTeamsEarly;
@@ -324,6 +330,13 @@ profileRouter.put("/me/skill", async (req, res) => {
       .from(userProfilesTable)
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
 
+    if (existing && existing.skillLevel !== skillLevel) {
+      res.status(403).json({ error: "Skill level is locked. Ask an admin to change it." });
+      return;
+    }
+
+    const startingElo = await getStartingEloForSkill(skillLevel);
+
     if (existing) {
       await db
         .update(userProfilesTable)
@@ -337,6 +350,16 @@ profileRouter.put("/me/skill", async (req, res) => {
         updatedAt: new Date(),
       });
     }
+
+    await db
+      .update(playersTable)
+      .set({ skillLevel, eloRating: startingElo })
+      .where(
+        and(
+          eq(playersTable.clerkUserId, clerkUserId),
+          eq(playersTable.tournamentId, USER_REGISTRY_TOURNAMENT_ID)
+        )
+      );
 
     res.json({ skillLevel });
   } catch (err) {
