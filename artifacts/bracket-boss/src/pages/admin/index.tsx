@@ -46,17 +46,25 @@ export default function AdminPage() {
   }, []);
 
   const verify = async (c: string) => {
+    const normalized = c.trim();
+    if (!normalized) {
+      setStatus("denied");
+      return;
+    }
     setStatus("checking");
     try {
-      const res = await adminFetch(c, "/verify");
+      const res = await adminFetch(normalized, "/verify");
       if (res.ok) {
-        localStorage.setItem(CODE_KEY, c);
+        setCode(normalized);
+        localStorage.setItem(CODE_KEY, normalized);
         setStatus("authed");
       } else {
+        setCode("");
         localStorage.removeItem(CODE_KEY);
         setStatus("denied");
       }
     } catch {
+      setCode("");
       setStatus("denied");
     }
   };
