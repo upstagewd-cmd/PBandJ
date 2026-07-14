@@ -1,8 +1,26 @@
 import { Share, Plus, X } from "lucide-react";
-import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import type { Platform } from "@/hooks/use-install-prompt";
 
-export function InstallBanner() {
-  const { shouldShow, platform, dismiss, triggerInstall, deferredPrompt } = useInstallPrompt();
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+interface InstallBannerProps {
+  shouldShow: boolean;
+  platform: Platform;
+  dismiss: () => void;
+  triggerInstall: () => Promise<void>;
+  deferredPrompt: BeforeInstallPromptEvent | null;
+}
+
+export function InstallBanner({
+  shouldShow,
+  platform,
+  dismiss,
+  triggerInstall,
+  deferredPrompt,
+}: InstallBannerProps) {
 
   if (!shouldShow) return null;
 

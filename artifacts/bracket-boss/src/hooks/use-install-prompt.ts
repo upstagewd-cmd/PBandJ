@@ -126,5 +126,13 @@ export function useInstallPrompt() {
     setManuallyTriggered(true);
   };
 
-  return { shouldShow, platform, dismiss, triggerInstall, deferredPrompt, manualShow };
+  return {
+    shouldShow,
+    platform,
+    isPWA,
+    dismiss,
+    triggerInstall,
+    deferredPrompt,
+    manualShow,
+  };
 }

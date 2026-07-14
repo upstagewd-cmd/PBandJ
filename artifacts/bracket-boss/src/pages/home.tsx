@@ -90,12 +90,13 @@ export default function Home() {
   const createSession = useCreateSession();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { platform, manualShow, deferredPrompt } = useInstallPrompt();
+  const installPrompt = useInstallPrompt();
+  const { platform, isPWA, manualShow, deferredPrompt } = installPrompt;
 
   // Show install button if:
   // - On iOS (all browsers support PWA via share menu), or
   // - On Android/Desktop AND browser supports beforeinstallprompt (deferredPrompt available)
-  const canShowInstallButton = platform === "ios" || !!deferredPrompt;
+  const canShowInstallButton = !isPWA && (platform === "ios" || !!deferredPrompt);
 
   const handleCreateTournament = () => {
     createTournament.mutate(
@@ -139,7 +140,7 @@ export default function Home() {
           className="absolute top-4 left-4 text-muted-foreground hover:text-foreground font-semibold"
           onClick={manualShow}
         >
-          <Download className="w-4 h-4 mr-2" />
+          <Download className="w-4 h-4 mr-1" />
           Install App
         </Button>
       )}
@@ -289,7 +290,13 @@ export default function Home() {
       </div>
 
       {/* Install Banner Modal */}
-      <InstallBanner />
+      <InstallBanner
+        shouldShow={installPrompt.shouldShow}
+        platform={installPrompt.platform}
+        dismiss={installPrompt.dismiss}
+        triggerInstall={installPrompt.triggerInstall}
+        deferredPrompt={installPrompt.deferredPrompt}
+      />
     </div>
   );
 }
