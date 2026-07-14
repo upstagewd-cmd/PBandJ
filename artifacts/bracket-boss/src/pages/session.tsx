@@ -4,6 +4,7 @@ import {
   useGetSession,
   getGetSessionQueryKey,
   useAddSessionPlayer,
+  useGetMyProfile,
   useLogSessionMatch,
   useUpdateSession,
   usePairSessionPlayers,
@@ -41,7 +42,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
-import { getPlayerDisplayName } from "@/lib/display-name";
+import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -189,10 +190,14 @@ function PlayerPool({
         <ul className="space-y-2">
           {players.map((p) => {
             const name = getPlayerDisplayName(p);
+            const subtext = getPlayerDisplaySubtext(p);
             return (
               <li key={p.id} className="flex items-center gap-3">
                 <PlayerAvatar player={p} size="sm" />
-                <span className="text-sm font-medium flex-1 truncate">{name}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  {subtext && <p className="text-[10px] text-muted-foreground truncate">{subtext}</p>}
+                </div>
                 {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
                 <button
                   type="button"
@@ -228,6 +233,9 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
   const addPlayer = useAddSessionPlayer();
   const { toast } = useToast();
   const [alreadyAdded, setAlreadyAdded] = useState(false);
+  const { data: profile } = useGetMyProfile({
+    query: { retry: false, queryKey: ["myProfile"], enabled: !!user },
+  });
 
   if (!user) return null;
 
@@ -257,6 +265,9 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
 
   // No name on Clerk profile — let JoinForm handle it (it pre-fills + attaches clerkUserId)
   if (!user.firstName || !user.lastName) return null;
+  const nickname = ((profile as any)?.nickname ?? "").trim();
+  const displayName = nickname || `${user.firstName} ${user.lastName}`;
+  const displaySubtext = nickname ? `${user.firstName} ${user.lastName[0]}.` : null;
 
   const handleQuickJoin = () => {
     addPlayer.mutate(
@@ -282,7 +293,8 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate">Join as {user.firstName} {user.lastName}</p>
+        <p className="text-sm font-bold truncate">Join as {displayName}</p>
+        {displaySubtext && <p className="text-xs text-muted-foreground truncate">{displaySubtext}</p>}
         <p className="text-xs text-muted-foreground">Signed in · your real ELO will be used</p>
       </div>
       <Button size="sm" className="shrink-0 font-bold" onClick={handleQuickJoin} disabled={addPlayer.isPending}>
@@ -302,6 +314,9 @@ const SKILL_LEVELS = [
 
 function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined: () => void; isHost?: boolean }) {
   const { user } = useUser();
+  const { data: profile } = useGetMyProfile({
+    query: { retry: false, queryKey: ["myProfile"], enabled: !!user && !isHost },
+  });
   const [first, setFirst] = useState(() => user?.firstName ?? "");
   const [last, setLast] = useState(() => user?.lastName ?? "");
   const [team, setTeam] = useState("");
@@ -311,6 +326,14 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
   const { toast } = useToast();
 
   const isLoggedIn = !!user;
+
+  useEffect(() => {
+    if (!isLoggedIn || isHost) return;
+    if (!first && user?.firstName) setFirst(user.firstName);
+    if (!last && user?.lastName) setLast(user.lastName);
+    const nickname = ((profile as any)?.nickname ?? "").trim();
+    if (!team && nickname) setTeam(nickname);
+  }, [isLoggedIn, isHost, user, profile, first, last, team]);
 
   if (alreadyAdded) {
     return (
@@ -997,6 +1020,9 @@ function Leaderboard({ players, matchCount }: { players: SessionPlayer[]; matchC
               <p className="font-bold text-sm truncate">
                 {getPlayerDisplayName(p)}
               </p>
+              {getPlayerDisplaySubtext(p) && (
+                <p className="text-[10px] text-muted-foreground truncate">{getPlayerDisplaySubtext(p)}</p>
+              )}
               <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle}</p>
             </div>
             <span className="text-sm font-bold text-muted-foreground shrink-0">{p.eloRating}</span>

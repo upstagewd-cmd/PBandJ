@@ -171,6 +171,9 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
 export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   const { toast } = useToast();
   const { user } = useUser();
+  const { data: profile } = useGetMyProfile({
+    query: { retry: false, queryKey: ["myProfile"], enabled: !!user && !hostToken },
+  });
   const isHost = !!hostToken;
   const isCancelled = tournament.status === "cancelled";
   const queryClient = useQueryClient();
@@ -204,6 +207,20 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   useEffect(() => {
     if (!isEditingName) setTournamentName(tournament.name);
   }, [tournament.name, isEditingName]);
+
+  useEffect(() => {
+    if (isHost || !user) return;
+
+    const currentFirst = joinForm.getValues("firstName");
+    const currentLast = joinForm.getValues("lastName");
+    const currentNickname = joinForm.getValues("teamName");
+
+    if (!currentFirst && user.firstName) joinForm.setValue("firstName", user.firstName);
+    if (!currentLast && user.lastName) joinForm.setValue("lastName", user.lastName);
+
+    const nickname = ((profile as any)?.nickname ?? "").trim();
+    if (!currentNickname && nickname) joinForm.setValue("teamName", nickname);
+  }, [isHost, user, profile, joinForm]);
 
   const handleNameBlur = () => {
     setIsEditingName(false);

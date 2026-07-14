@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
-import { eq, or, and, inArray } from "drizzle-orm";
+import { eq, or, and, inArray, ne, sql } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
 import { getStartingEloForSkill } from "../lib/settings";
@@ -387,6 +387,25 @@ profileRouter.put("/me/nickname", async (req, res) => {
     }
 
     const nickname = nicknameInput?.trim() || null;
+
+    if (nickname) {
+      const normalizedNickname = nickname.toLowerCase();
+      const [taken] = await db
+        .select({ clerkUserId: userProfilesTable.clerkUserId })
+        .from(userProfilesTable)
+        .where(
+          and(
+            sql`lower(${userProfilesTable.nickname}) = ${normalizedNickname}`,
+            ne(userProfilesTable.clerkUserId, clerkUserId)
+          )
+        )
+        .limit(1);
+
+      if (taken) {
+        res.status(409).json({ error: "Nickname already taken" });
+        return;
+      }
+    }
 
     const [existing] = await db
       .select()

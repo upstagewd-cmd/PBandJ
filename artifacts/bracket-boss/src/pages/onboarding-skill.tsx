@@ -5,6 +5,7 @@ import { useGetMyProfile } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 const SKILL_OPTIONS = [
@@ -34,6 +35,7 @@ export default function OnboardingSkillPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState<string | null>(null);
+  const [nickname, setNickname] = useState("");
 
   const { data: profile, isLoading } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"] },
@@ -52,9 +54,25 @@ export default function OnboardingSkillPage() {
     }
   }, [isLoading, profile, profileSkillLevel, setLocation]);
 
+  useEffect(() => {
+    if (!profile) return;
+    setNickname(((profile as any).nickname ?? "") as string);
+  }, [profile]);
+
   const handleSelect = async (skillLevel: "beginner" | "intermediate" | "advanced") => {
     setSaving(skillLevel);
     try {
+      const trimmedNickname = nickname.trim();
+
+      // Nickname is optional. Save it best-effort and do not block onboarding.
+      if (trimmedNickname.length > 0) {
+        await fetch("/api/profile/me/nickname", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nickname: trimmedNickname }),
+        });
+      }
+
       const res = await fetch("/api/profile/me/skill", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -89,6 +107,19 @@ export default function OnboardingSkillPage() {
               <p className="text-sm text-muted-foreground">
                 This sets your starting ELO. You can ask an admin to change it later.
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block">
+                Nickname <span className="normal-case tracking-normal font-normal text-muted-foreground/70">(optional)</span>
+              </label>
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="What should people call you?"
+                className="h-11 bg-muted/50 border-none"
+                disabled={!!saving}
+              />
             </div>
 
             {isLoading ? (
