@@ -234,13 +234,23 @@ export function PlayersTab({ code }: { code: string }) {
           return (
             <div
               key={p.id}
+              role={mergeMode ? "button" : undefined}
+              tabIndex={mergeMode ? 0 : undefined}
+              aria-pressed={mergeMode ? isMergeA : undefined}
+              onClick={mergeMode ? () => handleMergeClick(p.id) : undefined}
+              onKeyDown={mergeMode ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleMergeClick(p.id);
+                }
+              } : undefined}
               className={`bg-card border rounded-xl p-3 space-y-2 transition-all ${
                 isMergeA
                   ? "border-primary ring-2 ring-primary/20"
                   : isMergeTarget
                     ? "border-primary/20 hover:border-primary/40"
                     : "border-border/50"
-              }`}
+              } ${mergeMode ? "cursor-pointer hover:shadow-sm" : ""}`}
             >
               {isEditTarget ? (
                 <div className="space-y-2">
@@ -324,6 +334,7 @@ export function PlayersTab({ code }: { code: string }) {
                   <div className="flex gap-1 shrink-0">
                     {mergeMode ? (
                       <Button
+                        type="button"
                         size="sm"
                         variant={isMergeA ? "default" : "outline"}
                         onClick={() => handleMergeClick(p.id)}
