@@ -9,7 +9,6 @@
     "deploy": "pnpm --filter @workspace/db push && pnpm --filter @workspace/api-server start",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "start": "pnpm --filter @workspace/api-server start",
     "build:prod": "pnpm --filter @workspace/bracket-boss build && pnpm --filter @workspace/api-server build"
   },
   "private": true,
