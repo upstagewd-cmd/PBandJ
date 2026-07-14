@@ -378,7 +378,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
       </div>
       <div>
         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">
-          Team Name <span className="normal-case font-normal">(optional)</span>
+          Nickname <span className="normal-case font-normal">(optional)</span>
         </label>
         <Input
           value={team}
