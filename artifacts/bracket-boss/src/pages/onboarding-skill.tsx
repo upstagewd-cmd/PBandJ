@@ -96,7 +96,10 @@ export default function OnboardingSkillPage() {
           body: JSON.stringify({ firstName: desiredFirst, lastName: desiredLast }),
         });
 
-        if (!res.ok) {
+        if (!res.ok && user) {
+          await user.update({ firstName: desiredFirst, lastName: desiredLast });
+          await user.reload();
+        } else if (!res.ok) {
           throw new Error("Failed to save name");
         }
       } catch {

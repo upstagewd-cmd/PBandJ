@@ -337,7 +337,10 @@ profileRouter.put("/me/skill", async (req, res) => {
       .from(userProfilesTable)
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
 
-    if (existing && existing.skillLevel !== skillLevel) {
+    const existingSkillLevel = (existing?.skillLevel ?? "").trim();
+    const hasLockedSkillLevel = ["beginner", "intermediate", "advanced"].includes(existingSkillLevel);
+
+    if (hasLockedSkillLevel && existingSkillLevel !== skillLevel) {
       res.status(403).json({ error: "Skill level is locked. Ask an admin to change it." });
       return;
     }
@@ -431,7 +434,8 @@ profileRouter.put("/me/nickname", async (req, res) => {
         id: randomUUID(),
         clerkUserId,
         nickname,
-        skillLevel: "beginner",
+        // Leave skill unset until onboarding picks it. This avoids pre-locking a default.
+        skillLevel: "",
         updatedAt: new Date(),
       });
     }

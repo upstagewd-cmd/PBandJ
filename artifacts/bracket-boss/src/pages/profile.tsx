@@ -165,7 +165,11 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firstName: nameFirst.trim(), lastName: nameLast.trim() }),
       });
-      if (!res.ok) throw new Error("Failed");
+
+      if (!res.ok) {
+        await user.update({ firstName: nameFirst.trim(), lastName: nameLast.trim() });
+      }
+
       await user.reload();
       setEditingName(false);
       toast({ title: "Name updated!" });
