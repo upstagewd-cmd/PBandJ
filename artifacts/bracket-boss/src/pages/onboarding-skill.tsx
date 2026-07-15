@@ -50,19 +50,12 @@ export default function OnboardingSkillPage() {
   const { data: profile, isLoading } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"] },
   });
-  const profileSkillLevel = (profile as any)?.skillLevel as string | null | undefined;
 
   useEffect(() => {
     if (isSignedIn === false) {
       setLocation("/sign-in");
     }
   }, [isSignedIn, setLocation]);
-
-  useEffect(() => {
-    if (!isLoading && profile && profileSkillLevel) {
-      setLocation("/");
-    }
-  }, [isLoading, profile, profileSkillLevel, setLocation]);
 
   useEffect(() => {
     if (!profile) return;

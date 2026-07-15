@@ -63,10 +63,9 @@ export default function ProfilePage() {
     user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] ??
     "Player";
   const profileNickname = ((profile as any)?.nickname ?? "").trim();
-  const profilePrimaryName = profileNickname || displayName;
-  const profileSubtext = profileNickname
-    ? [user?.firstName ?? "", user?.lastName ? `${user.lastName[0]}.` : ""].filter(Boolean).join(" ")
-    : null;
+  const clerkFullName = [user?.firstName ?? "", user?.lastName ?? ""].filter(Boolean).join(" ").trim();
+  const profilePrimaryName = clerkFullName || displayName;
+  const profileSubtext = profileNickname || null;
 
   useEffect(() => {
     setNickname((profile as any)?.nickname ?? "");
@@ -369,7 +368,6 @@ export default function ProfilePage() {
               ) : profileNickname ? (
                 <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
                   <p className="text-base font-bold truncate">{profileNickname}</p>
-                  {profileSubtext && <p className="text-xs text-muted-foreground truncate">{profileSubtext}</p>}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No nickname set yet.</p>
