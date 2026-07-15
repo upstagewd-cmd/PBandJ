@@ -42,10 +42,22 @@ function setupPwaUpdateHandling() {
     });
   };
 
+  const unregisterExistingServiceWorkers = async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    } catch {
+      // Best-effort cleanup only.
+    }
+  };
+
   if (!isAuthOrOnboardingRoute()) {
     registerServiceWorker();
     return;
   }
+
+  // On auth routes, remove any existing SW controller to avoid legacy refresh behavior.
+  void unregisterExistingServiceWorkers();
 
   const waitForPostAuthRoute = window.setInterval(() => {
     if (!isAuthOrOnboardingRoute()) {
