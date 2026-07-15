@@ -29,17 +29,6 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
-
-function normalizeClerkTarget(to: string): string {
-  const url = new URL(to, window.location.origin);
-  return stripBase(`${url.pathname}${url.search}${url.hash}`);
-}
-
 if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
@@ -114,9 +103,9 @@ function SignInPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignIn
-          routing="hash"
+          routing="path"
+          path={`${basePath}/sign-in`}
           signUpUrl={`${basePath}/sign-up`}
-          fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
         />
       </div>
@@ -146,10 +135,9 @@ function SignUpPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignUp
-          routing="hash"
+          routing="path"
+          path={`${basePath}/sign-up`}
           signInUrl={`${basePath}/sign-in`}
-          forceRedirectUrl={`${basePath}/onboarding/skill`}
-          fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
         />
       </div>
@@ -196,19 +184,6 @@ function Router() {
 }
 
 function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
-
-  const routerPush = (to: string) => {
-    setLocation(normalizeClerkTarget(to));
-  };
-
-  const routerReplace = (to: string) => {
-    const target = normalizeClerkTarget(to);
-    const fullPath = `${basePath}${target}`;
-    window.history.replaceState(window.history.state, "", fullPath);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
-
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -232,8 +207,6 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
-      routerPush={routerPush}
-      routerReplace={routerReplace}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
