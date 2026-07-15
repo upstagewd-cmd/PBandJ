@@ -110,9 +110,9 @@ function SignInPage() {
       <div className="flex flex-1 items-center justify-center">
         <SignIn
           routing="path"
-          path={`${basePath}/sign-in`}
-          signUpUrl={`${basePath}/sign-up`}
-          fallbackRedirectUrl={window.location.origin}
+          path="/sign-in"
+          signUpUrl="/sign-up"
+          fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
       </div>
@@ -143,10 +143,10 @@ function SignUpPage() {
       <div className="flex flex-1 items-center justify-center">
         <SignUp
           routing="path"
-          path={`${basePath}/sign-up`}
-          signInUrl={`${basePath}/sign-in`}
-          forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
-          fallbackRedirectUrl={window.location.origin}
+          path="/sign-up"
+          signInUrl="/sign-in"
+          forceRedirectUrl="/onboarding/skill"
+          fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
       </div>
@@ -178,9 +178,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/sign-in/*?" component={SignInPage} />     
-<Route path="/sign-up/*?" component={SignUpPage} />
-  <Route path="/onboarding/skill" component={OnboardingSkillPage} />
+      <Route path="/sign-in/*?" component={SignInPage} />
+      <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/onboarding/skill" component={OnboardingSkillPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
@@ -193,6 +193,18 @@ function Router() {
 }
 
 function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  const normalizeClerkTarget = (to: string) => {
+    if (!to) return "/";
+    try {
+      const parsed = new URL(to, window.location.origin);
+      return stripBase(`${parsed.pathname}${parsed.search}${parsed.hash}`);
+    } catch {
+      return stripBase(to);
+    }
+  };
+
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -216,8 +228,8 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
-routerPush={(to) => window.location.assign(to)}
-routerReplace={(to) => window.location.replace(to)}
+      routerPush={(to) => setLocation(normalizeClerkTarget(to))}
+      routerReplace={(to) => setLocation(normalizeClerkTarget(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
