@@ -193,35 +193,6 @@ function Router() {
 }
 
 function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
-
-  const navigateClerkTarget = (to: string, replace = false) => {
-    if (!to) {
-      setLocation("/", { replace });
-      return;
-    }
-
-    try {
-      const parsed = new URL(to, window.location.origin);
-
-      // OAuth and other cross-origin auth hops must use a full navigation.
-      if (parsed.origin !== window.location.origin) {
-        if (replace) {
-          window.location.replace(parsed.toString());
-        } else {
-          window.location.assign(parsed.toString());
-        }
-        return;
-      }
-
-      const internalTarget = stripBase(`${parsed.pathname}${parsed.search}${parsed.hash}`);
-      setLocation(internalTarget, { replace });
-    } catch {
-      // Non-URL strings should still route internally.
-      setLocation(stripBase(to), { replace });
-    }
-  };
-
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -245,8 +216,6 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
-      routerPush={(to) => navigateClerkTarget(to)}
-      routerReplace={(to) => navigateClerkTarget(to, true)}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />

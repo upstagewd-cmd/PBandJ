@@ -29,10 +29,11 @@ function setupPwaUpdateHandling() {
     immediate: true,
     onNeedRefresh() {
       if (hasReloadedForPwaUpdate) return;
-      // Avoid disrupting signup/signin and onboarding with an automatic refresh.
-      if (isAuthOrOnboardingRoute()) return;
-      sessionStorage.setItem("pbj-pwa-updated", "1");
-      window.location.reload();
+      // Never force a hard reload; it can interrupt auth flows on Safari.
+      // We keep the marker to avoid repeatedly handling the same update signal.
+      if (!isAuthOrOnboardingRoute()) {
+        sessionStorage.setItem("pbj-pwa-updated", "1");
+      }
     },
     onOfflineReady() {
       // No-op: app already shows install/offline affordances.
