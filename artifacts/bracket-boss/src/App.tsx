@@ -32,6 +32,8 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const authUrlToken = "authv=1";
 const signInUrlWithToken = `/sign-in?${authUrlToken}`;
 const signUpUrlWithToken = `/sign-up?${authUrlToken}`;
+const isProd = import.meta.env.PROD;
+const clerkProxyUrl = `${basePath}/api/__clerk`;
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -136,7 +138,8 @@ function SignInPage() {
           <div className="text-sm text-muted-foreground">Preparing secure sign in...</div>
         ) : (
         <SignIn
-          routing="hash"
+          routing="path"
+          path="/sign-in"
           signUpUrl={signUpUrlWithToken}
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
@@ -173,7 +176,8 @@ function SignUpPage() {
           <div className="text-sm text-muted-foreground">Preparing secure sign up...</div>
         ) : (
         <SignUp
-          routing="hash"
+          routing="path"
+          path="/sign-up"
           signInUrl={signInUrlWithToken}
           forceRedirectUrl="/onboarding/skill"
           fallbackRedirectUrl="/"
@@ -241,6 +245,7 @@ function ClerkProviderWithRoutes() {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
+      proxyUrl={isProd ? clerkProxyUrl : undefined}
       appearance={clerkAppearance}
         signInUrl={`${basePath}${signInUrlWithToken}`}
         signUpUrl={`${basePath}${signUpUrlWithToken}`}
