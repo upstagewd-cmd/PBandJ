@@ -19,7 +19,7 @@ export default defineConfig({
     tailwindcss({ optimize: false }),
 
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       injectRegister: "auto",
       scope: `${basePrefix}/`,
       base: `${basePrefix}/`,
@@ -72,7 +72,13 @@ export default defineConfig({
           "**/*.{js,css,html,ico,png,svg,woff2,ttf}",
         ],
 navigateFallback: `${basePrefix}/index.html`,
-navigateFallbackDenylist: [/^\/api\//, /^\/ws/, /^\/sign-up\/sso-callback/],
+navigateFallbackDenylist: [
+  /^\/api\//,
+  /^\/ws/,
+  /\/sign-up\/sso-callback/,
+  /\/sign-in\/sso-callback/,
+  /\/sso-callback/,
+],
         runtimeCaching: [],
       },
 
