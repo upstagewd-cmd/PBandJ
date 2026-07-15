@@ -72,9 +72,22 @@ const frontendPath = path.resolve(
   "../../bracket-boss/dist/public"
 );
 
-app.use(express.static(frontendPath));
+app.use(
+  express.static(frontendPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  })
+);
 
 app.get("/{*splat}", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 export default app;
