@@ -11,11 +11,17 @@ setBaseUrl(
 // Ensure users get fresh builds quickly while avoiding reload loops.
 if ("serviceWorker" in navigator) {
   const hasReloadedForPwaUpdate = sessionStorage.getItem("pbj-pwa-updated") === "1";
+  const isAuthOrOnboardingRoute = () => {
+    const path = window.location.pathname;
+    return path.includes("/sign-in") || path.includes("/sign-up") || path.includes("/onboarding/skill");
+  };
 
   registerSW({
     immediate: true,
     onNeedRefresh() {
       if (hasReloadedForPwaUpdate) return;
+      // Avoid disrupting signup/signin and onboarding with an automatic refresh.
+      if (isAuthOrOnboardingRoute()) return;
       sessionStorage.setItem("pbj-pwa-updated", "1");
       window.location.reload();
     },
