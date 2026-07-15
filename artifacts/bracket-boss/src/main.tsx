@@ -8,8 +8,17 @@ setBaseUrl(
   import.meta.env.VITE_API_URL || window.location.origin
 );
 
-// Ensure users get fresh builds quickly while avoiding reload loops.
-if ("serviceWorker" in navigator) {
+function hideBootSplash() {
+  const splash = document.getElementById("app-splash");
+  if (!splash) return;
+
+  splash.classList.add("is-hidden");
+  window.setTimeout(() => splash.remove(), 260);
+}
+
+function setupPwaUpdateHandling() {
+  if (!("serviceWorker" in navigator)) return;
+
   const hasReloadedForPwaUpdate = sessionStorage.getItem("pbj-pwa-updated") === "1";
   const isAuthOrOnboardingRoute = () => {
     const path = window.location.pathname;
@@ -32,3 +41,12 @@ if ("serviceWorker" in navigator) {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+requestAnimationFrame(hideBootSplash);
+
+const scheduleAfterPaint =
+  "requestIdleCallback" in window
+    ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 1500 })
+    : (cb: () => void) => window.setTimeout(cb, 200);
+
+scheduleAfterPaint(setupPwaUpdateHandling);
