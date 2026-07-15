@@ -29,6 +29,9 @@ const queryClient = new QueryClient({
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const authUrlToken = "authv=1";
+const signInUrlWithToken = `/sign-in?${authUrlToken}`;
+const signUpUrlWithToken = `/sign-up?${authUrlToken}`;
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -112,7 +115,7 @@ function SignInPage() {
         <SignIn
           routing="path"
           path="/sign-in"
-          signUpUrl="/sign-up"
+          signUpUrl={signUpUrlWithToken}
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
@@ -145,7 +148,7 @@ function SignUpPage() {
         <SignUp
           routing="path"
           path="/sign-up"
-          signInUrl="/sign-in"
+          signInUrl={signInUrlWithToken}
           forceRedirectUrl="/onboarding/skill"
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
@@ -203,8 +206,8 @@ function ClerkProviderWithRoutes() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       appearance={clerkAppearance}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
+        signInUrl={`${basePath}${signInUrlWithToken}`}
+        signUpUrl={`${basePath}${signUpUrlWithToken}`}
   signInFallbackRedirectUrl={basePath || "/"}
   signUpFallbackRedirectUrl={basePath || "/"}
   signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
