@@ -112,7 +112,7 @@ function SignInPage() {
           routing="path"
           path={`${basePath}/sign-in`}
           signUpUrl={`${basePath}/sign-up`}
-          fallbackRedirectUrl={window.location.origin}
+          fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
         />
       </div>
@@ -145,8 +145,8 @@ function SignUpPage() {
           routing="path"
           path={`${basePath}/sign-up`}
           signInUrl={`${basePath}/sign-in`}
-          forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
-          fallbackRedirectUrl={window.location.origin}
+          forceRedirectUrl={`${basePath}/onboarding/skill`}
+          fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
         />
       </div>
@@ -199,9 +199,9 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
-  signInFallbackRedirectUrl={basePath || "/"}
-  signUpFallbackRedirectUrl={basePath || "/"}
-  signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
+      signInFallbackRedirectUrl={basePath || "/"}
+      signUpFallbackRedirectUrl={basePath || "/"}
+      signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
       localization={{
         signIn: {
           start: {
@@ -216,8 +216,6 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
-routerPush={(to) => window.location.assign(to)}
-routerReplace={(to) => window.location.replace(to)}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
