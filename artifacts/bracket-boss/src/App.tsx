@@ -202,6 +202,11 @@ function ClerkQueryClientCacheInvalidator() {
   const qc = useQueryClient();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
+  const isAuthOrOnboardingRoute = () => {
+    const path = window.location.pathname;
+    return path.includes("/sign-in") || path.includes("/sign-up") || path.includes("/onboarding/skill");
+  };
+
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
@@ -210,8 +215,12 @@ function ClerkQueryClientCacheInvalidator() {
         nextUserId: userId,
       });
       if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
-        authTrace("queryClient.clear", { reason: "user changed" });
-        qc.clear();
+        if (isAuthOrOnboardingRoute()) {
+          authTrace("queryClient.clear.skipped", { reason: "auth-route", path: window.location.pathname });
+        } else {
+          authTrace("queryClient.clear", { reason: "user changed" });
+          qc.clear();
+        }
       }
       prevUserIdRef.current = userId;
     });
