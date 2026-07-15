@@ -1,6 +1,7 @@
-import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { useEffect, useRef } from "react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,14 @@ const queryClient = new QueryClient({
 });
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || "/"
+    : path;
+}
 
 if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
@@ -102,9 +110,9 @@ function SignInPage() {
       <div className="flex flex-1 items-center justify-center">
         <SignIn
           routing="path"
-          path="/sign-in"
-          signUpUrl="/sign-up"
-          fallbackRedirectUrl="/"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          fallbackRedirectUrl={window.location.origin}
           appearance={clerkAppearance}
         />
       </div>
@@ -135,10 +143,10 @@ function SignUpPage() {
       <div className="flex flex-1 items-center justify-center">
         <SignUp
           routing="path"
-          path="/sign-up"
-          signInUrl="/sign-in"
-          forceRedirectUrl="/onboarding/skill"
-          fallbackRedirectUrl="/"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+          forceRedirectUrl={`${window.location.origin}${basePath}/onboarding/skill`}
+          fallbackRedirectUrl={window.location.origin}
           appearance={clerkAppearance}
         />
       </div>
@@ -146,13 +154,33 @@ function SignUpPage() {
   );
 }
 
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const qc = useQueryClient();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        qc.clear();
+      }
+      prevUserIdRef.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener, qc]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/sign-in/*?" component={SignInPage} />
-      <Route path="/sign-up/*?" component={SignUpPage} />
-      <Route path="/onboarding/skill" component={OnboardingSkillPage} />
+      <Route path="/sign-in/*?" component={SignInPage} />     
+<Route path="/sign-up/*?" component={SignUpPage} />
+  <Route path="/onboarding/skill" component={OnboardingSkillPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/t/:tournamentId" component={TournamentPage} />
@@ -171,9 +199,9 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
-      signInFallbackRedirectUrl={basePath || "/"}
-      signUpFallbackRedirectUrl={basePath || "/"}
-      signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
+  signInFallbackRedirectUrl={basePath || "/"}
+  signUpFallbackRedirectUrl={basePath || "/"}
+  signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
       localization={{
         signIn: {
           start: {
@@ -188,8 +216,11 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
+routerPush={(to) => window.location.assign(to)}
+routerReplace={(to) => window.location.replace(to)}
     >
       <QueryClientProvider client={queryClient}>
+        <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <Router />
           <Toaster />
