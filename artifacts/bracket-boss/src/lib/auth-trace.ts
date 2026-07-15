@@ -6,6 +6,8 @@ type TraceEntry = {
   data?: TraceData;
 };
 
+export type AuthTraceEntry = TraceEntry;
+
 const STORAGE_KEY = "pbj-auth-trace-log";
 const SESSION_KEY = "pbj-auth-trace-session";
 const ENABLE_KEY = "pbj-trace-auth";
@@ -37,6 +39,18 @@ function readEntries(): TraceEntry[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+export function getAuthTraceDump(): AuthTraceEntry[] {
+  return readEntries();
+}
+
+export function clearAuthTraceDump() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
   }
 }
 

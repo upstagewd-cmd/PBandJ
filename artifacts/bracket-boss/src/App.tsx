@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +16,7 @@ import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
 import OnboardingSkillPage from "@/pages/onboarding-skill";
-import { authTrace } from "@/lib/auth-trace";
+import { authTrace, clearAuthTraceDump, getAuthTraceDump, isAuthTraceEnabled } from "@/lib/auth-trace";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -234,11 +234,51 @@ function ClerkProviderWithRoutes() {
   );
 }
 
+function AuthTraceTools() {
+  const [enabled, setEnabled] = useState(() => isAuthTraceEnabled());
+
+  useEffect(() => {
+    setEnabled(isAuthTraceEnabled());
+  }, []);
+
+  if (!enabled) return null;
+
+  const copyTrace = async () => {
+    const trace = getAuthTraceDump();
+    const payload = JSON.stringify(trace, null, 2);
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      alert("Auth trace copied. Paste it in chat.");
+    } catch {
+      // Fallback for browsers with restricted clipboard APIs.
+      window.prompt("Copy auth trace", payload);
+    }
+  };
+
+  const clearTrace = () => {
+    clearAuthTraceDump();
+    alert("Auth trace cleared.");
+  };
+
+  return (
+    <div className="fixed bottom-3 right-3 z-[9999] flex gap-2">
+      <Button size="sm" variant="secondary" onClick={copyTrace}>
+        Copy Trace
+      </Button>
+      <Button size="sm" variant="ghost" onClick={clearTrace}>
+        Clear
+      </Button>
+    </div>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <WouterRouter base={basePath}>
         <ClerkProviderWithRoutes />
+        <AuthTraceTools />
       </WouterRouter>
     </ThemeProvider>
   );
