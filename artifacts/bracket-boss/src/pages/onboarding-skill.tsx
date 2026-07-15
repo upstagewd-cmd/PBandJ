@@ -101,6 +101,9 @@ export default function OnboardingSkillPage() {
           await user.reload();
         } else if (!res.ok) {
           throw new Error("Failed to save name");
+        } else if (user) {
+          // Ensure Clerk user cache reflects backend-updated names before navigating away.
+          await user.reload();
         }
       } catch {
         toast({
