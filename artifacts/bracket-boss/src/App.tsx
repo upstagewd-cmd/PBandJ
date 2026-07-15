@@ -16,6 +16,7 @@ import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
 import OnboardingSkillPage from "@/pages/onboarding-skill";
+import { authTrace } from "@/lib/auth-trace";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -163,7 +164,12 @@ function ClerkQueryClientCacheInvalidator() {
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
+      authTrace("clerk.listener", {
+        prevUserId: prevUserIdRef.current ?? null,
+        nextUserId: userId,
+      });
       if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        authTrace("queryClient.clear", { reason: "user changed" });
         qc.clear();
       }
       prevUserIdRef.current = userId;

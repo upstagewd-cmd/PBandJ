@@ -3,6 +3,9 @@ import App from "./App";
 import "./index.css";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { registerSW } from "virtual:pwa-register";
+import { installAuthTrace } from "@/lib/auth-trace";
+
+installAuthTrace();
 
 setBaseUrl(
   import.meta.env.VITE_API_URL || window.location.origin
