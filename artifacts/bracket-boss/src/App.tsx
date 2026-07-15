@@ -43,32 +43,21 @@ if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
 
-function isMobileBrowser(): boolean {
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-}
-
-function useAuthPageWarmup(route: "sign-in" | "sign-up") {
+function useAuthQueryNormalization(route: "sign-in" | "sign-up", setLocation: (to: string, options?: { replace?: boolean }) => void) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isMobileBrowser()) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("authv") === "1") {
       setReady(true);
       return;
     }
 
-    const warmKey = `pbj-auth-warmed-${route}`;
-    if (sessionStorage.getItem(warmKey) === "1") {
-      setReady(true);
-      return;
-    }
-
-    sessionStorage.setItem(warmKey, "1");
-    authTrace("auth.warmup.reload", { route, path: `${window.location.pathname}${window.location.search}` });
-
-    const target = new URL(window.location.href);
-    target.searchParams.set("authWarm", "1");
-    window.location.replace(target.toString());
-  }, [route]);
+    params.set("authv", "1");
+    const next = `/${route}?${params.toString()}`;
+    authTrace("auth.url.normalize", { route, to: next });
+    setLocation(next, { replace: true });
+  }, [route, setLocation]);
 
   return ready;
 }
@@ -123,7 +112,7 @@ const clerkAppearance = {
 
 function SignInPage() {
   const [, setLocation] = useLocation();
-  const ready = useAuthPageWarmup("sign-in");
+  const ready = useAuthQueryNormalization("sign-in", setLocation);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -160,7 +149,7 @@ function SignInPage() {
 
 function SignUpPage() {
   const [, setLocation] = useLocation();
-  const ready = useAuthPageWarmup("sign-up");
+  const ready = useAuthQueryNormalization("sign-up", setLocation);
 
   const handleBack = () => {
     if (window.history.length > 1) {
