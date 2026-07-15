@@ -35,6 +35,11 @@ function stripBase(path: string): string {
     : path;
 }
 
+function normalizeClerkTarget(to: string): string {
+  const url = new URL(to, window.location.origin);
+  return stripBase(`${url.pathname}${url.search}${url.hash}`);
+}
+
 if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
@@ -193,6 +198,19 @@ function Router() {
 }
 
 function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  const routerPush = (to: string) => {
+    setLocation(normalizeClerkTarget(to));
+  };
+
+  const routerReplace = (to: string) => {
+    const target = normalizeClerkTarget(to);
+    const fullPath = `${basePath}${target}`;
+    window.history.replaceState(window.history.state, "", fullPath);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -216,6 +234,8 @@ function ClerkProviderWithRoutes() {
           },
         },
       }}
+      routerPush={routerPush}
+      routerReplace={routerReplace}
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
