@@ -113,8 +113,7 @@ function SignInPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignIn
-          routing="path"
-          path="/sign-in"
+          routing="hash"
           signUpUrl={signUpUrlWithToken}
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
@@ -146,8 +145,7 @@ function SignUpPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignUp
-          routing="path"
-          path="/sign-up"
+          routing="hash"
           signInUrl={signInUrlWithToken}
           forceRedirectUrl="/onboarding/skill"
           fallbackRedirectUrl="/"
