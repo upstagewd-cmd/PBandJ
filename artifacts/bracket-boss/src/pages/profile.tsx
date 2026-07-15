@@ -9,6 +9,7 @@ import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, User
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { getNicknameApiErrorMessage, normalizeNickname, validateNickname, NICKNAME_MAX_LENGTH } from "@/lib/nickname";
 
 const SKILL_LEVELS = [
   { value: "beginner", label: "Beginner", emoji: "🟢", desc: "New to pickleball" },
@@ -31,6 +32,7 @@ export default function ProfilePage() {
   const [editingNickname, setEditingNickname] = useState(false);
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useGetMyProfile({
@@ -108,28 +110,48 @@ export default function ProfilePage() {
 
   const startEditingNickname = () => {
     setNickname((profile as any)?.nickname ?? "");
+    setNicknameError(null);
     setEditingNickname(true);
   };
 
   const cancelEditingNickname = () => {
     setEditingNickname(false);
     setNickname((profile as any)?.nickname ?? "");
+    setNicknameError(null);
   };
 
   const saveNickname = async () => {
+    const validationError = validateNickname(nickname);
+    if (validationError) {
+      setNicknameError(validationError);
+      toast({ title: validationError, variant: "destructive" });
+      return;
+    }
+
     setSavingNickname(true);
+    const nextNickname = normalizeNickname(nickname);
     try {
       const res = await fetch("/api/profile/me/nickname", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname }),
+        body: JSON.stringify({ nickname: nextNickname }),
       });
-      if (!res.ok) throw new Error("Failed");
+
+      if (!res.ok) {
+        const message = await getNicknameApiErrorMessage(res);
+        setNicknameError(message);
+        toast({ title: message, variant: "destructive" });
+        return;
+      }
+
       await queryClient.invalidateQueries({ queryKey: ["myProfile"] });
       setEditingNickname(false);
-      toast({ title: nickname.trim() ? "Nickname saved!" : "Nickname cleared!" });
+      setNicknameError(null);
+      toast({ title: nextNickname ? "Nickname saved!" : "Nickname cleared!" });
     } catch {
-      toast({ title: "Couldn't save nickname", variant: "destructive" });
+      const message = "Couldn't save nickname. Please try again.";
+      setNicknameError(message);
+      toast({ title: message, variant: "destructive" });
     } finally {
       setSavingNickname(false);
     }
@@ -320,11 +342,16 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <Input
                     value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
+                    onChange={(e) => {
+                      setNickname(e.target.value);
+                      if (nicknameError) setNicknameError(null);
+                    }}
                     placeholder="Nickname"
                     className="h-10"
+                    maxLength={NICKNAME_MAX_LENGTH}
                     autoFocus
                   />
+                  {nicknameError && <p className="text-xs text-red-400">{nicknameError}</p>}
                   <div className="flex gap-2">
                     <Button size="sm" className="h-8 px-3" onClick={saveNickname} disabled={savingNickname}>
                       Save

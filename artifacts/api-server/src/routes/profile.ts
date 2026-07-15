@@ -24,6 +24,8 @@ profileRouter.get("/me", async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.clerkUserId, clerkUserId));
 
+    const allPlayerIds = players.map((p) => p.id);
+
     const competitivePlayers = players.filter(
       (player) => player.tournamentId !== USER_REGISTRY_TOURNAMENT_ID
     );
@@ -35,6 +37,33 @@ profileRouter.get("/me", async (req, res) => {
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
     const nickname = userProfile?.nickname ?? null;
     const skillLevel = userProfile?.skillLevel ?? null;
+
+    const allBadgeRows = allPlayerIds.length
+      ? await db
+          .select({ badge: badgesTable, playerId: playerBadgesTable.playerId })
+          .from(playerBadgesTable)
+          .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
+          .where(
+            and(
+              or(...allPlayerIds.map((pid) => eq(playerBadgesTable.playerId, pid))),
+              eq(badgesTable.enabled, true)
+            )
+          )
+      : [];
+
+    const seenBadgeIds = new Set<string>();
+    const badges = allBadgeRows
+      .filter((r) => {
+        if (seenBadgeIds.has(r.badge.id)) return false;
+        seenBadgeIds.add(r.badge.id);
+        return true;
+      })
+      .map((r) => ({
+        id: r.badge.id,
+        name: r.badge.name,
+        icon: r.badge.icon,
+        description: r.badge.description,
+      }));
 
     if (competitivePlayers.length === 0) {
       res.json({
@@ -51,7 +80,7 @@ profileRouter.get("/me", async (req, res) => {
         tournamentsPlayed: 0,
         recentMatches: [],
         partnerStats: [],
-        badges: [],
+        badges,
       });
       return;
     }
@@ -133,7 +162,7 @@ profileRouter.get("/me", async (req, res) => {
       })
       .filter((pid): pid is string => !!pid);
 
-    const [tournaments, opponentPlayers, allBadgeRows, allPartnerPlayers] = await Promise.all([
+    const [tournaments, opponentPlayers, allPartnerPlayers] = await Promise.all([
       tournamentIds.length
         ? db.select().from(tournamentsTable).where(
             tournamentIds.length === 1
@@ -148,16 +177,6 @@ profileRouter.get("/me", async (req, res) => {
               : or(...opponentIds.map((id) => eq(playersTable.id, id)))
           )
         : Promise.resolve([]),
-      db
-        .select({ badge: badgesTable, playerId: playerBadgesTable.playerId })
-        .from(playerBadgesTable)
-        .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
-        .where(
-          and(
-            or(...playerIds.map((pid) => eq(playerBadgesTable.playerId, pid))),
-            eq(badgesTable.enabled, true)
-          )
-        ),
       partnerIds.length
         ? db.select().from(playersTable).where(
             partnerIds.length === 1
@@ -170,21 +189,6 @@ profileRouter.get("/me", async (req, res) => {
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
     const oppMap = new Map(opponentPlayers.map((p) => [p.id, p]));
     const partnerPlayerMap = new Map(allPartnerPlayers.map((p) => [p.id, p]));
-
-    // Deduplicate badges
-    const seenBadgeIds = new Set<string>();
-    const badges = allBadgeRows
-      .filter((r) => {
-        if (seenBadgeIds.has(r.badge.id)) return false;
-        seenBadgeIds.add(r.badge.id);
-        return true;
-      })
-      .map((r) => ({
-        id: r.badge.id,
-        name: r.badge.name,
-        icon: r.badge.icon,
-        description: r.badge.description,
-      }));
 
     // ── Compute partner stats ──
     const partnerStatMap = new Map<string, { playerId: string; name: string; avatarUrl: string | null; wins: number; losses: number; matches: number }>();
@@ -382,11 +386,16 @@ profileRouter.put("/me/nickname", async (req, res) => {
 
     const nicknameInput = req.body?.nickname;
     if (nicknameInput !== undefined && typeof nicknameInput !== "string") {
-      res.status(400).json({ error: "nickname must be a string" });
+      res.status(400).json({ error: "invalid_nickname_type", message: "Nickname must be plain text." });
       return;
     }
 
     const nickname = nicknameInput?.trim() || null;
+
+    if (nickname && nickname.length > 15) {
+      res.status(400).json({ error: "nickname_too_long", message: "Nickname must be 15 characters or fewer." });
+      return;
+    }
 
     if (nickname) {
       const normalizedNickname = nickname.toLowerCase();
@@ -402,7 +411,7 @@ profileRouter.put("/me/nickname", async (req, res) => {
         .limit(1);
 
       if (taken) {
-        res.status(409).json({ error: "Nickname already taken" });
+        res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
         return;
       }
     }
