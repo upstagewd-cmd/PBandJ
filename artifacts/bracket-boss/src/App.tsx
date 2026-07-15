@@ -43,6 +43,36 @@ if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
 
+function isMobileBrowser(): boolean {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+function useAuthPageWarmup(route: "sign-in" | "sign-up") {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileBrowser()) {
+      setReady(true);
+      return;
+    }
+
+    const warmKey = `pbj-auth-warmed-${route}`;
+    if (sessionStorage.getItem(warmKey) === "1") {
+      setReady(true);
+      return;
+    }
+
+    sessionStorage.setItem(warmKey, "1");
+    authTrace("auth.warmup.reload", { route, path: `${window.location.pathname}${window.location.search}` });
+
+    const target = new URL(window.location.href);
+    target.searchParams.set("authWarm", "1");
+    window.location.replace(target.toString());
+  }, [route]);
+
+  return ready;
+}
+
 const clerkAppearance = {
   cssLayerName: "clerk",
   options: {
@@ -93,6 +123,7 @@ const clerkAppearance = {
 
 function SignInPage() {
   const [, setLocation] = useLocation();
+  const ready = useAuthPageWarmup("sign-in");
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -112,12 +143,16 @@ function SignInPage() {
         </Button>
       </div>
       <div className="flex flex-1 items-center justify-center">
+        {!ready ? (
+          <div className="text-sm text-muted-foreground">Preparing secure sign in...</div>
+        ) : (
         <SignIn
           routing="hash"
           signUpUrl={signUpUrlWithToken}
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
+        )}
       </div>
     </div>
   );
@@ -125,6 +160,7 @@ function SignInPage() {
 
 function SignUpPage() {
   const [, setLocation] = useLocation();
+  const ready = useAuthPageWarmup("sign-up");
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -144,6 +180,9 @@ function SignUpPage() {
         </Button>
       </div>
       <div className="flex flex-1 items-center justify-center">
+        {!ready ? (
+          <div className="text-sm text-muted-foreground">Preparing secure sign up...</div>
+        ) : (
         <SignUp
           routing="hash"
           signInUrl={signInUrlWithToken}
@@ -151,6 +190,7 @@ function SignUpPage() {
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
+        )}
       </div>
     </div>
   );
