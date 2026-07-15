@@ -32,6 +32,7 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const authUrlToken = "authv=1";
 const signInUrlWithToken = `/sign-in?${authUrlToken}`;
 const signUpUrlWithToken = `/sign-up?${authUrlToken}`;
+const clerkProxyUrl = `${basePath}/api/__clerk`;
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -252,6 +253,7 @@ function ClerkProviderWithRoutes() {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
         signInUrl={`${basePath}${signInUrlWithToken}`}
         signUpUrl={`${basePath}${signUpUrlWithToken}`}
