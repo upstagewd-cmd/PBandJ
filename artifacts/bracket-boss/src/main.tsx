@@ -28,20 +28,33 @@ function setupPwaUpdateHandling() {
     return path.includes("/sign-in") || path.includes("/sign-up") || path.includes("/onboarding/skill");
   };
 
-  registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      if (hasReloadedForPwaUpdate) return;
-      // Never force a hard reload; it can interrupt auth flows on Safari.
-      // We keep the marker to avoid repeatedly handling the same update signal.
-      if (!isAuthOrOnboardingRoute()) {
+  const registerServiceWorker = () => {
+    registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        if (hasReloadedForPwaUpdate) return;
+        // Never force a hard reload; it can interrupt auth flows on Safari.
         sessionStorage.setItem("pbj-pwa-updated", "1");
-      }
-    },
-    onOfflineReady() {
-      // No-op: app already shows install/offline affordances.
-    },
-  });
+      },
+      onOfflineReady() {
+        // No-op: app already shows install/offline affordances.
+      },
+    });
+  };
+
+  if (!isAuthOrOnboardingRoute()) {
+    registerServiceWorker();
+    return;
+  }
+
+  const waitForPostAuthRoute = window.setInterval(() => {
+    if (!isAuthOrOnboardingRoute()) {
+      window.clearInterval(waitForPostAuthRoute);
+      registerServiceWorker();
+    }
+  }, 400);
+
+  window.addEventListener("pagehide", () => window.clearInterval(waitForPostAuthRoute), { once: true });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
