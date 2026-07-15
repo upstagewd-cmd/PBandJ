@@ -91,7 +91,6 @@ export default function Home() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const installPrompt = useInstallPrompt();
-  const authUrlToken = "authv=1";
   const { platform, isPWA, manualShow, deferredPrompt } = installPrompt;
 
   // Show install button if:
@@ -153,14 +152,14 @@ export default function Home() {
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground font-semibold"
-            onClick={() => setLocation(`/sign-in?${authUrlToken}`)}
+            onClick={() => setLocation("/sign-in")}
           >
             Sign In
           </Button>
           <Button
             size="sm"
             className="font-bold rounded-xl"
-            onClick={() => setLocation(`/sign-up?${authUrlToken}`)}
+            onClick={() => setLocation("/sign-up")}
           >
             Create Account
           </Button>
@@ -260,7 +259,7 @@ export default function Home() {
           <p className="text-muted-foreground/60 text-xs">
             <button
               className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-              onClick={() => setLocation(`/sign-up?${authUrlToken}`)}
+              onClick={() => setLocation("/sign-up")}
             >
               Create a free account
             </button>{" "}

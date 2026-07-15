@@ -114,8 +114,7 @@ function SignInPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignIn
-          routing="path"
-          path={`${basePath}/sign-in`}
+          routing="hash"
           signUpUrl={`${basePath}/sign-up`}
           fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
@@ -147,8 +146,7 @@ function SignUpPage() {
       </div>
       <div className="flex flex-1 items-center justify-center">
         <SignUp
-          routing="path"
-          path={`${basePath}/sign-up`}
+          routing="hash"
           signInUrl={`${basePath}/sign-in`}
           forceRedirectUrl={`${basePath}/onboarding/skill`}
           fallbackRedirectUrl={basePath || "/"}
