@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
 import OnboardingSkillPage from "@/pages/onboarding-skill";
-import { authTrace, clearAuthTraceDump, getAuthTraceDump, isAuthTraceEnabled } from "@/lib/auth-trace";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,39 +25,10 @@ const queryClient = new QueryClient({
 });
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const authUrlToken = "authv=1";
-const signInUrlWithToken = `/sign-in?${authUrlToken}`;
-const signUpUrlWithToken = `/sign-up?${authUrlToken}`;
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
 
 if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
-}
-
-function useAuthQueryNormalization(route: "sign-in" | "sign-up", setLocation: (to: string, options?: { replace?: boolean }) => void) {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("authv") === "1") {
-      setReady(true);
-      return;
-    }
-
-    params.set("authv", "1");
-    const next = `/${route}?${params.toString()}`;
-    authTrace("auth.url.normalize", { route, to: next });
-    setLocation(next, { replace: true });
-  }, [route, setLocation]);
-
-  return ready;
 }
 
 const clerkAppearance = {
@@ -112,7 +81,6 @@ const clerkAppearance = {
 
 function SignInPage() {
   const [, setLocation] = useLocation();
-  const ready = useAuthQueryNormalization("sign-in", setLocation);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -132,17 +100,13 @@ function SignInPage() {
         </Button>
       </div>
       <div className="flex flex-1 items-center justify-center">
-        {!ready ? (
-          <div className="text-sm text-muted-foreground">Preparing secure sign in...</div>
-        ) : (
         <SignIn
           routing="path"
           path="/sign-in"
-          signUpUrl={signUpUrlWithToken}
+          signUpUrl="/sign-up"
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
-        )}
       </div>
     </div>
   );
@@ -150,7 +114,6 @@ function SignInPage() {
 
 function SignUpPage() {
   const [, setLocation] = useLocation();
-  const ready = useAuthQueryNormalization("sign-up", setLocation);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -170,55 +133,17 @@ function SignUpPage() {
         </Button>
       </div>
       <div className="flex flex-1 items-center justify-center">
-        {!ready ? (
-          <div className="text-sm text-muted-foreground">Preparing secure sign up...</div>
-        ) : (
         <SignUp
           routing="path"
           path="/sign-up"
-          signInUrl={signInUrlWithToken}
+          signInUrl="/sign-in"
           forceRedirectUrl="/onboarding/skill"
           fallbackRedirectUrl="/"
           appearance={clerkAppearance}
         />
-        )}
       </div>
     </div>
   );
-}
-
-
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const qc = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-
-  const isAuthOrOnboardingRoute = () => {
-    const path = window.location.pathname;
-    return path.includes("/sign-in") || path.includes("/sign-up") || path.includes("/onboarding/skill");
-  };
-
-  useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      authTrace("clerk.listener", {
-        prevUserId: prevUserIdRef.current ?? null,
-        nextUserId: userId,
-      });
-      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
-        if (isAuthOrOnboardingRoute()) {
-          authTrace("queryClient.clear.skipped", { reason: "auth-route", path: window.location.pathname });
-        } else {
-          authTrace("queryClient.clear", { reason: "user changed" });
-          qc.clear();
-        }
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, qc]);
-
-  return null;
 }
 
 function Router() {
@@ -244,11 +169,11 @@ function ClerkProviderWithRoutes() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       appearance={clerkAppearance}
-        signInUrl={`${basePath}${signInUrlWithToken}`}
-        signUpUrl={`${basePath}${signUpUrlWithToken}`}
-  signInFallbackRedirectUrl={basePath || "/"}
-  signUpFallbackRedirectUrl={basePath || "/"}
-  signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      signInFallbackRedirectUrl={basePath || "/"}
+      signUpFallbackRedirectUrl={basePath || "/"}
+      signUpForceRedirectUrl={`${basePath}/onboarding/skill`}
       localization={{
         signIn: {
           start: {
@@ -265,7 +190,6 @@ function ClerkProviderWithRoutes() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <Router />
           <Toaster />
@@ -275,51 +199,11 @@ function ClerkProviderWithRoutes() {
   );
 }
 
-function AuthTraceTools() {
-  const [enabled, setEnabled] = useState(() => isAuthTraceEnabled());
-
-  useEffect(() => {
-    setEnabled(isAuthTraceEnabled());
-  }, []);
-
-  if (!enabled) return null;
-
-  const copyTrace = async () => {
-    const trace = getAuthTraceDump();
-    const payload = JSON.stringify(trace, null, 2);
-
-    try {
-      await navigator.clipboard.writeText(payload);
-      alert("Auth trace copied. Paste it in chat.");
-    } catch {
-      // Fallback for browsers with restricted clipboard APIs.
-      window.prompt("Copy auth trace", payload);
-    }
-  };
-
-  const clearTrace = () => {
-    clearAuthTraceDump();
-    alert("Auth trace cleared.");
-  };
-
-  return (
-    <div className="fixed bottom-3 right-3 z-[9999] flex gap-2">
-      <Button size="sm" variant="secondary" onClick={copyTrace}>
-        Copy Trace
-      </Button>
-      <Button size="sm" variant="ghost" onClick={clearTrace}>
-        Clear
-      </Button>
-    </div>
-  );
-}
-
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <WouterRouter base={basePath}>
         <ClerkProviderWithRoutes />
-        <AuthTraceTools />
       </WouterRouter>
     </ThemeProvider>
   );
