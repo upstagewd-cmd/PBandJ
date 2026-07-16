@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
 });
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL || "/api/__clerk";
+const clerkDomain = import.meta.env.VITE_CLERK_DOMAIN || "clerk.pbandjesus.app";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -188,7 +188,8 @@ function ClerkProviderWithRoutes() {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
+      domain={clerkDomain}
+      isSatellite={false}
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
