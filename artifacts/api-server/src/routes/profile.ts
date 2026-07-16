@@ -3,11 +3,11 @@ import { randomUUID } from "crypto";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
-import { eq, or, and, inArray, ne, sql } from "drizzle-orm";
+import { eq, or, and, inArray } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
 import { getStartingEloForSkill } from "../lib/settings";
-import { getNicknameMap } from "../lib/user-display";
+import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
 export const profileRouter = Router();
 
@@ -432,18 +432,7 @@ profileRouter.put("/me/nickname", async (req, res) => {
     }
 
     if (nickname) {
-      const normalizedNickname = nickname.toLowerCase();
-      const [taken] = await db
-        .select({ clerkUserId: userProfilesTable.clerkUserId })
-        .from(userProfilesTable)
-        .where(
-          and(
-            sql`lower(${userProfilesTable.nickname}) = ${normalizedNickname}`,
-            ne(userProfilesTable.clerkUserId, clerkUserId)
-          )
-        )
-        .limit(1);
-
+      const taken = await isNicknameTakenGlobal(nickname, { excludeClerkUserId: clerkUserId });
       if (taken) {
         res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
         return;

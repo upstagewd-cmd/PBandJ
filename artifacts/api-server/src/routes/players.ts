@@ -13,7 +13,7 @@ import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getRank } from "../lib/ranks";
 import { getStartingEloForSkill } from "../lib/settings";
-import { getNicknameMap } from "../lib/user-display";
+import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
 export const playersRouter = Router({ mergeParams: true });
 const NICKNAME_MAX_LENGTH = 15;
@@ -68,6 +68,24 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     // only for self-join requests where no clerkUserId is provided in the body.
     const clerkUserId: string | null =
       body.clerkUserId !== undefined ? (body.clerkUserId ?? null) : (auth?.userId ?? null);
+
+    if (teamName) {
+      const taken = await isNicknameTakenGlobal(teamName, { excludeClerkUserId: clerkUserId });
+      if (taken) {
+        res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+        return;
+      }
+    } else if (clerkUserId) {
+      const profileNicknameMap = await getNicknameMap([clerkUserId]);
+      const profileNickname = (profileNicknameMap.get(clerkUserId) ?? "").trim();
+      if (profileNickname) {
+        const taken = await isNicknameTakenGlobal(profileNickname, { excludeClerkUserId: clerkUserId });
+        if (taken) {
+          res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+          return;
+        }
+      }
+    }
 
     // Duplicate guard: prevent the same Clerk user from joining twice
     if (clerkUserId) {
@@ -172,6 +190,16 @@ playersRouter.patch("/:playerId", async (req: Request<{ tournamentId: string; pl
       if (body.teamName && body.teamName.trim().length > NICKNAME_MAX_LENGTH) {
         res.status(400).json({ error: "nickname_too_long", message: `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.` });
         return;
+      }
+      if (body.teamName && body.teamName.trim()) {
+        const taken = await isNicknameTakenGlobal(body.teamName, {
+          excludeClerkUserId: player.clerkUserId ?? null,
+          excludePlayerId: player.id,
+        });
+        if (taken) {
+          res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+          return;
+        }
       }
       updates.teamName = body.teamName || null;
     }

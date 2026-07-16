@@ -104,8 +104,8 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
           <Check className="w-5 h-5 text-green-400" />
         </div>
         <div>
-          <p className="text-sm font-bold text-green-400">You're registered ✓</p>
-          <p className="text-xs text-muted-foreground">Your real ELO will be used in bracket seeding</p>
+          <p className="text-sm font-bold text-green-400">You're in ✓</p>
+          <p className="text-xs text-muted-foreground">You've been added to the pool</p>
         </div>
       </div>
     );
@@ -135,12 +135,19 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
             localStorage.setItem(`playerToken_${tournament.id}_${data.id}`, data.playerToken);
           }
           onJoined();
-          toast({ title: "You're in! See you on the court." });
+          toast({ title: "You're in the pool! Start playing." });
         },
         onError: (err: unknown) => {
           const status = (err as { status?: number })?.status;
-          if (status === 409) { setAlreadyAdded(true); }
-          else { toast({ title: "Could not join", variant: "destructive" }); }
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "already_added") {
+            setAlreadyAdded(true);
+          } else if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
+          } else {
+            toast({ title: "Could not join", variant: "destructive" });
+          }
         },
       }
     );
@@ -188,6 +195,8 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tournamentName, setTournamentName] = useState(tournament.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
 
   const updateTournament = useUpdateTournament();
   const startTournament = useStartTournament();
@@ -206,6 +215,14 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   useEffect(() => {
     if (!isEditingName) setTournamentName(tournament.name);
   }, [tournament.name, isEditingName]);
+
+  useEffect(() => {
+    if (!isEditingName || !nameInputRef.current) return;
+    const input = nameInputRef.current;
+    input.focus();
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  }, [isEditingName]);
 
   useEffect(() => {
     if (isHost || !user) return;
@@ -260,8 +277,12 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         },
         onError: (err: unknown) => {
           const status = (err as { status?: number })?.status;
-          if (status === 409) {
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "already_added") {
             setJoinAlreadyAdded(true);
+          } else if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
           } else {
             toast({
               title: "Could not join",
@@ -275,10 +296,14 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   };
 
   const handleGenerateTeams = (mode: "balanced" | "random") => {
+    setTeamGenerateMode(mode);
     generateTeams.mutate(
       { tournamentId: tournament.id, data: { hostToken: hostToken!, mode } },
       {
-        onSettled: refetch,
+        onSettled: () => {
+          setTeamGenerateMode(null);
+          refetch();
+        },
         onSuccess: () => toast({ title: `Teams generated (${mode})!` }),
         onError: () => toast({ title: "Failed to generate teams", variant: "destructive" }),
       }
@@ -310,8 +335,12 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
         onSuccess: () => toast({ title: `${player.firstName} ${player.lastName} added!` }),
         onError: (err: unknown) => {
           const status = (err as { status?: number })?.status;
-          if (status === 409) {
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "already_added") {
             toast({ title: `${player.firstName} is already in the tournament.` });
+          } else if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
           } else {
             toast({ title: "Failed to add player", variant: "destructive" });
           }
@@ -335,13 +364,31 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
             </div>
             <div className="space-y-2">
               {isHost && !isCancelled ? (
-                <input
-                  className="w-full border-none bg-transparent text-center text-4xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
-                  value={tournamentName}
-                  onChange={(e) => setTournamentName(e.target.value)}
-                  onFocus={() => setIsEditingName(true)}
-                  onBlur={handleNameBlur}
-                />
+                isEditingName ? (
+                  <input
+                    ref={nameInputRef}
+                    className="w-full border-none bg-transparent text-center text-4xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
+                    value={tournamentName}
+                    onChange={(e) => setTournamentName(e.target.value)}
+                    onBlur={handleNameBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") nameInputRef.current?.blur();
+                      if (e.key === "Escape") {
+                        setTournamentName(tournament.name);
+                        setIsEditingName(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingName(true)}
+                    className="group flex items-center gap-2 text-left"
+                  >
+                    <h1 className="text-4xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
+                    <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                  </button>
+                )
               ) : (
                 <h1 className={`text-4xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
               )}
@@ -687,7 +734,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 disabled={generateTeams.isPending || tournament.players.length < 2}
                 className="font-bold uppercase tracking-wider text-xs"
               >
-                {generateTeams.isPending
+                {generateTeams.isPending && teamGenerateMode === "balanced"
                   ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                   : <Shuffle className="w-3 h-3 mr-1.5" />
                 }
@@ -699,7 +746,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 disabled={generateTeams.isPending || tournament.players.length < 2}
                 className="font-bold uppercase tracking-wider text-xs"
               >
-                <RefreshCw className="w-3 h-3 mr-1.5" /> Random
+                <RefreshCw className={`w-3 h-3 mr-1.5 ${generateTeams.isPending && teamGenerateMode === "random" ? "animate-spin" : ""}`} /> Random
               </Button>
             </div>
           </div>
@@ -920,8 +967,15 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
       { tournamentId, playerId: player.id, data: { ...auth, teamName: draft } },
       {
         onSettled: refetch,
-        onError: () => {
-          toast({ title: "Couldn't save nickname", variant: "destructive" });
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
+          } else {
+            toast({ title: "Couldn't save nickname", variant: "destructive" });
+          }
           setDraft(player.teamName ?? "");
         },
       }

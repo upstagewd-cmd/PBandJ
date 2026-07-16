@@ -275,8 +275,15 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
         onSuccess: () => { onJoined(); toast({ title: "You're in the pool! Start playing." }); },
         onError: (err: unknown) => {
           const status = (err as { status?: number })?.status;
-          if (status === 409) { setAlreadyAdded(true); }
-          else { toast({ title: "Failed to join", variant: "destructive" }); }
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "already_added") {
+            setAlreadyAdded(true);
+          } else if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
+          } else {
+            toast({ title: "Failed to join", variant: "destructive" });
+          }
         },
       }
     );
@@ -306,9 +313,9 @@ function QuickJoinCard({ sessionId, players, onJoined }: { sessionId: string; pl
 // ─── Join Form ────────────────────────────────────────────────────────────────
 
 const SKILL_LEVELS = [
-  { value: "beginner", label: "Beginner", emoji: "🟢", elo: "~900" },
-  { value: "intermediate", label: "Intermediate", emoji: "🟡", elo: "~1200" },
-  { value: "advanced", label: "Advanced", emoji: "🔴", elo: "~1500" },
+  { value: "beginner", label: "Beginner", emoji: "🟢", desc: "New to pickleball" },
+  { value: "intermediate", label: "Intermediate", emoji: "🔵", desc: "Comfortable with doubles" },
+  { value: "advanced", label: "Advanced", emoji: "🔴", desc: "Experienced competitor" },
 ] as const;
 
 function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined: () => void; isHost?: boolean }) {
@@ -363,8 +370,12 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
         },
         onError: (err: unknown) => {
           const status = (err as { status?: number })?.status;
-          if (status === 409) {
+          const code = (err as { error?: string; body?: { error?: string } })?.error
+            ?? (err as { body?: { error?: string } })?.body?.error;
+          if (status === 409 && code === "already_added") {
             setAlreadyAdded(true);
+          } else if (status === 409 && code === "nickname_taken") {
+            toast({ title: "That nickname is already taken. Try another one.", variant: "destructive" });
           } else {
             toast({ title: "Failed to join", variant: "destructive" });
           }
@@ -428,7 +439,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
             >
               <span className="text-xl">{s.emoji}</span>
               <span className="text-xs font-bold">{s.label}</span>
-              <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.elo}</span>
+              <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
             </button>
           ))}
         </div>

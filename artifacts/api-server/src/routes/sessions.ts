@@ -6,6 +6,7 @@ import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSes
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 import { getStartingEloForSkill } from "../lib/settings";
+import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
 export const sessionsRouter = Router();
 const NICKNAME_MAX_LENGTH = 15;
@@ -172,6 +173,24 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
     if (body.teamName && body.teamName.trim().length > NICKNAME_MAX_LENGTH) {
       res.status(400).json({ error: "nickname_too_long", message: `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.` });
       return;
+    }
+
+    if (body.teamName && body.teamName.trim()) {
+      const taken = await isNicknameTakenGlobal(body.teamName, { excludeClerkUserId: body.clerkUserId ?? null });
+      if (taken) {
+        res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+        return;
+      }
+    } else if (body.clerkUserId) {
+      const profileNicknameMap = await getNicknameMap([body.clerkUserId]);
+      const profileNickname = (profileNicknameMap.get(body.clerkUserId) ?? "").trim();
+      if (profileNickname) {
+        const taken = await isNicknameTakenGlobal(profileNickname, { excludeClerkUserId: body.clerkUserId });
+        if (taken) {
+          res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+          return;
+        }
+      }
     }
 
     // Duplicate guard: prevent the same signed-in user from joining twice

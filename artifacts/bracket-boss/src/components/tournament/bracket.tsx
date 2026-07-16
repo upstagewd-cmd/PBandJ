@@ -134,7 +134,11 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
   }, [tournament.name, editingName]);
 
   useEffect(() => {
-    if (editingName) nameInputRef.current?.focus();
+    if (!editingName || !nameInputRef.current) return;
+    const input = nameInputRef.current;
+    input.focus();
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
   }, [editingName]);
 
   const handleNameBlur = () => {

@@ -21,7 +21,8 @@ export function getPlayerDisplayName(person: PersonLike) {
 
 export function getPlayerDisplaySubtext(person: PersonLike) {
   const nickname = trimText(person.nickname);
-  if (nickname) {
+  const teamName = trimText(person.teamName);
+  if (nickname || teamName) {
     const lastInitial = person.lastName?.trim()?.[0];
     return `${person.firstName} ${lastInitial ? `${lastInitial}.` : ""}`.trim();
   }
