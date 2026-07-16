@@ -7,21 +7,6 @@ setBaseUrl(
   import.meta.env.VITE_API_URL || window.location.origin
 );
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .getRegistrations()
-      .then((registrations) => {
-        registrations.forEach((registration) => {
-          void registration.unregister();
-        });
-      })
-      .catch(() => {
-        // Ignore SW cleanup failures in this temporary auth-isolation path.
-      });
-  });
-}
-
 function hideBootSplash() {
   const splash = document.getElementById("app-splash");
   if (!splash) return;

@@ -7,7 +7,6 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { ensureUserHasPlayerRecord } from "./lib/player-bootstrap";
-import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
 
@@ -31,14 +30,11 @@ app.use(
   }),
 );
 
-// Must be mounted before body parsers for Clerk proxy compatibility.
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", clerkMiddleware());
+app.use(clerkMiddleware());
 
 app.use("/api", async (req, _res, next) => {
   try {
