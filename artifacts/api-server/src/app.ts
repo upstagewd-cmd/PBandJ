@@ -34,7 +34,7 @@ app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(clerkMiddleware());
+app.use("/api", clerkMiddleware());
 
 app.use("/api", async (req, _res, next) => {
   try {
