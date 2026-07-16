@@ -7,11 +7,15 @@ import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getTournamentFull } from "../lib/tournament-helpers";
-import { getNicknameMap } from "../lib/user-display";
+import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
-async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: string | null) {
+async function serializePlayer(
+  p: typeof playersTable.$inferSelect,
+  nickname?: string | null,
+  clerkImageUrl?: string | null
+) {
   const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
@@ -21,7 +25,7 @@ async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: s
     nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
-    avatarUrl: p.avatarUrl ?? null,
+    avatarUrl: p.avatarUrl ?? clerkImageUrl ?? null,
     eloRating: p.eloRating ?? 1200,
     rankTitle: rank.title,
     rankEmoji: rank.emoji,
@@ -41,6 +45,7 @@ async function getOpenPlayState(tournamentId: string) {
     ? await db.select().from(playersTable).where(inArray(playersTable.id, playerIds))
     : [];
   const nicknameMap = await getNicknameMap(players.map((player) => player.clerkUserId));
+  const clerkImageMap = await getClerkImageMap(players.map((player) => player.clerkUserId));
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
   const recentMatchRows = await db
@@ -57,6 +62,7 @@ async function getOpenPlayState(tournamentId: string) {
   const allPlayers = allPlayerIds.size
     ? await db.select().from(playersTable).where(inArray(playersTable.id, [...allPlayerIds]))
     : [];
+  const allPlayerImageMap = await getClerkImageMap(allPlayers.map((player) => player.clerkUserId));
   const allPlayerMap = new Map(allPlayers.map((p) => [p.id, p]));
 
   const recentMatches = await Promise.all(recentMatchRows
@@ -71,12 +77,20 @@ async function getOpenPlayState(tournamentId: string) {
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
+        .map((player) => serializePlayer(
+          player!,
+          nicknameMap.get(player!.clerkUserId ?? "") ?? null,
+          allPlayerImageMap.get(player!.clerkUserId ?? "") ?? null
+        ))),
       teamTwoPlayers: await Promise.all([m.teamTwoPOneId, m.teamTwoPTwoId]
         .filter(Boolean)
         .map((id) => allPlayerMap.get(id!))
         .filter(Boolean)
-        .map((player) => serializePlayer(player!, nicknameMap.get(player!.clerkUserId ?? "") ?? null))),
+        .map((player) => serializePlayer(
+          player!,
+          nicknameMap.get(player!.clerkUserId ?? "") ?? null,
+          allPlayerImageMap.get(player!.clerkUserId ?? "") ?? null
+        ))),
       playedAt: m.playedAt.toISOString(),
     })));
 
@@ -85,7 +99,14 @@ async function getOpenPlayState(tournamentId: string) {
       .map(async (e) => {
         const p = playerMap.get(e.playerId);
         if (!p) return null;
-        return { ...(await serializePlayer(p, nicknameMap.get(p.clerkUserId ?? "") ?? null)), partnerId: e.partnerId ?? null };
+        return {
+          ...(await serializePlayer(
+            p,
+            nicknameMap.get(p.clerkUserId ?? "") ?? null,
+            clerkImageMap.get(p.clerkUserId ?? "") ?? null
+          )),
+          partnerId: e.partnerId ?? null,
+        };
       })
       .filter(Boolean)),
     recentMatches,

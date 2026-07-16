@@ -1,11 +1,34 @@
 import { Router, Request } from "express";
-import { db, playersTable, matchesTable, tournamentsTable } from "@workspace/db";
+import { db, playersTable, matchesTable, tournamentsTable, teamsTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
-import { getNicknameMap } from "../lib/user-display";
+import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
 
 export const playerStatsRouter = Router();
+
+type DbPlayer = typeof playersTable.$inferSelect;
+type DbTeam = typeof teamsTable.$inferSelect;
+type DbMatch = typeof matchesTable.$inferSelect;
+
+function getIdentityPlayers(allPlayers: DbPlayer[], player: DbPlayer): DbPlayer[] {
+  if (!player.clerkUserId) return [player];
+  return allPlayers.filter((p) => p.clerkUserId === player.clerkUserId);
+}
+
+function getTeamIdsForPlayers(allTeams: DbTeam[], playerIds: Set<string>): Set<string> {
+  const teamIds = new Set<string>();
+  for (const team of allTeams) {
+    if ((team.player1Id && playerIds.has(team.player1Id)) || (team.player2Id && playerIds.has(team.player2Id))) {
+      teamIds.add(team.id);
+    }
+  }
+  return teamIds;
+}
+
+function getMatchesForIdentity(allMatches: DbMatch[], idSet: Set<string>): DbMatch[] {
+  return allMatches.filter((m) => idSet.has(m.playerOneId ?? "") || idSet.has(m.playerTwoId ?? ""));
+}
 
 // GET /api/players/known — all players, deduplicated by clerkUserId (signed-in) or full name (guests)
 playerStatsRouter.get("/known", async (_req, res) => {
@@ -50,50 +73,61 @@ playerStatsRouter.get("/known", async (_req, res) => {
 
 playerStatsRouter.get("/", async (_req, res) => {
   try {
-    const allPlayers = await db
-      .select()
-      .from(playersTable)
-      .orderBy(desc(playersTable.eloRating));
+    const [allPlayers, allMatches, allTeams] = await Promise.all([
+      db.select().from(playersTable).orderBy(desc(playersTable.eloRating)),
+      db.select().from(matchesTable),
+      db.select().from(teamsTable),
+    ]);
+    const nicknameMap = await getNicknameMap(allPlayers.map((p) => p.clerkUserId));
+    const clerkImageMap = await getClerkImageMap(allPlayers.map((p) => p.clerkUserId));
 
-    const summaries = await Promise.all(
-      allPlayers.map(async (player) => {
-        const allMatches = await db
-          .select()
-          .from(matchesTable)
-          .where(or(eq(matchesTable.playerOneId, player.id), eq(matchesTable.playerTwoId, player.id)));
+    const summaries = await Promise.all(allPlayers.map(async (player) => {
+      const identityPlayers = getIdentityPlayers(allPlayers, player);
+      const identityPlayerIds = new Set(identityPlayers.map((p) => p.id));
+      const identityTeamIds = getTeamIdsForPlayers(allTeams, identityPlayerIds);
+      const identityIds = new Set<string>([...identityPlayerIds, ...identityTeamIds]);
 
-        const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
-        const wins = completedMatches.filter((m) => m.winnerId === player.id).length;
-        const losses = completedMatches.length - wins;
-        const winPct = completedMatches.length > 0 ? Math.round((wins / completedMatches.length) * 100) : 0;
+      const identityMatches = getMatchesForIdentity(allMatches, identityIds);
+      const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
+      const wins = completedMatches.filter((m) => identityIds.has(m.winnerId ?? "")).length;
+      const losses = completedMatches.length - wins;
+      const winPct = completedMatches.length > 0 ? Math.round((wins / completedMatches.length) * 100) : 0;
 
-        const badgeRows = await db
-          .select({ badge: badgesTable })
-          .from(playerBadgesTable)
-          .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
-          .where(and(eq(playerBadgesTable.playerId, player.id), eq(badgesTable.enabled, true)));
+      const badgeRows = await db
+        .select({ badge: badgesTable })
+        .from(playerBadgesTable)
+        .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
+        .where(
+          and(
+            or(...identityPlayers.map((p) => eq(playerBadgesTable.playerId, p.id))),
+            eq(badgesTable.enabled, true)
+          )
+        );
+      const badgeCount = new Set(badgeRows.map((r) => r.badge.id)).size;
 
-        const rank = await getRank(player.eloRating ?? 1200);
+      const eloRating = Math.max(...identityPlayers.map((p) => p.eloRating ?? 1200));
+      const rank = await getRank(eloRating);
+      const primary = identityPlayers[0] ?? player;
 
-        return {
-          id: player.id,
-          firstName: player.firstName,
-          lastName: player.lastName,
-          teamName: player.teamName ?? null,
-          avatarUrl: player.avatarUrl ?? null,
-          eloRating: player.eloRating ?? 1200,
-          rankTitle: rank.title,
-          rankEmoji: rank.emoji,
-          skillLevel: player.skillLevel ?? null,
-          wins,
-          losses,
-          matchesPlayed: completedMatches.length,
-          winPct,
-          badgeCount: badgeRows.length,
-          joinedAt: player.joinedAt.toISOString(),
-        };
-      })
-    );
+      return {
+        id: primary.id,
+        firstName: primary.firstName,
+        lastName: primary.lastName,
+        nickname: nicknameMap.get(primary.clerkUserId ?? "") ?? null,
+        teamName: primary.teamName ?? null,
+        avatarUrl: primary.avatarUrl ?? clerkImageMap.get(primary.clerkUserId ?? "") ?? null,
+        eloRating,
+        rankTitle: rank.title,
+        rankEmoji: rank.emoji,
+        skillLevel: primary.skillLevel ?? null,
+        wins,
+        losses,
+        matchesPlayed: completedMatches.length,
+        winPct,
+        badgeCount,
+        joinedAt: primary.joinedAt.toISOString(),
+      };
+    }));
 
     res.json(summaries);
   } catch (err) {
@@ -110,21 +144,27 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
   try {
     const { playerId } = req.params;
 
-    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
+    const [player, allPlayers, allTeams, allMatches] = await Promise.all([
+      db.select().from(playersTable).where(eq(playersTable.id, playerId)).then((rows) => rows[0]),
+      db.select().from(playersTable),
+      db.select().from(teamsTable),
+      db.select().from(matchesTable),
+    ]);
     if (!player) { res.status(404).json({ error: "Player not found" }); return; }
 
-    const allMatches = await db
-      .select()
-      .from(matchesTable)
-      .where(or(eq(matchesTable.playerOneId, playerId), eq(matchesTable.playerTwoId, playerId)));
+    const identityPlayers = getIdentityPlayers(allPlayers, player);
+    const identityPlayerIds = new Set(identityPlayers.map((p) => p.id));
+    const identityTeamIds = getTeamIdsForPlayers(allTeams, identityPlayerIds);
+    const identityIds = new Set<string>([...identityPlayerIds, ...identityTeamIds]);
 
-    const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
-    const wins = completedMatches.filter((m) => m.winnerId === playerId).length;
+    const identityMatches = getMatchesForIdentity(allMatches, identityIds);
+    const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
+    const wins = completedMatches.filter((m) => identityIds.has(m.winnerId ?? "")).length;
     const losses = completedMatches.length - wins;
     const winPct = completedMatches.length > 0 ? Math.round((wins / completedMatches.length) * 100) : 0;
 
     const tournamentWins = completedMatches.filter(
-      (m) => m.winnerId === playerId && (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset")
+      (m) => identityIds.has(m.winnerId ?? "") && (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset")
     ).length;
 
     const recentCompleted = completedMatches
@@ -133,9 +173,20 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       .slice(0, 20);
 
     const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
-    const opponentIds = recentCompleted.map((m) =>
-      m.playerOneId === playerId ? m.playerTwoId : m.playerOneId
-    ).filter(Boolean) as string[];
+    const opponentSideIds = recentCompleted.map((m) => {
+      const myOnSideOne = identityIds.has(m.playerOneId ?? "");
+      return myOnSideOne ? m.playerTwoId : m.playerOneId;
+    }).filter(Boolean) as string[];
+
+    const opponentTeams = allTeams.filter((team) => opponentSideIds.includes(team.id));
+    const opponentPlayerIds = new Set<string>();
+    for (const team of opponentTeams) {
+      if (team.player1Id) opponentPlayerIds.add(team.player1Id);
+      if (team.player2Id) opponentPlayerIds.add(team.player2Id);
+    }
+    for (const sideId of opponentSideIds) {
+      if (!opponentTeams.some((team) => team.id === sideId)) opponentPlayerIds.add(sideId);
+    }
 
     const [tournaments, opponentPlayers, badgeRows] = await Promise.all([
       tournamentIds.length
@@ -145,11 +196,11 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
               : or(...tournamentIds.map((id) => eq(tournamentsTable.id, id)))
           )
         : Promise.resolve([]),
-      opponentIds.length
+      opponentPlayerIds.size
         ? db.select().from(playersTable).where(
-            opponentIds.length === 1
-              ? eq(playersTable.id, opponentIds[0])
-              : or(...opponentIds.map((id) => eq(playersTable.id, id)))
+            opponentPlayerIds.size === 1
+              ? eq(playersTable.id, [...opponentPlayerIds][0])
+              : or(...[...opponentPlayerIds].map((id) => eq(playersTable.id, id)))
           )
         : Promise.resolve([]),
       db
@@ -160,19 +211,29 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     ]);
 
     const playerNicknameMap = await getNicknameMap([player.clerkUserId]);
+    const opponentImageMap = await getClerkImageMap(opponentPlayers.map((p) => p.clerkUserId));
+    const playerImageMap = await getClerkImageMap([player.clerkUserId]);
     const opponentNicknameMap = await getNicknameMap(opponentPlayers.map((opponent) => opponent.clerkUserId));
 
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
-    const oppMap = new Map<string, { id: string; firstName: string; lastName: string; teamName: string | null }>(
+    const oppMap = new Map<string, { id: string; firstName: string; lastName: string; teamName: string | null; avatarUrl: string | null; clerkUserId: string | null }>(
       opponentPlayers.map((p) => [p.id, p])
     );
+    const teamMap = new Map(opponentTeams.map((team) => [team.id, team]));
 
     const recentMatchesResult = recentCompleted.map((m) => {
-      const oppId = m.playerOneId === playerId ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
-      const opp = oppMap.get(oppId);
+      const myOnSideOne = identityIds.has(m.playerOneId ?? "");
+      const oppId = myOnSideOne ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
+      const oppTeam = teamMap.get(oppId);
+      const opponentPlayersResolved = oppTeam
+        ? [oppTeam.player1Id, oppTeam.player2Id].filter(Boolean).map((id) => oppMap.get(id!)).filter(Boolean)
+        : [oppMap.get(oppId)].filter(Boolean);
       const tourney = tourneyMap.get(m.tournamentId);
-      const opponentName = opp
-        ? (opponentNicknameMap.get(oppId) ?? opp.teamName ?? `${opp.firstName} ${opp.lastName}`)
+      const opponentName = opponentPlayersResolved.length > 0
+        ? opponentPlayersResolved.map((op) => {
+            const nickname = opponentNicknameMap.get(op!.clerkUserId ?? "");
+            return nickname || op!.teamName || `${op!.firstName} ${op!.lastName}`;
+          }).join(" & ")
         : "Unknown";
       return {
         matchId: m.id,
@@ -181,30 +242,39 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
         bracket: m.bracket,
         round: m.round,
         opponentName,
-        won: m.winnerId === playerId,
+        opponentPlayers: opponentPlayersResolved.map((op) => ({
+          id: op!.id,
+          firstName: op!.firstName,
+          lastName: op!.lastName,
+          nickname: opponentNicknameMap.get(op!.clerkUserId ?? "") ?? null,
+          avatarUrl: op!.avatarUrl ?? opponentImageMap.get(op!.clerkUserId ?? "") ?? null,
+        })),
+        won: identityIds.has(m.winnerId ?? ""),
         scoreOne: m.scoreOne ?? null,
         scoreTwo: m.scoreTwo ?? null,
         completedAt: m.completedAt ? new Date(m.completedAt).toISOString() : new Date().toISOString(),
       };
     });
 
-    const rank = await getRank(player.eloRating ?? 1200);
+    const eloRating = Math.max(...identityPlayers.map((p) => p.eloRating ?? 1200));
+    const rank = await getRank(eloRating);
+    const primary = identityPlayers[0] ?? player;
 
     res.json({
       player: {
-        id: player.id,
-        tournamentId: player.tournamentId,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        nickname: playerNicknameMap.get(player.clerkUserId ?? "") ?? null,
-        partnerName: player.partnerName ?? null,
-        teamName: player.teamName ?? null,
-        avatarUrl: player.avatarUrl ?? null,
-        eloRating: player.eloRating ?? 1200,
+        id: primary.id,
+        tournamentId: primary.tournamentId,
+        firstName: primary.firstName,
+        lastName: primary.lastName,
+        nickname: playerNicknameMap.get(primary.clerkUserId ?? "") ?? null,
+        partnerName: primary.partnerName ?? null,
+        teamName: primary.teamName ?? null,
+        avatarUrl: primary.avatarUrl ?? playerImageMap.get(primary.clerkUserId ?? "") ?? null,
+        eloRating,
         rankTitle: rank.title,
         rankEmoji: rank.emoji,
-        seed: player.seed,
-        joinedAt: player.joinedAt.toISOString(),
+        seed: primary.seed,
+        joinedAt: primary.joinedAt.toISOString(),
       },
       wins,
       losses,

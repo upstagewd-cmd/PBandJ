@@ -483,6 +483,15 @@ export default function ProfilePage() {
                           {m.won ? "W" : "L"}
                         </span>
                         <div className="min-w-0 flex-1">
+                          {Array.isArray((m as any).opponentPlayers) && (m as any).opponentPlayers.length > 0 && (
+                            <div className="flex -space-x-2 mb-1">
+                              {(m as any).opponentPlayers.slice(0, 2).map((opponent: any) => (
+                                <div key={opponent.id} className="ring-2 ring-card rounded-full">
+                                  <PlayerAvatar player={opponent} size="sm" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           <p className="text-sm font-bold truncate">
                             vs <span className="text-foreground">{m.opponentName}</span>
                           </p>

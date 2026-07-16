@@ -78,6 +78,26 @@ export function generateSingleEliminationBracket(
   const n = players.length;
   if (n < 2) return [];
 
+  if (n === 3) {
+    const sorted = [...players].sort((a, b) => a.seed - b.seed);
+    const [topSeed, secondSeed, thirdSeed] = sorted.map((p) => p.id);
+
+    const semifinal = makeMatch(tournamentId, "winner", 1, 1);
+    semifinal.playerOneId = secondSeed;
+    semifinal.playerTwoId = thirdSeed;
+    semifinal.status = "active";
+
+    const final = makeMatch(tournamentId, "winner", 2, 1);
+    final.playerOneId = topSeed;
+    final.playerTwoId = null;
+    final.status = "pending";
+
+    semifinal.nextWinnerMatchId = final.id;
+    semifinal.nextWinnerSlot = "two";
+
+    return [semifinal, final];
+  }
+
   if (n === 6) {
     const sorted = [...players].sort((a, b) => a.seed - b.seed);
     const bracketSize = 8;

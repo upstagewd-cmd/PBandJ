@@ -8,6 +8,7 @@ import { getRank } from "../lib/ranks";
 import { getStartingEloForSkill } from "../lib/settings";
 
 export const sessionsRouter = Router();
+const NICKNAME_MAX_LENGTH = 15;
 
 // ─── ID generation (same pattern as tournaments) ──────────────────────────────
 
@@ -168,6 +169,10 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
 
     const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId));
     if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+    if (body.teamName && body.teamName.trim().length > NICKNAME_MAX_LENGTH) {
+      res.status(400).json({ error: "nickname_too_long", message: `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.` });
+      return;
+    }
 
     // Duplicate guard: prevent the same signed-in user from joining twice
     if (body.clerkUserId) {
@@ -189,7 +194,6 @@ sessionsRouter.post("/:sessionId/players", async (req: Request<{ sessionId: stri
         startingElo = Math.round(userPlayers.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / userPlayers.length);
       }
     }
-
     await db.insert(sessionPlayersTable).values({
       id: randomUUID(),
       sessionId,

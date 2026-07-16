@@ -19,8 +19,20 @@ const sizeMap = {
   lg: "w-14 h-14 text-base",
 };
 
+function resolveAvatarSrc(avatarUrl?: string | null): string | null {
+  if (!avatarUrl) return null;
+  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://") || avatarUrl.startsWith("data:")) {
+    return avatarUrl;
+  }
+  if (avatarUrl.startsWith("/api/storage")) {
+    return avatarUrl;
+  }
+  return `/api/storage${avatarUrl}`;
+}
+
 export function PlayerAvatar({ player, size = "md", className }: PlayerAvatarProps) {
   const initials = `${player.firstName.charAt(0)}${player.lastName.charAt(0)}`.toUpperCase();
+  const avatarSrc = resolveAvatarSrc(player.avatarUrl);
 
   return (
     <div
@@ -30,9 +42,9 @@ export function PlayerAvatar({ player, size = "md", className }: PlayerAvatarPro
         className
       )}
     >
-      {player.avatarUrl ? (
+      {avatarSrc ? (
         <img
-          src={`/api/storage${player.avatarUrl}`}
+          src={avatarSrc}
           alt={initials}
           className="w-full h-full object-cover"
           onError={(e) => {

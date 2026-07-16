@@ -10,6 +10,14 @@ interface ChampionshipProps {
   tournament: TournamentFull;
 }
 
+function getTeamLines(team: any): string[] {
+  if (!team) return [];
+  if (Array.isArray(team.members) && team.members.length > 0) {
+    return team.members.map((member: any) => member.nickname || `${member.firstName} ${member.lastName}`.trim()).filter(Boolean);
+  }
+  return [getPlayerDisplayName(team)];
+}
+
 export function TournamentChampionship({ tournament }: ChampionshipProps) {
   const [, setLocation] = useLocation();
   
@@ -53,6 +61,10 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
     );
   }
 
+  const championLines = getTeamLines((summary as any).champion);
+  const runnerUpLines = getTeamLines((summary as any).runnerUp);
+  const thirdPlaceLines = getTeamLines((summary as any).thirdPlace);
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-12 animate-in fade-in zoom-in-95 duration-700">
       
@@ -72,18 +84,18 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
         <div className="order-2 md:order-1 bg-card border border-border/50 rounded-3xl p-6 text-center shadow-lg transform md:-translate-y-4">
           <div className="text-4xl mb-4">🥈</div>
           <h3 className="text-muted-foreground uppercase text-xs tracking-widest font-bold mb-2">Runner Up</h3>
-          <p className="text-2xl font-bold truncate">
-            {summary.runnerUp
-              ? getPlayerDisplayName(summary.runnerUp)
-              : "—"}
-          </p>
+          <div className="text-2xl font-bold leading-tight space-y-0.5">
+            {runnerUpLines.length > 0 ? runnerUpLines.map((line) => <p key={line}>{line}</p>) : <p>—</p>}
+          </div>
         </div>
 
         {/* First Place */}
         <div className="order-1 md:order-2 bg-gradient-to-b from-primary/20 to-card border-2 border-primary rounded-3xl p-8 text-center shadow-[0_0_40px_rgba(255,100,50,0.3)] z-10">
           <div className="text-6xl mb-6">🥇</div>
           <h3 className="text-primary uppercase text-sm tracking-widest font-black mb-2">1st Place</h3>
-          <p className="text-4xl font-extrabold truncate">{getPlayerDisplayName(summary.champion)}</p>
+          <div className="text-3xl md:text-4xl font-extrabold leading-tight space-y-1">
+            {championLines.length > 0 ? championLines.map((line) => <p key={line}>{line}</p>) : <p>{getPlayerDisplayName((summary as any).champion)}</p>}
+          </div>
         </div>
 
         {/* Third Place */}
@@ -91,7 +103,9 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
           <div className="order-3 bg-card border border-border/50 rounded-3xl p-6 text-center shadow-lg transform md:-translate-y-8">
             <div className="text-4xl mb-4">🥉</div>
             <h3 className="text-muted-foreground uppercase text-xs tracking-widest font-bold mb-2">Third Place</h3>
-            <p className="text-2xl font-bold truncate">{getPlayerDisplayName(summary.thirdPlace)}</p>
+            <div className="text-2xl font-bold leading-tight space-y-0.5">
+              {thirdPlaceLines.length > 0 ? thirdPlaceLines.map((line) => <p key={line}>{line}</p>) : <p>{getPlayerDisplayName((summary as any).thirdPlace)}</p>}
+            </div>
           </div>
         ) : (
           <div className="order-3 hidden md:block"></div>

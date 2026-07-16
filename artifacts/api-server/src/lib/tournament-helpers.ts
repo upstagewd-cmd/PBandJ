@@ -1,9 +1,13 @@
 import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getRank } from "./ranks";
-import { getNicknameMap } from "./user-display";
+import { getNicknameMap, getClerkImageMap } from "./user-display";
 
-async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: string | null) {
+async function serializePlayer(
+  p: typeof playersTable.$inferSelect,
+  nickname?: string | null,
+  clerkImageUrl?: string | null
+) {
   const rank = await getRank(p.eloRating ?? 1200);
   return {
     id: p.id,
@@ -13,7 +17,7 @@ async function serializePlayer(p: typeof playersTable.$inferSelect, nickname?: s
     nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
-    avatarUrl: p.avatarUrl ?? null,
+    avatarUrl: p.avatarUrl ?? clerkImageUrl ?? null,
     eloRating: p.eloRating ?? 1200,
     rankTitle: rank.title,
     rankEmoji: rank.emoji,
@@ -38,6 +42,7 @@ export async function getTournamentFull(tournamentId: string) {
     db.select().from(matchesTable).where(eq(matchesTable.tournamentId, tournamentId)).orderBy(matchesTable.round, matchesTable.matchNumber),
   ]);
   const nicknameMap = await getNicknameMap(players.map((player) => player.clerkUserId));
+  const clerkImageMap = await getClerkImageMap(players.map((player) => player.clerkUserId));
 
   return {
     id: tournament.id,
@@ -47,7 +52,15 @@ export async function getTournamentFull(tournamentId: string) {
     createdAt: tournament.createdAt.toISOString(),
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
-    players: await Promise.all(players.map((player) => serializePlayer(player, nicknameMap.get(player.clerkUserId ?? "") ?? null))),
+    players: await Promise.all(
+      players.map((player) =>
+        serializePlayer(
+          player,
+          nicknameMap.get(player.clerkUserId ?? "") ?? null,
+          clerkImageMap.get(player.clerkUserId ?? "") ?? null
+        )
+      )
+    ),
     teams: teams.map((t) => ({
       id: t.id,
       tournamentId: t.tournamentId,

@@ -145,22 +145,22 @@ export default function PlayersPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 sm:ml-auto">
-                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm">
+                  <div className="flex flex-nowrap gap-2 sm:ml-auto overflow-x-auto">
+                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <TrendingUp className="w-4 h-4 text-green-400" />
                         <span className="font-semibold text-foreground">{player.wins}W</span>
                         <span>/{player.losses}L</span>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm">
+                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Trophy className="w-4 h-4 text-yellow-500" />
                         <span className="font-semibold text-foreground">{player.matchesPlayed}</span>
                         <span>matches</span>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm">
+                    <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Users className="w-4 h-4 text-primary" />
                         <span className="font-semibold text-foreground">{player.badgeCount}</span>

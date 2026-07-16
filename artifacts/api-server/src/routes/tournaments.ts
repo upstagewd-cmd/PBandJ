@@ -10,6 +10,7 @@ import {
 import { generateSingleEliminationBracket } from "../lib/bracket";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
+import { getNicknameMap } from "../lib/user-display";
 
 export const tournamentsRouter = Router();
 
@@ -209,6 +210,8 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
     const seFinal = winnerMatches.find((m) => m.round === maxWinnerRound && m.status === "completed");
     const finalMatch = gfReset ?? gf ?? seFinal ?? null;
 
+    const nicknameMap = await getNicknameMap(players.map((p) => p.clerkUserId));
+
     // Resolve a team ID to a display-friendly object the frontend can render
     const teamDisplay = (teamId: string | null | undefined) => {
       if (!teamId) return null;
@@ -216,14 +219,23 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
       if (!team) return null;
       const p1 = players.find((p) => p.id === team.player1Id);
       const p2 = players.find((p) => p.id === team.player2Id);
+      const p1Name = p1 ? (nicknameMap.get(p1.clerkUserId ?? "") || p1.firstName) : "";
+      const p2Name = p2 ? (nicknameMap.get(p2.clerkUserId ?? "") || p2.firstName) : "";
       const displayName =
         team.teamName ||
-        (p1 && p2 ? `${p1.firstName} & ${p2.firstName}` : p1?.firstName ?? "Team");
+        (p1 && p2 ? `${p1Name} & ${p2Name}` : p1Name || p2Name || "Team");
       return {
         id: team.id,
         teamName: displayName,
         firstName: p1?.firstName ?? "",
         lastName: p1?.lastName ?? "",
+        members: [p1, p2].filter(Boolean).map((p) => ({
+          id: p!.id,
+          firstName: p!.firstName,
+          lastName: p!.lastName,
+          nickname: nicknameMap.get(p!.clerkUserId ?? "") ?? null,
+          avatarUrl: p!.avatarUrl ?? null,
+        })),
         joinedAt: p1?.joinedAt?.toISOString() ?? new Date().toISOString(),
       };
     };

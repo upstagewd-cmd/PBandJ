@@ -1,6 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db, tournamentsTable, playersTable, openPlayPoolTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import {
@@ -16,6 +16,7 @@ import { getStartingEloForSkill } from "../lib/settings";
 import { getNicknameMap } from "../lib/user-display";
 
 export const playersRouter = Router({ mergeParams: true });
+const NICKNAME_MAX_LENGTH = 15;
 
 async function serializePlayer(p: typeof playersTable.$inferSelect, includeToken?: boolean, nickname?: string | null) {
   const rank = await getRank(p.eloRating ?? 1200);
@@ -56,6 +57,10 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
     const playerToken = randomUUID();
 
     const teamName = body.teamName || null;
+    if (teamName && teamName.trim().length > NICKNAME_MAX_LENGTH) {
+      res.status(400).json({ error: "nickname_too_long", message: `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.` });
+      return;
+    }
 
     const auth = getAuth(req);
     // If body explicitly includes clerkUserId (even null), use it — the host is adding a known
@@ -106,6 +111,12 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       }
     }
 
+    let avatarUrl: string | null = null;
+    if (clerkUserId) {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId).catch(() => null);
+      avatarUrl = clerkUser?.imageUrl ?? null;
+    }
+
     const playerRow = {
       id,
       tournamentId,
@@ -114,7 +125,7 @@ playersRouter.post("/", async (req: Request<{ tournamentId: string }>, res) => {
       partnerName: body.partnerName ?? null,
       teamName,
       playerToken,
-      avatarUrl: null as string | null,
+      avatarUrl,
       clerkUserId,
       skillLevel: body.skillLevel ?? null,
       eloRating: startingElo,
@@ -157,7 +168,13 @@ playersRouter.patch("/:playerId", async (req: Request<{ tournamentId: string; pl
     }
 
     const updates: Partial<typeof player> = {};
-    if (body.teamName !== undefined) updates.teamName = body.teamName || null;
+    if (body.teamName !== undefined) {
+      if (body.teamName && body.teamName.trim().length > NICKNAME_MAX_LENGTH) {
+        res.status(400).json({ error: "nickname_too_long", message: `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.` });
+        return;
+      }
+      updates.teamName = body.teamName || null;
+    }
     if (body.avatarUrl !== undefined) updates.avatarUrl = body.avatarUrl || null;
 
     if (Object.keys(updates).length > 0) {

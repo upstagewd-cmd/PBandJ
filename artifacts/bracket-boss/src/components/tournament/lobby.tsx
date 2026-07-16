@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser, Show } from "@clerk/react";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -35,13 +35,11 @@ import {
   Link,
   Sparkles,
   Pencil,
-  Camera,
   Shuffle,
   RefreshCw,
   X,
   ArrowLeftRight,
   User,
-  ExternalLink,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -50,6 +48,7 @@ import { useLocation } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
+import { NICKNAME_MAX_LENGTH } from "@/lib/nickname";
 
 interface LobbyProps {
   tournament: TournamentFull;
@@ -65,7 +64,7 @@ const SKILL_LEVELS = [
 const joinSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  teamName: z.string().optional(),
+  teamName: z.string().max(NICKNAME_MAX_LENGTH, `Nickname must be ${NICKNAME_MAX_LENGTH} characters or fewer.`).optional(),
   skillLevel: z.enum(["beginner", "intermediate", "advanced"]),
 });
 
@@ -561,7 +560,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                           Nickname <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
                         </Label>
                         <FormControl>
-                          <Input placeholder="The Dink Masters" className="h-11 bg-muted/50 border-none" {...field} />
+                          <Input placeholder="The Dink Masters" className="h-11 bg-muted/50 border-none" maxLength={NICKNAME_MAX_LENGTH} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -899,6 +898,7 @@ interface PlayerRowProps {
 
 function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, onRemove }: PlayerRowProps) {
   const [, setLocation] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.teamName ?? "");
   const [uploading, setUploading] = useState(false);
@@ -964,22 +964,33 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
         <span className="text-muted-foreground font-mono text-sm w-4 shrink-0">{index + 1}</span>
 
         <div className="relative shrink-0">
-          <PlayerAvatar player={player} size="md" />
-          {canEdit && (
-            <label className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
-              {uploading ? (
-                <Loader2 className="w-3 h-3 text-primary-foreground animate-spin" />
-              ) : (
-                <Camera className="w-3 h-3 text-primary-foreground" />
-              )}
+          {canEdit ? (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="rounded-full"
+                title="Change profile image"
+              >
+                <PlayerAvatar player={player} size="md" />
+              </button>
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 className="sr-only"
                 onChange={handleAvatarUpload}
                 disabled={uploading}
               />
-            </label>
+              {uploading && (
+                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                  <Loader2 className="w-3 h-3 text-primary-foreground animate-spin" />
+                </div>
+              )}
+            </>
+          ) : (
+            <PlayerAvatar player={player} size="md" />
           )}
         </div>
 
@@ -997,15 +1008,20 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
                 }}
                 placeholder="Nickname..."
                 className="h-8 text-sm bg-background border-primary/40"
+                maxLength={NICKNAME_MAX_LENGTH}
               />
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-semibold text-sm truncate">{getPlayerDisplayName(player)}</span>
-                {player.teamName && (
-                  <span className="text-xs text-muted-foreground truncate">· {player.teamName}</span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setLocation(`/player/${player.id}`)}
+                  className="font-semibold text-sm truncate text-left bg-transparent border-0 p-0 m-0 appearance-none"
+                  title="View player profile"
+                >
+                  {getPlayerDisplayName(player)}
+                </button>
                 {canEdit && (
                   <button onClick={() => setEditing(true)} className="shrink-0 opacity-40 hover:opacity-100 transition-opacity">
                     <Pencil className="w-3 h-3" />
@@ -1027,14 +1043,6 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => setLocation(`/player/${player.id}`)}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-          title="View player profile"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </button>
         <span className="text-xs text-muted-foreground tabular-nums">
           {player.rankEmoji} {Math.round(player.eloRating)}
         </span>

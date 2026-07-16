@@ -251,7 +251,7 @@ export function TournamentBracket({ tournament, hostToken }: BracketProps) {
                       <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
                         {roundLabel(m)}
                       </span>
-                      <span className="font-bold text-sm truncate">
+                      <span className="font-bold text-sm leading-tight break-words">
                         <span className="text-primary">{winner}</span>
                         <span className="text-muted-foreground mx-1.5">beat</span>
                         <span className="text-muted-foreground">{loser}</span>
@@ -442,7 +442,7 @@ function TeamSlot({
         </div>
       )}
       <div className="min-w-0 flex flex-col">
-        <span className={`truncate text-sm ${isWinner && !isChampionship ? "text-primary" : ""}`}>
+        <span className={`text-sm leading-tight break-words ${isWinner && !isChampionship ? "text-primary" : ""}`}>
           {name ?? "TBD"}
         </span>
         {isWinner && isChampionship && (

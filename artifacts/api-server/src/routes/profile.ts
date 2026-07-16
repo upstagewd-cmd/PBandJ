@@ -7,6 +7,7 @@ import { eq, or, and, inArray, ne, sql } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
 import { getStartingEloForSkill } from "../lib/settings";
+import { getNicknameMap } from "../lib/user-display";
 
 export const profileRouter = Router();
 
@@ -136,7 +137,6 @@ profileRouter.get("/me", async (req, res) => {
 
     // Re-use the teams fetched earlier
     const userTeams = userTeamsEarly;
-    const teamMap = new Map(userTeams.map((t) => [t.id, t]));
 
     const recentCompleted = completedMatches
       .filter((m) => m.completedAt)
@@ -146,13 +146,32 @@ profileRouter.get("/me", async (req, res) => {
     const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
 
     // Opponent is whichever side is NOT the user (could be a team ID or player ID)
-    const opponentIds = recentCompleted.map((m) => {
-      const myOnSideOne = winnerIds.has(m.playerOneId ?? "") || playerIds.includes(m.playerOneId ?? "");
-      const oppTeamId = myOnSideOne ? m.playerTwoId : m.playerOneId;
-      // Resolve team → individual player IDs for display
-      const oppTeam = oppTeamId ? teamMap.get(oppTeamId) : null;
-      return oppTeam ? [oppTeam.player1Id, oppTeam.player2Id].filter(Boolean) as string[] : (oppTeamId ? [oppTeamId] : []);
-    }).flat();
+    const opponentSideIds = recentCompleted
+      .map((m) => {
+        const myOnSideOne = winnerIds.has(m.playerOneId ?? "") || playerIds.includes(m.playerOneId ?? "");
+        return myOnSideOne ? m.playerTwoId : m.playerOneId;
+      })
+      .filter(Boolean) as string[];
+
+    const opponentTeams = opponentSideIds.length
+      ? await db.select().from(teamsTable).where(
+          opponentSideIds.length === 1
+            ? eq(teamsTable.id, opponentSideIds[0])
+            : or(...opponentSideIds.map((id) => eq(teamsTable.id, id)))
+        )
+      : [];
+    const opponentTeamMap = new Map(opponentTeams.map((t) => [t.id, t]));
+
+    const opponentPlayerIds = new Set<string>();
+    for (const sideId of opponentSideIds) {
+      const oppTeam = opponentTeamMap.get(sideId);
+      if (oppTeam) {
+        if (oppTeam.player1Id) opponentPlayerIds.add(oppTeam.player1Id);
+        if (oppTeam.player2Id) opponentPlayerIds.add(oppTeam.player2Id);
+      } else {
+        opponentPlayerIds.add(sideId);
+      }
+    }
 
     // Partner IDs from the user's teams
     const partnerIds = userTeams
@@ -170,11 +189,11 @@ profileRouter.get("/me", async (req, res) => {
               : or(...tournamentIds.map((id) => eq(tournamentsTable.id, id)))
           )
         : Promise.resolve([]),
-      opponentIds.length
+      opponentPlayerIds.size
         ? db.select().from(playersTable).where(
-            opponentIds.length === 1
-              ? eq(playersTable.id, opponentIds[0])
-              : or(...opponentIds.map((id) => eq(playersTable.id, id)))
+            opponentPlayerIds.size === 1
+              ? eq(playersTable.id, [...opponentPlayerIds][0])
+              : or(...[...opponentPlayerIds].map((id) => eq(playersTable.id, id)))
           )
         : Promise.resolve([]),
       partnerIds.length
@@ -186,6 +205,7 @@ profileRouter.get("/me", async (req, res) => {
         : Promise.resolve([]),
     ]);
 
+    const opponentNicknameMap = await getNicknameMap(opponentPlayers.map((p) => p.clerkUserId));
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
     const oppMap = new Map(opponentPlayers.map((p) => [p.id, p]));
     const partnerPlayerMap = new Map(allPartnerPlayers.map((p) => [p.id, p]));
@@ -208,16 +228,21 @@ profileRouter.get("/me", async (req, res) => {
       const oppTeamId = myOnSideOne ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
 
       // Resolve opponent name — could be a team record or a direct player
-      const oppTeam = teamMap.get(oppTeamId);
-      let opponentName = "Unknown";
-      if (oppTeam) {
-        // Use team name from players table if available
-        const p1 = oppMap.get(oppTeam.player1Id ?? "");
-        opponentName = p1?.teamName ?? oppTeam.teamName ?? "Unknown";
-      } else {
-        const directOpp = oppMap.get(oppTeamId);
-        opponentName = directOpp ? (directOpp.teamName ?? `${directOpp.firstName} ${directOpp.lastName}`) : "Unknown";
-      }
+      const oppTeam = opponentTeamMap.get(oppTeamId);
+      const opponentPlayers = oppTeam
+        ? [oppTeam.player1Id, oppTeam.player2Id]
+            .filter(Boolean)
+            .map((id) => oppMap.get(id!))
+            .filter(Boolean)
+        : [oppMap.get(oppTeamId)].filter(Boolean);
+      const opponentName = opponentPlayers.length > 0
+        ? opponentPlayers
+            .map((p) => {
+              const nick = opponentNicknameMap.get(p?.clerkUserId ?? "");
+              return nick || p?.teamName || `${p?.firstName} ${p?.lastName}`;
+            })
+            .join(" & ")
+        : "Unknown";
 
       // Find the user's team for this match → partner
       const myTeam = userTeams.find((t) => t.id === m.playerOneId || t.id === m.playerTwoId);
@@ -254,6 +279,12 @@ profileRouter.get("/me", async (req, res) => {
         bracket: m.bracket,
         round: m.round,
         opponentName,
+        opponentPlayers: opponentPlayers.map((p) => ({
+          id: p!.id,
+          firstName: p!.firstName,
+          lastName: p!.lastName,
+          avatarUrl: p!.avatarUrl ?? null,
+        })),
         partnerName,
         won,
         scoreOne: m.scoreOne ?? null,

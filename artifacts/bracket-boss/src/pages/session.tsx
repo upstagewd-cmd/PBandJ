@@ -37,12 +37,12 @@ import {
   RefreshCw,
   UserMinus,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
+import { NICKNAME_MAX_LENGTH } from "@/lib/nickname";
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -195,18 +195,17 @@ function PlayerPool({
               <li key={p.id} className="flex items-center gap-3">
                 <PlayerAvatar player={p} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setLocation(`/player/${p.id}`)}
+                    className="text-sm font-medium truncate text-left bg-transparent border-0 p-0 m-0 appearance-none"
+                    title="View player profile"
+                  >
+                    {name}
+                  </button>
                   {subtext && <p className="text-[10px] text-muted-foreground truncate">{subtext}</p>}
                 </div>
                 {p.skillLevel && <span className="text-sm shrink-0">{SKILL_EMOJI[p.skillLevel] ?? ""}</span>}
-                <button
-                  type="button"
-                  onClick={() => setLocation(`/player/${p.id}`)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
-                  title="View player profile"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </button>
                 <span className="text-xs text-muted-foreground shrink-0">{p.rankEmoji} {Math.round(p.eloRating)}</span>
                 {hostToken && (
                   <button
@@ -408,6 +407,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
           onChange={(e) => setTeam(e.target.value)}
           placeholder="e.g. The Smashers"
           onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+          maxLength={NICKNAME_MAX_LENGTH}
         />
       </div>
       <div>
