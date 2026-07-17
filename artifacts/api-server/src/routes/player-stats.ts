@@ -1,5 +1,5 @@
 import { Router, Request } from "express";
-import { db, playersTable, matchesTable, tournamentsTable, teamsTable, openPlayMatchesTable } from "@workspace/db";
+import { db, playersTable, matchesTable, tournamentsTable, teamsTable, openPlayMatchesTable, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
@@ -11,6 +11,9 @@ type DbPlayer = typeof playersTable.$inferSelect;
 type DbTeam = typeof teamsTable.$inferSelect;
 type DbMatch = typeof matchesTable.$inferSelect;
 type DbOpenPlayMatch = typeof openPlayMatchesTable.$inferSelect;
+type DbSession = typeof sessionsTable.$inferSelect;
+type DbSessionPlayer = typeof sessionPlayersTable.$inferSelect;
+type DbSessionMatch = typeof sessionMatchesTable.$inferSelect;
 
 function getIdentityPlayers(allPlayers: DbPlayer[], player: DbPlayer): DbPlayer[] {
   if (!player.clerkUserId) return [player];
@@ -34,6 +37,27 @@ function getMatchesForIdentity(allMatches: DbMatch[], idSet: Set<string>): DbMat
 function getOpenPlayMatchesForIdentity(allMatches: DbOpenPlayMatch[], playerIds: Set<string>): DbOpenPlayMatch[] {
   return allMatches.filter((m) =>
     [m.teamOnePOneId, m.teamOnePTwoId, m.teamTwoPOneId, m.teamTwoPTwoId].some((id) => id && playerIds.has(id))
+  );
+}
+
+function getSessionPlayersForIdentity(allSessionPlayers: DbSessionPlayer[], identityPlayers: DbPlayer[]): DbSessionPlayer[] {
+  const clerkIds = new Set(identityPlayers.map((player) => player.clerkUserId).filter((id): id is string => !!id));
+  const guestNames = new Set(
+    identityPlayers
+      .filter((player) => !player.clerkUserId)
+      .map((player) => `${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`)
+  );
+
+  return allSessionPlayers.filter((sessionPlayer) => {
+    if (sessionPlayer.clerkUserId && clerkIds.has(sessionPlayer.clerkUserId)) return true;
+    const nameKey = `${sessionPlayer.firstName.trim().toLowerCase()} ${sessionPlayer.lastName.trim().toLowerCase()}`;
+    return !sessionPlayer.clerkUserId && guestNames.has(nameKey);
+  });
+}
+
+function getSessionMatchesForIdentity(allSessionMatches: DbSessionMatch[], sessionPlayerIds: Set<string>): DbSessionMatch[] {
+  return allSessionMatches.filter((match) =>
+    [match.team1P1Id, match.team1P2Id, match.team2P1Id, match.team2P2Id].some((id) => id && sessionPlayerIds.has(id))
   );
 }
 
@@ -80,10 +104,12 @@ playerStatsRouter.get("/known", async (_req, res) => {
 
 playerStatsRouter.get("/", async (_req, res) => {
   try {
-    const [allPlayers, allMatches, allTeams] = await Promise.all([
+    const [allPlayers, allMatches, allTeams, allSessionPlayers, allSessionMatches] = await Promise.all([
       db.select().from(playersTable).orderBy(desc(playersTable.eloRating)),
       db.select().from(matchesTable),
       db.select().from(teamsTable),
+      db.select().from(sessionPlayersTable),
+      db.select().from(sessionMatchesTable),
     ]);
     const allOpenPlayMatches = await db.select().from(openPlayMatchesTable);
     // Only compute one leaderboard row per signed-in identity.
@@ -103,7 +129,10 @@ playerStatsRouter.get("/", async (_req, res) => {
       const identityPlayerIds = new Set(identityPlayers.map((p) => p.id));
       const identityTeamIds = getTeamIdsForPlayers(allTeams, identityPlayerIds);
       const identityIds = new Set<string>([...identityPlayerIds, ...identityTeamIds]);
+      const identitySessionPlayers = getSessionPlayersForIdentity(allSessionPlayers, identityPlayers);
+      const identitySessionPlayerIds = new Set(identitySessionPlayers.map((sessionPlayer) => sessionPlayer.id));
       const openPlayIdentityMatches = getOpenPlayMatchesForIdentity(allOpenPlayMatches, identityPlayerIds);
+      const sessionIdentityMatches = getSessionMatchesForIdentity(allSessionMatches, identitySessionPlayerIds);
 
       const identityMatches = getMatchesForIdentity(allMatches, identityIds);
       const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
@@ -114,8 +143,14 @@ playerStatsRouter.get("/", async (_req, res) => {
           : [m.teamTwoPOneId, m.teamTwoPTwoId]
         ).some((id) => id && identityPlayerIds.has(id))
       ).length;
-      const wins = tournamentWins + openPlayWins;
-      const matchesPlayed = completedMatches.length + openPlayIdentityMatches.length;
+      const sessionWins = sessionIdentityMatches.filter((match) =>
+        (match.winnerTeam === 1
+          ? [match.team1P1Id, match.team1P2Id]
+          : [match.team2P1Id, match.team2P2Id]
+        ).some((id) => id && identitySessionPlayerIds.has(id))
+      ).length;
+      const wins = tournamentWins + openPlayWins + sessionWins;
+      const matchesPlayed = completedMatches.length + openPlayIdentityMatches.length + sessionIdentityMatches.length;
       const losses = matchesPlayed - wins;
       const winPct = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
 
@@ -170,11 +205,14 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
   try {
     const { playerId } = req.params;
 
-    const [player, allPlayers, allTeams, allMatches] = await Promise.all([
+    const [player, allPlayers, allTeams, allMatches, allSessionPlayers, allSessionMatches, allSessions] = await Promise.all([
       db.select().from(playersTable).where(eq(playersTable.id, playerId)).then((rows) => rows[0]),
       db.select().from(playersTable),
       db.select().from(teamsTable),
       db.select().from(matchesTable),
+      db.select().from(sessionPlayersTable),
+      db.select().from(sessionMatchesTable),
+      db.select().from(sessionsTable),
     ]);
     const allOpenPlayMatches = await db.select().from(openPlayMatchesTable);
     if (!player) { res.status(404).json({ error: "Player not found" }); return; }
@@ -183,7 +221,10 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const identityPlayerIds = new Set(identityPlayers.map((p) => p.id));
     const identityTeamIds = getTeamIdsForPlayers(allTeams, identityPlayerIds);
     const identityIds = new Set<string>([...identityPlayerIds, ...identityTeamIds]);
+    const identitySessionPlayers = getSessionPlayersForIdentity(allSessionPlayers, identityPlayers);
+    const identitySessionPlayerIds = new Set(identitySessionPlayers.map((sessionPlayer) => sessionPlayer.id));
     const openPlayIdentityMatches = getOpenPlayMatchesForIdentity(allOpenPlayMatches, identityPlayerIds);
+    const sessionIdentityMatches = getSessionMatchesForIdentity(allSessionMatches, identitySessionPlayerIds);
 
     const identityMatches = getMatchesForIdentity(allMatches, identityIds);
     const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
@@ -194,8 +235,14 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
         : [m.teamTwoPOneId, m.teamTwoPTwoId]
       ).some((id) => id && identityPlayerIds.has(id))
     ).length;
-    const wins = tournamentWins + openPlayWins;
-    const matchesPlayed = completedMatches.length + openPlayIdentityMatches.length;
+    const sessionWins = sessionIdentityMatches.filter((match) =>
+      (match.winnerTeam === 1
+        ? [match.team1P1Id, match.team1P2Id]
+        : [match.team2P1Id, match.team2P2Id]
+      ).some((id) => id && identitySessionPlayerIds.has(id))
+    ).length;
+    const wins = tournamentWins + openPlayWins + sessionWins;
+    const matchesPlayed = completedMatches.length + openPlayIdentityMatches.length + sessionIdentityMatches.length;
     const losses = matchesPlayed - wins;
     const winPct = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
 
@@ -210,8 +257,12 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const recentOpenPlay = openPlayIdentityMatches
       .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
       .slice(0, 20);
+    const recentSessionMatches = sessionIdentityMatches
+      .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
+      .slice(0, 20);
 
     const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
+    const sessionIds = [...new Set(recentSessionMatches.map((m) => m.sessionId))];
     const opponentSideIds = recentCompleted.map((m) => {
       const myOnSideOne = identityIds.has(m.playerOneId ?? "");
       return myOnSideOne ? m.playerTwoId : m.playerOneId;

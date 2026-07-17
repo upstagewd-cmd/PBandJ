@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 import { getAuth, clerkClient } from "@clerk/express";
-import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable, openPlayMatchesTable } from "@workspace/db";
+import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable, openPlayMatchesTable, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
 import { eq, or, and, inArray } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
@@ -10,6 +10,30 @@ import { getStartingEloForSkill } from "../lib/settings";
 import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
 export const profileRouter = Router();
+
+type DbSessionPlayer = typeof sessionPlayersTable.$inferSelect;
+type DbSessionMatch = typeof sessionMatchesTable.$inferSelect;
+
+function getSessionPlayersForIdentity(allSessionPlayers: DbSessionPlayer[], identityPlayers: typeof playersTable.$inferSelect[]) {
+  const clerkIds = new Set(identityPlayers.map((player) => player.clerkUserId).filter((id): id is string => !!id));
+  const guestNames = new Set(
+    identityPlayers
+      .filter((player) => !player.clerkUserId)
+      .map((player) => `${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`)
+  );
+
+  return allSessionPlayers.filter((sessionPlayer) => {
+    if (sessionPlayer.clerkUserId && clerkIds.has(sessionPlayer.clerkUserId)) return true;
+    const nameKey = `${sessionPlayer.firstName.trim().toLowerCase()} ${sessionPlayer.lastName.trim().toLowerCase()}`;
+    return !sessionPlayer.clerkUserId && guestNames.has(nameKey);
+  });
+}
+
+function getSessionMatchesForIdentity(allSessionMatches: DbSessionMatch[], sessionPlayerIds: Set<string>) {
+  return allSessionMatches.filter((match) =>
+    [match.team1P1Id, match.team1P2Id, match.team2P1Id, match.team2P2Id].some((id) => id && sessionPlayerIds.has(id))
+  );
+}
 
 profileRouter.get("/me", async (req, res) => {
   try {
@@ -25,6 +49,9 @@ profileRouter.get("/me", async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.clerkUserId, clerkUserId));
     const allPlayers = await db.select().from(playersTable);
+    const allSessionPlayers = await db.select().from(sessionPlayersTable);
+    const allSessionMatches = await db.select().from(sessionMatchesTable);
+    const allSessions = await db.select().from(sessionsTable);
 
     const allPlayerIds = players.map((p) => p.id);
 
@@ -129,12 +156,15 @@ profileRouter.get("/me", async (req, res) => {
     const completedMatches = allMatches.filter((m) => m.status === "completed" && !m.isBye);
     const identityPlayerIdSet = new Set(playerIds);
     const allPlayersMap = new Map(allPlayers.map((p) => [p.id, p]));
+    const sessionPlayersForIdentity = getSessionPlayersForIdentity(allSessionPlayers, identityPlayers);
+    const sessionPlayerIdSet = new Set(sessionPlayersForIdentity.map((player) => player.id));
 
     const openPlayIdentityMatches = allOpenPlayMatches.filter((m) => {
       const sideOneHasIdentity = [m.teamOnePOneId, m.teamOnePTwoId].some((id) => id && identityPlayerIdSet.has(id));
       const sideTwoHasIdentity = [m.teamTwoPOneId, m.teamTwoPTwoId].some((id) => id && identityPlayerIdSet.has(id));
       return sideOneHasIdentity || sideTwoHasIdentity;
     });
+    const sessionIdentityMatches = getSessionMatchesForIdentity(allSessionMatches, sessionPlayerIdSet);
 
     let totalWins = 0;
     let tournamentWins = 0;
@@ -154,7 +184,14 @@ profileRouter.get("/me", async (req, res) => {
       const won = winningSide.some((id) => id && identityPlayerIdSet.has(id));
       if (won) totalWins++;
     }
-    const totalMatchesPlayed = completedMatches.length + openPlayIdentityMatches.length;
+    for (const m of sessionIdentityMatches) {
+      const winningSide = m.winnerTeam === 1
+        ? [m.team1P1Id, m.team1P2Id]
+        : [m.team2P1Id, m.team2P2Id];
+      const won = winningSide.some((id) => id && sessionPlayerIdSet.has(id));
+      if (won) totalWins++;
+    }
+    const totalMatchesPlayed = completedMatches.length + openPlayIdentityMatches.length + sessionIdentityMatches.length;
     const totalLosses = totalMatchesPlayed - totalWins;
     const winPct = totalMatchesPlayed > 0 ? Math.round((totalWins / totalMatchesPlayed) * 100) : 0;
 
@@ -172,8 +209,12 @@ profileRouter.get("/me", async (req, res) => {
     const recentOpenPlay = openPlayIdentityMatches
       .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
       .slice(0, 20);
+    const recentSessionMatches = sessionIdentityMatches
+      .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
+      .slice(0, 20);
 
     const tournamentIds = [...new Set(recentCompleted.map((m) => m.tournamentId))];
+    const sessionIds = [...new Set(recentSessionMatches.map((m) => m.sessionId))];
 
     // Opponent is whichever side is NOT the user (could be a team ID or player ID)
     const opponentSideIds = recentCompleted
@@ -234,6 +275,11 @@ profileRouter.get("/me", async (req, res) => {
           )
         : Promise.resolve([]),
     ]);
+
+    const sessionMap = new Map(allSessions.map((session) => [session.id, session]));
+    const sessionOpponentPlayers = sessionIds.length
+      ? allSessionPlayers.filter((sessionPlayer) => sessionIds.some((sessionId) => sessionPlayer.sessionId === sessionId))
+      : [];
 
     const opponentNicknameMap = await getNicknameMap(opponentPlayers.map((p) => p.clerkUserId));
     const tourneyMap = new Map(tournaments.map((t) => [t.id, t]));
@@ -348,6 +394,40 @@ profileRouter.get("/me", async (req, res) => {
             lastName: p!.lastName,
             nickname: null,
             avatarUrl: p!.avatarUrl ?? null,
+          })),
+          partnerName: "—",
+          won,
+          scoreOne: m.scoreOne ?? null,
+          scoreTwo: m.scoreTwo ?? null,
+          completedAt: m.playedAt ? new Date(m.playedAt).toISOString() : new Date().toISOString(),
+        };
+      }),
+      ...recentSessionMatches.map((m) => {
+        const mySideOne = [m.team1P1Id, m.team1P2Id].some((id) => id && sessionPlayerIdSet.has(id));
+        const opponentIds = mySideOne ? [m.team2P1Id, m.team2P2Id] : [m.team1P1Id, m.team1P2Id];
+        const opponentPlayersResolved = opponentIds
+          .map((id) => sessionOpponentPlayers.find((sessionPlayer) => sessionPlayer.id === id))
+          .filter(Boolean);
+        const opponentName = opponentPlayersResolved.length > 0
+          ? opponentPlayersResolved.map((op) => `${op!.firstName} ${op!.lastName}`.trim()).join(" & ")
+          : "Unknown";
+        const won = (m.winnerTeam === 1)
+          ? [m.team1P1Id, m.team1P2Id].some((id) => id && sessionPlayerIdSet.has(id))
+          : [m.team2P1Id, m.team2P2Id].some((id) => id && sessionPlayerIdSet.has(id));
+
+        return {
+          matchId: m.id,
+          tournamentId: m.sessionId,
+          tournamentName: sessionMap.get(m.sessionId)?.name ?? "Open Play",
+          bracket: "open_play",
+          round: 0,
+          opponentName,
+          opponentPlayers: opponentPlayersResolved.map((op) => ({
+            id: op!.id,
+            firstName: op!.firstName,
+            lastName: op!.lastName,
+            nickname: null,
+            avatarUrl: null,
           })),
           partnerName: "—",
           won,

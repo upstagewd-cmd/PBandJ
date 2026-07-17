@@ -7,6 +7,7 @@ import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
 import { getStartingEloForSkill, getEloKFactor } from "../lib/settings";
 import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
+import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
 
 export const sessionsRouter = Router();
 const NICKNAME_MAX_LENGTH = 15;
@@ -281,6 +282,55 @@ sessionsRouter.post("/:sessionId/matches", async (req: Request<{ sessionId: stri
       const p = playerMap.get(id);
       if (p) await db.update(sessionPlayersTable).set({ eloRating: Math.max(800, p.eloRating + loserDelta) }).where(eq(sessionPlayersTable.id, id));
     }
+
+    const participatingSessionPlayers = await db
+      .select({
+        id: sessionPlayersTable.id,
+        clerkUserId: sessionPlayersTable.clerkUserId,
+        firstName: sessionPlayersTable.firstName,
+        lastName: sessionPlayersTable.lastName,
+      })
+      .from(sessionPlayersTable)
+      .where(inArray(sessionPlayersTable.id, allIds));
+
+    const sessionIdentityKeys = new Map(
+      participatingSessionPlayers.map((player) => [
+        player.id,
+        player.clerkUserId
+          ? `clerk:${player.clerkUserId}`
+          : `name:${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`,
+      ])
+    );
+
+    const persistentPlayers = await db.select({ id: playersTable.id, clerkUserId: playersTable.clerkUserId, firstName: playersTable.firstName, lastName: playersTable.lastName }).from(playersTable);
+    const persistentPlayersByIdentity = new Map<string, (typeof persistentPlayers)[number][]>();
+    for (const player of persistentPlayers) {
+      const key = player.clerkUserId
+        ? `clerk:${player.clerkUserId}`
+        : `name:${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`;
+      const existing = persistentPlayersByIdentity.get(key) ?? [];
+      existing.push(player);
+      persistentPlayersByIdentity.set(key, existing);
+    }
+
+    const winnerPersistentIds = [...new Set(winnerIds.flatMap((id) => persistentPlayersByIdentity.get(sessionIdentityKeys.get(id) ?? "")?.map((player) => player.id) ?? []))];
+    const loserPersistentIds = [...new Set(loserIds.flatMap((id) => persistentPlayersByIdentity.get(sessionIdentityKeys.get(id) ?? "")?.map((player) => player.id) ?? []))];
+    const allPersistentIds = [...new Set([...winnerPersistentIds, ...loserPersistentIds])];
+
+    for (const id of winnerPersistentIds) {
+      const [p] = await db.select().from(playersTable).where(eq(playersTable.id, id));
+      if (p) {
+        await db.update(playersTable).set({ eloRating: (p.eloRating ?? 1200) + winnerDelta }).where(eq(playersTable.id, id));
+      }
+    }
+    for (const id of loserPersistentIds) {
+      const [p] = await db.select().from(playersTable).where(eq(playersTable.id, id));
+      if (p) {
+        await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + loserDelta) }).where(eq(playersTable.id, id));
+      }
+    }
+
+    await autoAwardBadgesForPlayers(allPersistentIds);
 
     const full = await getSessionFull(sessionId);
     res.status(201).json(full);
