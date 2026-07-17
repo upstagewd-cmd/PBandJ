@@ -9,6 +9,7 @@ import { ArrowLeft, Trophy, Target, TrendingUp, Star, LogOut, User, Camera, User
 import { useToast } from "@/hooks/use-toast";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { BadgeInfoChip } from "@/components/profile/BadgeInfoChip";
 import { getNicknameApiErrorMessage, normalizeNickname, validateNickname, NICKNAME_MAX_LENGTH } from "@/lib/nickname";
 
 const SKILL_LEVELS = [
@@ -310,13 +311,10 @@ export default function ProfilePage() {
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
                 <div className="flex flex-wrap gap-2">
                   {((profile as any).badges as Array<{ id: string; name: string; icon: string; description: string }>).map((b) => (
-                    <div key={b.id} title={b.description}
-                      className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
-                      <span className="text-base leading-none">{b.icon}</span>
-                      <span className="text-xs font-bold text-primary">{b.name}</span>
-                    </div>
+                    <BadgeInfoChip key={b.id} badge={b} />
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
               </div>
             )}
             <p className="text-xs text-muted-foreground/60 text-center">

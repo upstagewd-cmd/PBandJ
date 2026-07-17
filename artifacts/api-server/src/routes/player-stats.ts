@@ -4,6 +4,7 @@ import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
+import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
 
 export const playerStatsRouter = Router();
 
@@ -228,6 +229,9 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
 
     const identityMatches = getMatchesForIdentity(allMatches, identityIds);
     const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
+    const competitiveIdentityPlayers = identityPlayers.filter(
+      (candidate) => candidate.tournamentId !== USER_REGISTRY_TOURNAMENT_ID
+    );
     const tournamentWins = completedMatches.filter((m) => identityIds.has(m.winnerId ?? "")).length;
     const openPlayWins = openPlayIdentityMatches.filter((m) =>
       (m.winnerTeam === 1
@@ -249,6 +253,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const tournamentWinsDisplay = completedMatches.filter(
       (m) => identityIds.has(m.winnerId ?? "") && (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset")
     ).length;
+    const tournamentsPlayed = new Set(competitiveIdentityPlayers.map((candidate) => candidate.tournamentId)).size;
 
     const recentCompleted = completedMatches
       .filter((m) => m.completedAt)
@@ -294,10 +299,19 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
           )
         : Promise.resolve([]),
       db
-        .select({ badge: badgesTable })
+        .select({
+          badge: badgesTable,
+          grantId: playerBadgesTable.id,
+          grantedAt: playerBadgesTable.grantedAt,
+        })
         .from(playerBadgesTable)
         .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
-        .where(and(eq(playerBadgesTable.playerId, playerId), eq(badgesTable.enabled, true))),
+        .where(
+          and(
+            or(...identityPlayers.map((candidate) => eq(playerBadgesTable.playerId, candidate.id))),
+            eq(badgesTable.enabled, true)
+          )
+        ),
     ]);
 
     const playerNicknameMap = await getNicknameMap([player.clerkUserId]);
@@ -379,9 +393,57 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       };
     });
 
-    const recentMatchesResult = [...recentTournamentMatches, ...recentOpenPlayMatches]
+    const sessionMap = new Map(allSessions.map((session) => [session.id, session]));
+    const sessionOpponentPlayers = sessionIds.length
+      ? allSessionPlayers.filter((sessionPlayer) => sessionIds.some((sessionId) => sessionPlayer.sessionId === sessionId))
+      : [];
+
+    const recentSessionMatchesResult = recentSessionMatches.map((match) => {
+      const mySideOne = [match.team1P1Id, match.team1P2Id].some((id) => id && identitySessionPlayerIds.has(id));
+      const opponentIds = mySideOne ? [match.team2P1Id, match.team2P2Id] : [match.team1P1Id, match.team1P2Id];
+      const opponentPlayersResolved = opponentIds
+        .map((id) => sessionOpponentPlayers.find((sessionPlayer) => sessionPlayer.id === id))
+        .filter(Boolean);
+      const opponentName = opponentPlayersResolved.length > 0
+        ? opponentPlayersResolved.map((opponent) => `${opponent!.firstName} ${opponent!.lastName}`.trim()).join(" & ")
+        : "Unknown";
+      const won = (match.winnerTeam === 1)
+        ? [match.team1P1Id, match.team1P2Id].some((id) => id && identitySessionPlayerIds.has(id))
+        : [match.team2P1Id, match.team2P2Id].some((id) => id && identitySessionPlayerIds.has(id));
+
+      return {
+        matchId: match.id,
+        tournamentId: match.sessionId,
+        tournamentName: sessionMap.get(match.sessionId)?.name ?? "Open Play",
+        bracket: "open_play",
+        round: 0,
+        opponentName,
+        opponentPlayers: opponentPlayersResolved.map((opponent) => ({
+          id: opponent!.id,
+          firstName: opponent!.firstName,
+          lastName: opponent!.lastName,
+          nickname: null,
+          avatarUrl: null,
+        })),
+        partnerName: "—",
+        won,
+        scoreOne: match.scoreOne ?? null,
+        scoreTwo: match.scoreTwo ?? null,
+        completedAt: match.playedAt ? new Date(match.playedAt).toISOString() : new Date().toISOString(),
+      };
+    });
+
+    const recentMatchesResult = [...recentTournamentMatches, ...recentOpenPlayMatches, ...recentSessionMatchesResult]
       .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
       .slice(0, 20);
+
+    const latestBadgeGrantByBadgeId = new Map<string, (typeof badgeRows)[number]>();
+    for (const row of badgeRows) {
+      const current = latestBadgeGrantByBadgeId.get(row.badge.id);
+      if (!current || row.grantedAt.getTime() > current.grantedAt.getTime()) {
+        latestBadgeGrantByBadgeId.set(row.badge.id, row);
+      }
+    }
 
     const eloRating = Math.max(...identityPlayers.map((p) => p.eloRating ?? 1200));
     const rank = await getRank(eloRating);
@@ -408,8 +470,9 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       matchesPlayed,
       winPct,
       tournamentWins: tournamentWinsDisplay,
+      tournamentsPlayed,
       recentMatches: recentMatchesResult,
-      badges: badgeRows.map((r: any) => ({
+      badges: [...latestBadgeGrantByBadgeId.values()].map((r: any) => ({
         id: r.badge.id,
         name: r.badge.name,
         icon: r.badge.icon,

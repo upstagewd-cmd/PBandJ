@@ -2,6 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useGetPlayerStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { BadgeInfoChip } from "@/components/profile/BadgeInfoChip";
 import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
 import { ArrowLeft, Trophy, Target, TrendingUp, Star } from "lucide-react";
 
@@ -29,6 +30,7 @@ export default function PlayerStatsPage() {
 
   const { player, wins, losses, matchesPlayed, winPct, tournamentWins, recentMatches } = stats;
   const badges = (stats as any).badges as Array<{ id: string; name: string; icon: string; description: string }> ?? [];
+  const tournamentsPlayed = Number((stats as any).tournamentsPlayed ?? 0);
 
   const rankTitle = (player as any).rankTitle ?? "New Seed";
   const rankEmoji = (player as any).rankEmoji ?? "🌱";
@@ -62,13 +64,10 @@ export default function PlayerStatsPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
             <div className="flex flex-wrap gap-2">
               {badges.map((b) => (
-                <div key={b.id} title={b.description}
-                  className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
-                  <span className="text-base leading-none">{b.icon}</span>
-                  <span className="text-xs font-bold text-primary">{b.name}</span>
-                </div>
+                <BadgeInfoChip key={b.id} badge={b} />
               ))}
             </div>
+            <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
           </div>
         )}
       </div>
@@ -78,7 +77,12 @@ export default function PlayerStatsPage() {
         <StatCard icon={<Target className="w-5 h-5 text-primary" />} label="Matches" value={matchesPlayed} />
         <StatCard icon={<TrendingUp className="w-5 h-5 text-green-400" />} label="Wins" value={wins} sub={`${winPct}% win rate`} />
         <StatCard icon={<Target className="w-5 h-5 text-muted-foreground" />} label="Losses" value={losses} />
-        <StatCard icon={<Trophy className="w-5 h-5 text-yellow-500" />} label="Titles" value={tournamentWins} sub="won" />
+        <StatCard
+          icon={<Trophy className="w-5 h-5 text-yellow-500" />}
+          label="Titles"
+          value={tournamentWins}
+          sub={`${tournamentsPlayed} tournament${tournamentsPlayed !== 1 ? "s" : ""}`}
+        />
       </div>
 
       {/* Recent matches */}
