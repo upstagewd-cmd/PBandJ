@@ -9,6 +9,7 @@ import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
 import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
+import { getEloKFactor } from "../lib/settings";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
@@ -131,6 +132,7 @@ openPlayRouter.post("/matches", async (req: Request<{ tournamentId: string }>, r
   try {
     const body = LogOpenPlayMatchBody.parse(req.body);
     const { tournamentId } = req.params;
+    const kFactor = await getEloKFactor();
 
     const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
     if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
@@ -166,7 +168,7 @@ openPlayRouter.post("/matches", async (req: Request<{ tournamentId: string }>, r
     const winnerAvg = body.winnerTeam === 1 ? teamOneAvg : teamTwoAvg;
     const loserAvg = body.winnerTeam === 1 ? teamTwoAvg : teamOneAvg;
 
-    const { winnerDelta, loserDelta } = computeElo(winnerAvg, loserAvg);
+    const { winnerDelta, loserDelta } = computeElo(winnerAvg, loserAvg, kFactor);
 
     for (const id of winnerIds) {
       const p = playerMap.get(id);

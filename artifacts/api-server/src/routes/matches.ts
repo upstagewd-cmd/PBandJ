@@ -7,6 +7,7 @@ import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { computeElo } from "../lib/elo";
 import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
+import { getEloKFactor } from "../lib/settings";
 
 export const matchesRouter = Router({ mergeParams: true });
 
@@ -118,6 +119,7 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
   try {
     const body = UpdateMatchBody.parse(req.body);
     const { tournamentId, matchId } = req.params;
+    const kFactor = await getEloKFactor();
 
     const [tournament] = await db
       .select()
@@ -144,6 +146,7 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
       match.winnerId = body.winnerId;
       match.status = "completed";
       (match as any).completedAt = new Date();
+      const badgeAwardPlayerIds = new Set<string>();
 
       // ── ELO update for all 4 players (team-based) ────────────────────
       if (!match.isBye && match.playerOneId && match.playerTwoId) {
@@ -168,7 +171,7 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
           const team1Won = match.winnerId === team1.id;
           const t1Avg = t1Players.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / Math.max(1, t1Players.length);
           const t2Avg = t2Players.reduce((s, p) => s + (p.eloRating ?? 1200), 0) / Math.max(1, t2Players.length);
-          const { winnerDelta, loserDelta } = computeElo(team1Won ? t1Avg : t2Avg, team1Won ? t2Avg : t1Avg);
+          const { winnerDelta, loserDelta } = computeElo(team1Won ? t1Avg : t2Avg, team1Won ? t2Avg : t1Avg, kFactor);
 
           for (const p of t1Players) {
             const delta = team1Won ? winnerDelta : loserDelta;
@@ -178,9 +181,9 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
             const delta = team1Won ? loserDelta : winnerDelta;
             await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + delta) }).where(eq(playersTable.id, p.id));
           }
-
-          const awards = await autoAwardBadgesForPlayers([...team1PlayerIds, ...team2PlayerIds]);
-          broadcastBadgeUnlocked(tournamentId, awards);
+          for (const playerId of [...team1PlayerIds, ...team2PlayerIds]) {
+            badgeAwardPlayerIds.add(playerId);
+          }
 
           // ── Add both losing team players to open play pool ─────────────
           const loserTeamId = loserId(match);
@@ -204,6 +207,11 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
 
       const toSave = allMatches.filter((m) => changed.has(m.id));
       await saveMatches(toSave);
+
+      if (badgeAwardPlayerIds.size > 0) {
+        const awards = await autoAwardBadgesForPlayers([...badgeAwardPlayerIds]);
+        broadcastBadgeUnlocked(tournamentId, awards);
+      }
 
       // ── Check tournament completion ───────────────────────────────────
       // Tournament is done when the championship match (highest round, only 1 match) is completed

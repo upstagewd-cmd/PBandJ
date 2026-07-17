@@ -1,11 +1,12 @@
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { badgesTable, matchesTable, playerBadgesTable, playersTable, teamsTable } from "@workspace/db/schema";
+import { badgesTable, matchesTable, openPlayMatchesTable, playerBadgesTable, playersTable, teamsTable } from "@workspace/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getSystemSettingBoolean } from "./settings";
 
 type PlayerRow = typeof playersTable.$inferSelect;
 type MatchRow = typeof matchesTable.$inferSelect;
+type OpenPlayMatchRow = typeof openPlayMatchesTable.$inferSelect;
 type TeamRow = typeof teamsTable.$inferSelect;
 type BadgeRow = typeof badgesTable.$inferSelect;
 
@@ -34,19 +35,19 @@ function teamIdsForPlayers(allTeams: TeamRow[], playerIds: Set<string>) {
   return ids;
 }
 
-function bestWinStreak(matchesAscending: MatchRow[], identityIds: Set<string>) {
-  let best = 0;
-  let current = 0;
-  for (const match of matchesAscending) {
-    const won = identityIds.has(match.winnerId ?? "");
-    if (won) {
-      current += 1;
-      if (current > best) best = current;
-    } else {
-      current = 0;
-    }
+function winnerIdsForOpenPlayMatch(match: OpenPlayMatchRow) {
+  if (match.winnerTeam === 1) {
+    return [match.teamOnePOneId, match.teamOnePTwoId].filter(Boolean) as string[];
   }
-  return best;
+  return [match.teamTwoPOneId, match.teamTwoPTwoId].filter(Boolean) as string[];
+}
+
+function normalizeRuleType(ruleType: string) {
+  const normalized = ruleType.trim().toLowerCase();
+  if (normalized === "streak" || normalized === "win_streak" || normalized === "win_streaks") {
+    return "streaks";
+  }
+  return normalized;
 }
 
 function badgeMetric(
@@ -59,7 +60,7 @@ function badgeMetric(
     uniqueWinningPartners: number;
   }
 ) {
-  switch (badge.ruleType) {
+  switch (normalizeRuleType(badge.ruleType)) {
     case "wins":
       return context.wins;
     case "matches":
@@ -81,11 +82,12 @@ export async function autoAwardBadgesForPlayers(playerIds: string[]): Promise<Ba
   const badgeSystemEnabled = await getSystemSettingBoolean("badge_system_enabled", true);
   if (!badgeSystemEnabled) return [];
 
-  const [enabledBadges, allPlayers, allTeams, completedMatches] = await Promise.all([
+  const [enabledBadges, allPlayers, allTeams, completedMatches, openPlayMatches] = await Promise.all([
     db.select().from(badgesTable).where(eq(badgesTable.enabled, true)),
     db.select().from(playersTable),
     db.select().from(teamsTable),
     db.select().from(matchesTable).where(and(eq(matchesTable.status, "completed"), eq(matchesTable.isBye, false))),
+    db.select().from(openPlayMatchesTable),
   ]);
 
   if (enabledBadges.length === 0) return [];
@@ -110,6 +112,15 @@ export async function autoAwardBadgesForPlayers(playerIds: string[]): Promise<Ba
       (match) => identityIds.has(match.playerOneId ?? "") || identityIds.has(match.playerTwoId ?? "")
     );
     const wins = relevantMatches.filter((match) => identityIds.has(match.winnerId ?? ""));
+    const relevantOpenPlayMatches = openPlayMatches.filter((match) =>
+      identityPlayerIds.has(match.teamOnePOneId) ||
+      (match.teamOnePTwoId ? identityPlayerIds.has(match.teamOnePTwoId) : false) ||
+      identityPlayerIds.has(match.teamTwoPOneId) ||
+      (match.teamTwoPTwoId ? identityPlayerIds.has(match.teamTwoPTwoId) : false)
+    );
+    const openPlayWins = relevantOpenPlayMatches.filter((match) =>
+      winnerIdsForOpenPlayMatch(match).some((id) => identityPlayerIds.has(id))
+    );
 
     const tournamentsWon = new Set(
       wins
@@ -117,11 +128,27 @@ export async function autoAwardBadgesForPlayers(playerIds: string[]): Promise<Ba
         .map((match) => match.tournamentId)
     ).size;
 
-    const winsAscending = [...relevantMatches].sort((a, b) => {
-      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-      return aTime - bTime;
-    });
+    const streakEvents = [
+      ...relevantMatches.map((match) => ({
+        playedAt: match.completedAt ? new Date(match.completedAt).getTime() : 0,
+        won: identityIds.has(match.winnerId ?? ""),
+      })),
+      ...relevantOpenPlayMatches.map((match) => ({
+        playedAt: new Date(match.playedAt).getTime(),
+        won: winnerIdsForOpenPlayMatch(match).some((id) => identityPlayerIds.has(id)),
+      })),
+    ].sort((a, b) => a.playedAt - b.playedAt);
+
+    let bestStreak = 0;
+    let currentStreak = 0;
+    for (const event of streakEvents) {
+      if (event.won) {
+        currentStreak += 1;
+        if (currentStreak > bestStreak) bestStreak = currentStreak;
+      } else {
+        currentStreak = 0;
+      }
+    }
 
     const uniqueWinningPartners = new Set<string>();
     for (const match of wins) {
@@ -135,12 +162,23 @@ export async function autoAwardBadgesForPlayers(playerIds: string[]): Promise<Ba
       if (p1 && identityPlayerIds.has(p1) && p2 && !identityPlayerIds.has(p2)) uniqueWinningPartners.add(p2);
       if (p2 && identityPlayerIds.has(p2) && p1 && !identityPlayerIds.has(p1)) uniqueWinningPartners.add(p1);
     }
+    for (const match of openPlayWins) {
+      const winnerIds = winnerIdsForOpenPlayMatch(match);
+      for (const winnerId of winnerIds) {
+        if (!identityPlayerIds.has(winnerId)) continue;
+        for (const partnerId of winnerIds) {
+          if (partnerId !== winnerId && !identityPlayerIds.has(partnerId)) {
+            uniqueWinningPartners.add(partnerId);
+          }
+        }
+      }
+    }
 
     const context = {
-      wins: wins.length,
-      matches: relevantMatches.length,
+      wins: wins.length + openPlayWins.length,
+      matches: relevantMatches.length + relevantOpenPlayMatches.length,
       tournamentsWon,
-      bestStreak: bestWinStreak(winsAscending, identityIds),
+      bestStreak,
       uniqueWinningPartners: uniqueWinningPartners.size,
     };
 

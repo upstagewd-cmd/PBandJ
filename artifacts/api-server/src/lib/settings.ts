@@ -34,6 +34,10 @@ export async function getSystemSettingBoolean(key: string, fallback: boolean): P
   return fallback;
 }
 
+export async function getEloKFactor(): Promise<number> {
+  return getSystemSettingNumber("elo_k_factor", 32);
+}
+
 export async function getStartingEloForSkill(skillLevel?: string | null): Promise<number> {
   const fallback = await getSystemSettingNumber("elo_initial", 1200);
   if (!skillLevel) return fallback;

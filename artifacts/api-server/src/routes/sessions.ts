@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
-import { getStartingEloForSkill } from "../lib/settings";
+import { getStartingEloForSkill, getEloKFactor } from "../lib/settings";
 import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
 export const sessionsRouter = Router();
@@ -265,12 +265,13 @@ sessionsRouter.post("/:sessionId/matches", async (req: Request<{ sessionId: stri
     const t2Ids = [body.team2P1Id, body.team2P2Id].filter(Boolean) as string[];
     const t1Avg = t1Ids.reduce((s, id) => s + (playerMap.get(id)?.eloRating ?? 1200), 0) / t1Ids.length;
     const t2Avg = t2Ids.reduce((s, id) => s + (playerMap.get(id)?.eloRating ?? 1200), 0) / t2Ids.length;
+    const kFactor = await getEloKFactor();
 
     const winnerIds = body.winnerTeam === 1 ? t1Ids : t2Ids;
     const loserIds = body.winnerTeam === 1 ? t2Ids : t1Ids;
     const winnerAvg = body.winnerTeam === 1 ? t1Avg : t2Avg;
     const loserAvg = body.winnerTeam === 1 ? t2Avg : t1Avg;
-    const { winnerDelta, loserDelta } = computeElo(winnerAvg, loserAvg);
+    const { winnerDelta, loserDelta } = computeElo(winnerAvg, loserAvg, kFactor);
 
     for (const id of winnerIds) {
       const p = playerMap.get(id);

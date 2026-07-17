@@ -4,12 +4,34 @@ import {
   matchesTable,
   openPlayMatchesTable,
   playersTable,
+  teamsTable,
   tournamentsTable,
 } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { broadcastMatchDeleted } from "../../lib/ws";
+import { eq, desc, inArray } from "drizzle-orm";
+import { autoAwardBadgesForPlayers } from "../../lib/badge-awards";
+import { broadcastBadgeUnlocked, broadcastMatchDeleted } from "../../lib/ws";
 
 export const adminMatchesRouter = Router();
+
+async function getBracketMatchPlayerIds(match: typeof matchesTable.$inferSelect) {
+  const sideIds = [match.playerOneId, match.playerTwoId].filter(Boolean) as string[];
+  if (sideIds.length === 0) return [] as string[];
+
+  const teams = await db.select().from(teamsTable).where(inArray(teamsTable.id, sideIds));
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+
+  const ids = new Set<string>();
+  for (const sideId of sideIds) {
+    const team = teamById.get(sideId);
+    if (team) {
+      if (team.player1Id) ids.add(team.player1Id);
+      if (team.player2Id) ids.add(team.player2Id);
+    } else {
+      ids.add(sideId);
+    }
+  }
+  return [...ids];
+}
 
 adminMatchesRouter.get("/", async (req, res) => {
   const bracket = await db
@@ -56,6 +78,13 @@ adminMatchesRouter.patch("/:matchId", async (req, res) => {
     res.status(404).json({ error: "Match not found" });
     return;
   }
+
+  const playerIds = await getBracketMatchPlayerIds(updated);
+  if (playerIds.length > 0) {
+    const awards = await autoAwardBadgesForPlayers(playerIds);
+    broadcastBadgeUnlocked(updated.tournamentId, awards);
+  }
+
   res.json(updated);
 });
 
@@ -106,5 +135,17 @@ adminMatchesRouter.patch("/open-play/:matchId", async (req, res) => {
     res.status(404).json({ error: "Match not found" });
     return;
   }
+
+  const playerIds = [
+    updated.teamOnePOneId,
+    updated.teamOnePTwoId,
+    updated.teamTwoPOneId,
+    updated.teamTwoPTwoId,
+  ].filter(Boolean) as string[];
+  if (playerIds.length > 0) {
+    const awards = await autoAwardBadgesForPlayers(playerIds);
+    broadcastBadgeUnlocked(updated.tournamentId, awards);
+  }
+
   res.json(updated);
 });

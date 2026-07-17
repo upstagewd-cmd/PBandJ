@@ -4,11 +4,12 @@ import {
   playersTable,
   matchesTable,
   openPlayMatchesTable,
+  teamsTable,
 } from "@workspace/db/schema";
 import { eq, or, desc, inArray } from "drizzle-orm";
 import { computeElo, INITIAL_ELO } from "../../lib/elo.js";
 import { getRank } from "../../lib/ranks.js";
-import { getSystemSettingNumber } from "../../lib/settings.js";
+import { getSystemSettingNumber, getEloKFactor } from "../../lib/settings.js";
 
 export const adminRatingsRouter = Router();
 
@@ -96,6 +97,7 @@ adminRatingsRouter.post("/reset/:playerId", async (req, res) => {
 
 adminRatingsRouter.post("/recalculate", async (req, res) => {
   const allPlayers = await db.select().from(playersTable);
+  const allTeams = await db.select().from(teamsTable);
   const allMatches = await db
     .select()
     .from(matchesTable)
@@ -108,15 +110,33 @@ adminRatingsRouter.post("/recalculate", async (req, res) => {
   const ratings = new Map<string, number>(
     allPlayers.map((p) => [p.id, INITIAL_ELO]),
   );
+  const kFactor = await getEloKFactor();
+
+  const teamById = new Map(allTeams.map((team) => [team.id, team]));
+  const sideToPlayerIds = (sideId: string): string[] => {
+    const team = teamById.get(sideId);
+    if (!team) return [sideId];
+    return [team.player1Id, team.player2Id].filter(Boolean) as string[];
+  };
 
   for (const match of allMatches) {
     if (match.status !== "completed" || !match.winnerId || !match.playerOneId || !match.playerTwoId) continue;
-    const loserId = match.winnerId === match.playerOneId ? match.playerTwoId : match.playerOneId;
-    const winnerRating = ratings.get(match.winnerId) ?? INITIAL_ELO;
-    const loserRating = ratings.get(loserId) ?? INITIAL_ELO;
-    const { winnerDelta, loserDelta } = computeElo(winnerRating, loserRating);
-    ratings.set(match.winnerId, Math.max(800, winnerRating + winnerDelta));
-    ratings.set(loserId, Math.max(800, loserRating + loserDelta));
+    const loserSideId = match.winnerId === match.playerOneId ? match.playerTwoId : match.playerOneId;
+    const winnerIds = sideToPlayerIds(match.winnerId);
+    const loserIds = sideToPlayerIds(loserSideId);
+
+    if (winnerIds.length === 0 || loserIds.length === 0) continue;
+
+    const winnerRating = winnerIds.reduce((sum, id) => sum + (ratings.get(id) ?? INITIAL_ELO), 0) / winnerIds.length;
+    const loserRating = loserIds.reduce((sum, id) => sum + (ratings.get(id) ?? INITIAL_ELO), 0) / loserIds.length;
+    const { winnerDelta, loserDelta } = computeElo(winnerRating, loserRating, kFactor);
+
+    for (const id of winnerIds) {
+      ratings.set(id, Math.max(800, (ratings.get(id) ?? INITIAL_ELO) + winnerDelta));
+    }
+    for (const id of loserIds) {
+      ratings.set(id, Math.max(800, (ratings.get(id) ?? INITIAL_ELO) + loserDelta));
+    }
   }
 
   for (const match of allOpenPlay) {
@@ -128,7 +148,7 @@ adminRatingsRouter.post("/recalculate", async (req, res) => {
     const losers = match.winnerTeam === 1 ? team2 : team1;
     const winAvg = match.winnerTeam === 1 ? avgT1 : avgT2;
     const loseAvg = match.winnerTeam === 1 ? avgT2 : avgT1;
-    const { winnerDelta, loserDelta } = computeElo(winAvg, loseAvg);
+    const { winnerDelta, loserDelta } = computeElo(winAvg, loseAvg, kFactor);
     for (const id of winners) ratings.set(id, Math.max(800, (ratings.get(id) ?? INITIAL_ELO) + winnerDelta));
     for (const id of losers) ratings.set(id, Math.max(800, (ratings.get(id) ?? INITIAL_ELO) + loserDelta));
   }
