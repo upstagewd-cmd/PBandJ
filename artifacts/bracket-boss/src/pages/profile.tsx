@@ -473,47 +473,52 @@ export default function ProfilePage() {
                     <Star className="w-4 h-4" /> Recent Matches
                   </h2>
                   <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/30 overflow-hidden">
-                    {profile.recentMatches.map((m) => (
-                      <div key={m.matchId} className="flex items-center gap-3 px-4 py-3">
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${
-                            m.won ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
-                          }`}
-                        >
-                          {m.won ? "W" : "L"}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          {Array.isArray((m as any).opponentPlayers) && (m as any).opponentPlayers.length > 0 && (
-                            <div className="flex -space-x-2 mb-1">
-                              {(m as any).opponentPlayers.slice(0, 2).map((opponent: any) => (
-                                <div key={opponent.id} className="ring-2 ring-card rounded-full">
-                                  <PlayerAvatar player={opponent} size="sm" />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-sm font-bold truncate">
-                            vs <span className="text-foreground">{m.opponentName}</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {m.tournamentName} ·{" "}
-                            {m.bracket === "winner"
-                              ? "WB"
-                              : m.bracket === "loser"
-                              ? "LB"
-                              : m.bracket === "grand_finals"
-                              ? "GF"
-                              : "GF Reset"}{" "}
-                            R{m.round}
-                          </p>
-                        </div>
-                        {(m.scoreOne !== null || m.scoreTwo !== null) && (
-                          <span className="font-mono text-sm text-muted-foreground shrink-0">
-                            {m.scoreOne ?? "–"}–{m.scoreTwo ?? "–"}
+                    {profile.recentMatches.map((m) => {
+                      const matchLabel = m.bracket === "open_play"
+                        ? "Open Play"
+                        : m.bracket === "winner"
+                        ? "WB"
+                        : m.bracket === "loser"
+                        ? "LB"
+                        : m.bracket === "grand_finals"
+                        ? "GF"
+                        : "GF Reset";
+                      const roundLabel = m.bracket === "open_play" ? "" : ` R${m.round}`;
+
+                      return (
+                        <div key={m.matchId} className="flex items-center gap-3 px-4 py-3">
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${
+                              m.won ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                            }`}
+                          >
+                            {m.won ? "W" : "L"}
                           </span>
-                        )}
-                      </div>
-                    ))}
+                          <div className="min-w-0 flex-1">
+                            {Array.isArray((m as any).opponentPlayers) && (m as any).opponentPlayers.length > 0 && (
+                              <div className="flex -space-x-2 mb-1">
+                                {(m as any).opponentPlayers.slice(0, 2).map((opponent: any) => (
+                                  <div key={opponent.id} className="ring-2 ring-card rounded-full">
+                                    <PlayerAvatar player={opponent} size="sm" />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-sm font-bold truncate">
+                              vs <span className="text-foreground">{m.opponentName}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {m.tournamentName} · {matchLabel}{roundLabel}
+                            </p>
+                          </div>
+                          {(m.scoreOne !== null || m.scoreTwo !== null) && (
+                            <span className="font-mono text-sm text-muted-foreground shrink-0">
+                              {m.scoreOne ?? "–"}–{m.scoreTwo ?? "–"}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
