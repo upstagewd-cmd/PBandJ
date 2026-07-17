@@ -5,19 +5,58 @@ import {
   matchesTable,
   openPlayMatchesTable,
 } from "@workspace/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, desc, inArray } from "drizzle-orm";
 import { computeElo, INITIAL_ELO } from "../../lib/elo.js";
 import { getRank } from "../../lib/ranks.js";
+import { getSystemSettingNumber } from "../../lib/settings.js";
 
 export const adminRatingsRouter = Router();
+
+function getIdentityKey(player: {
+  clerkUserId: string | null;
+  firstName: string;
+  lastName: string;
+}) {
+  if (player.clerkUserId) return `clerk:${player.clerkUserId}`;
+  return `name:${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`;
+}
+
+async function updateIdentityElo(playerId: string, eloRating: number) {
+  const [target] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
+  if (!target) return null;
+
+  const allPlayers = await db.select().from(playersTable);
+  const targetKey = getIdentityKey(target);
+  const identityIds = allPlayers
+    .filter((player) => getIdentityKey(player) === targetKey)
+    .map((player) => player.id);
+
+  if (identityIds.length > 0) {
+    await db
+      .update(playersTable)
+      .set({ eloRating })
+      .where(inArray(playersTable.id, identityIds));
+  }
+
+  const [updated] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
+  return updated ?? null;
+}
 
 adminRatingsRouter.get("/", async (req, res) => {
   const players = await db
     .select()
     .from(playersTable)
-    .orderBy(playersTable.eloRating);
+    .orderBy(desc(playersTable.eloRating), desc(playersTable.joinedAt));
 
-  const ranked = await Promise.all(players.map(async (p) => ({
+  const seen = new Set<string>();
+  const uniquePlayers = players.filter((player) => {
+    const key = getIdentityKey(player);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const ranked = await Promise.all(uniquePlayers.map(async (p) => ({
     ...p,
     rank: await getRank(p.eloRating),
   })));
@@ -34,11 +73,7 @@ adminRatingsRouter.patch("/:playerId", async (req, res) => {
     return;
   }
 
-  const [updated] = await db
-    .update(playersTable)
-    .set({ eloRating })
-    .where(eq(playersTable.id, playerId))
-    .returning();
+  const updated = await updateIdentityElo(playerId, eloRating);
 
   if (!updated) {
     res.status(404).json({ error: "Player not found" });
@@ -49,11 +84,8 @@ adminRatingsRouter.patch("/:playerId", async (req, res) => {
 
 adminRatingsRouter.post("/reset/:playerId", async (req, res) => {
   const { playerId } = req.params;
-  const [updated] = await db
-    .update(playersTable)
-    .set({ eloRating: INITIAL_ELO })
-    .where(eq(playersTable.id, playerId))
-    .returning();
+  const initialElo = await getSystemSettingNumber("elo_initial", INITIAL_ELO);
+  const updated = await updateIdentityElo(playerId, initialElo);
 
   if (!updated) {
     res.status(404).json({ error: "Player not found" });
