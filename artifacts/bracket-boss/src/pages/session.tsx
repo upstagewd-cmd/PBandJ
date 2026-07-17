@@ -1083,7 +1083,9 @@ export default function SessionPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const { isSignedIn } = useUser();
   const sessionId = params.sessionId!;
+  const [showGuestJoin, setShowGuestJoin] = useState(false);
 
   const urlParams = new URLSearchParams(search);
   const tokenFromUrl = urlParams.get("token");
@@ -1144,6 +1146,8 @@ export default function SessionPage() {
 
   const isHost = !!hostToken;
   const isClosed = session.status === "closed";
+  const signupPath = `/sign-up?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
+  const signinPath = `/sign-in?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
@@ -1251,7 +1255,32 @@ export default function SessionPage() {
               <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
             </Show>
 
-            <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
+            {!isHost && !isSignedIn && (
+              <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4 shadow-sm">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
+                  <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
+                  <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+                </div>
+                <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+                  Create account
+                </Button>
+                <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+                  Already have an account? Sign in
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowGuestJoin((prev) => !prev)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Continue as guest
+                </button>
+              </div>
+            )}
+
+            {(isHost || isSignedIn || showGuestJoin) && (
+              <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
+            )}
 
             {isHost && session.players.length >= 2 && (
               <PairingManager

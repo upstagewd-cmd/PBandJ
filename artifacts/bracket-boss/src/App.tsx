@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
-import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
+import { Switch, Route, useLocation, useSearch, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
@@ -85,6 +85,9 @@ const clerkAppearance = {
 
 function SignInPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const next = new URLSearchParams(search).get("next")?.trim() ?? "";
+  const signUpUrl = `${basePath}/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -107,7 +110,7 @@ function SignInPage() {
         <SignIn
           routing="path"
           path={`${basePath}/sign-in`}
-          signUpUrl={`${basePath}/sign-up`}
+          signUpUrl={signUpUrl}
           appearance={clerkAppearance}
         />
       </div>
@@ -117,6 +120,10 @@ function SignInPage() {
 
 function SignUpPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const next = new URLSearchParams(search).get("next")?.trim() ?? "";
+  const signInUrl = `${basePath}/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const onboardingUrl = `${basePath}/onboarding/skill${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -139,7 +146,8 @@ function SignUpPage() {
         <SignUp
           routing="path"
           path={`${basePath}/sign-up`}
-          signInUrl={`${basePath}/sign-in`}
+          signInUrl={signInUrl}
+          forceRedirectUrl={onboardingUrl}
           appearance={clerkAppearance}
         />
       </div>

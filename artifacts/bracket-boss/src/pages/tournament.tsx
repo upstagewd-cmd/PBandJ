@@ -137,7 +137,11 @@ export default function TournamentPage() {
 
       <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-6 py-6 md:py-8">
         {tournament.status === "lobby" && (
-          <TournamentLobby tournament={tournament} hostToken={hostToken} />
+          <TournamentLobby
+            tournament={tournament}
+            hostToken={hostToken}
+            returnPath={`/t/${tournamentId}${search || ""}`}
+          />
         )}
         {tournament.status === "active" && (
           <TournamentBracket tournament={tournament} hostToken={hostToken} />

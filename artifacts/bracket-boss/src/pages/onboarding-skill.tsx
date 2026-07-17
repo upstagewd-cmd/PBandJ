@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Show, useUser } from "@clerk/react";
 import { useGetMyProfile } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ const SKILL_OPTIONS = [
 
 export default function OnboardingSkillPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { isSignedIn, user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -46,6 +47,8 @@ export default function OnboardingSkillPage() {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1);
   const nicknameRef = useRef<HTMLDivElement>(null);
   const skillRef = useRef<HTMLDivElement>(null);
+  const nextPathRaw = new URLSearchParams(search).get("next")?.trim() ?? "";
+  const nextPath = nextPathRaw.startsWith("/") ? nextPathRaw : "/";
 
   const { data: profile, isLoading } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"] },
@@ -181,7 +184,7 @@ export default function OnboardingSkillPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["myProfile"] });
-      setLocation("/");
+      setLocation(nextPath);
     } catch {
       toast({
         title: "Could not save skill level",

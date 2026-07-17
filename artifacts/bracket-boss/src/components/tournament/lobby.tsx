@@ -53,6 +53,7 @@ import { NICKNAME_MAX_LENGTH } from "@/lib/nickname";
 interface LobbyProps {
   tournament: TournamentFull;
   hostToken: string | null;
+  returnPath?: string;
 }
 
 const SKILL_LEVELS = [
@@ -174,9 +175,10 @@ function QuickJoinCard({ tournament, onJoined }: { tournament: TournamentFull; o
   );
 }
 
-export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
+export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProps) {
   const { toast } = useToast();
   const { user } = useUser();
+  const [, setLocation] = useLocation();
   const { data: profile } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"], enabled: !!user && !hostToken },
   });
@@ -195,6 +197,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tournamentName, setTournamentName] = useState(tournament.name);
+  const [showGuestJoin, setShowGuestJoin] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
 
@@ -211,6 +214,8 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
   });
 
   const [joinAlreadyAdded, setJoinAlreadyAdded] = useState(false);
+  const signupPath = `/sign-up?next=${encodeURIComponent(returnPath || `/t/${tournament.id}`)}`;
+  const signinPath = `/sign-in?next=${encodeURIComponent(returnPath || `/t/${tournament.id}`)}`;
 
   useEffect(() => {
     if (!isEditingName) setTournamentName(tournament.name);
@@ -572,11 +577,35 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 <QuickJoinCard tournament={tournament} onJoined={refetch} />
               </Show>
 
+              {!isHost && !user && (
+                <div className="bg-card border border-primary/30 rounded-3xl p-5 space-y-4 shadow-xl">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
+                    <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
+                    <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+                  </div>
+                  <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+                    Create account
+                  </Button>
+                  <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+                    Already have an account? Sign in
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuestJoin((prev) => !prev)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Continue as guest
+                  </button>
+                </div>
+              )}
+
               {joinAlreadyAdded ? (
                 <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">
                   You've already been added by the host — look for your name in the list.
                 </div>
               ) : (
+              (isHost || !!user || showGuestJoin) && (
               <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
                 <Form {...joinForm}>
                   <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">
@@ -648,6 +677,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                   </form>
                 </Form>
               </div>
+              )
               )}
             </>
           ) : (
