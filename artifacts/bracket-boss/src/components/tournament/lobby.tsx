@@ -468,7 +468,11 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                     size="sm"
                     className="rounded-full px-3 py-1 text-xs font-semibold"
                     disabled={!hostUrl}
-                    onClick={() => { hostCopy.copy(hostUrl); toast({ title: "Host link copied!" }); }}
+                    onClick={() => {
+                      if (!hostUrl) return;
+                      hostCopy.copy(hostUrl);
+                      toast({ title: "Host link copied!" });
+                    }}
                   >
                     {hostCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
                     {hostCopy.copied ? "Copied" : "Copy"}
