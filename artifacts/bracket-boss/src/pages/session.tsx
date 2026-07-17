@@ -959,14 +959,21 @@ function MatchLogger({
 
 // ─── Share Card ───────────────────────────────────────────────────────────────
 
-function ShareCard({ sessionId }: { sessionId: string }) {
+function ShareCard({ sessionId, isHost, hostUrl }: { sessionId: string; isHost: boolean; hostUrl: string | null }) {
   const [copied, setCopied] = useState(false);
+  const [hostCopied, setHostCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const url = `${window.location.origin}/s/${sessionId}`;
   const copy = async () => {
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+  const copyHost = async () => {
+    if (!hostUrl) return;
+    await navigator.clipboard.writeText(hostUrl);
+    setHostCopied(true);
+    setTimeout(() => setHostCopied(false), 2000);
   };
   return (
     <div className="rounded-[32px] border border-border/50 bg-card/90 p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
@@ -1014,6 +1021,21 @@ function ShareCard({ sessionId }: { sessionId: string }) {
               {url}
             </div>
           </div>
+
+          {isHost && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Host link</p>
+                <Button size="sm" className="rounded-full px-3 py-1 text-xs font-semibold" disabled={!hostUrl} onClick={copyHost}>
+                  {hostCopied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                  {hostCopied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <div className="mt-3 rounded-xl border border-primary/20 bg-background px-3 py-2.5 text-xs font-mono text-muted-foreground truncate">
+                {hostUrl ?? "Host link unavailable"}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1159,6 +1181,7 @@ export default function SessionPage() {
 
   const isHost = !!hostToken;
   const isClosed = session.status === "closed";
+  const hostUrl = hostToken ? `${window.location.origin}/s/${sessionId}?token=${hostToken}` : null;
   const signupPath = `/sign-up?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const signinPath = `/sign-in?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
 
@@ -1204,9 +1227,9 @@ export default function SessionPage() {
         )}
 
         {!isClosed && !isHost && !isSignedIn && (
-          <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
               <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
               <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
             </div>
@@ -1219,20 +1242,14 @@ export default function SessionPage() {
             <button
               type="button"
               onClick={() => setShowGuestJoin((prev) => !prev)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
             >
               Continue as guest
             </button>
           </div>
         )}
 
-        {!isClosed && <ShareCard sessionId={sessionId} />}
-
-        <div className="rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
-          <h2 className="mt-1 text-xl font-semibold text-foreground">Join the session pool</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Add yourself to the pool, then let the host pair players and log match results.</p>
-        </div>
+        {!isClosed && <ShareCard sessionId={sessionId} isHost={isHost} hostUrl={hostUrl} />}
 
         <PlayerPool
           players={session.players}

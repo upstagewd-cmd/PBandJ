@@ -399,29 +399,6 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         </div>
       </div>
 
-      {!isCancelled && !isHost && !user && (
-        <div className="bg-card border border-primary/30 rounded-3xl p-5 space-y-4 shadow-xl">
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
-            <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
-            <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
-          </div>
-          <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
-            Create account
-          </Button>
-          <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
-            Already have an account? Sign in
-          </Button>
-          <button
-            type="button"
-            onClick={() => setShowGuestJoin((prev) => !prev)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Continue as guest
-          </button>
-        </div>
-      )}
-
       {/* Cancelled banner for non-hosts */}
       {isCancelled && !isHost && (
         <div className="bg-muted/60 border border-border/60 rounded-3xl p-6 flex items-center gap-4">
@@ -483,20 +460,21 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
               </div>
               <Input readOnly value={playerUrl} className="mt-3 h-11 font-mono text-xs bg-muted border-none" />
             </div>
-            {isHost && hostUrl && (
+            {isHost && (
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Host link</p>
                   <Button
                     size="sm"
                     className="rounded-full px-3 py-1 text-xs font-semibold"
+                    disabled={!hostUrl}
                     onClick={() => { hostCopy.copy(hostUrl); toast({ title: "Host link copied!" }); }}
                   >
                     {hostCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
                     {hostCopy.copied ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <Input readOnly value={hostUrl} className="mt-3 h-11 font-mono text-xs bg-background border-primary/20" />
+                <Input readOnly value={hostUrl ?? "Host link unavailable"} className="mt-3 h-11 font-mono text-xs bg-background border-primary/20" />
               </div>
             )}
           </div>
@@ -552,11 +530,28 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         <div className="space-y-4">
           {isCancelled ? null : !tournament.registrationLocked ? (
             <>
-              <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
-                <h2 className="mt-1 text-xl font-semibold text-foreground">Join the field</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Register in seconds and get seeded into the bracket with your skill level.</p>
-              </div>
+              {!isHost && !user && (
+                <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
+                    <h2 className="mt-1 text-xl font-semibold text-foreground">Play with your PB&amp;J account</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+                  </div>
+                  <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+                    Create account
+                  </Button>
+                  <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+                    Already have an account? Sign in
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuestJoin((prev) => !prev)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+                  >
+                    Continue as guest
+                  </button>
+                </div>
+              )}
 
               {isHost && (
                 <KnownPlayerPicker
