@@ -197,6 +197,7 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const [tournamentName, setTournamentName] = useState(tournament.name);
   const [showGuestJoin, setShowGuestJoin] = useState(false);
   const [showInviteQr, setShowInviteQr] = useState(false);
+  const guestJoinRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
 
@@ -215,6 +216,88 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const [joinAlreadyAdded, setJoinAlreadyAdded] = useState(false);
   const signupPath = `/sign-up?next=${encodeURIComponent(returnPath || `/t/${tournament.id}`)}`;
   const signinPath = `/sign-in?next=${encodeURIComponent(returnPath || `/t/${tournament.id}`)}`;
+  const showAuthPrompt = !isCancelled && !tournament.registrationLocked && !user;
+
+  useEffect(() => {
+    if (!showGuestJoin || !guestJoinRef.current) return;
+    guestJoinRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const input = guestJoinRef.current.querySelector("input");
+    if (input instanceof HTMLInputElement) input.focus();
+  }, [showGuestJoin]);
+
+  const renderJoinForm = (autoFocusFirstName = false) => (
+    <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
+      <Form {...joinForm}>
+        <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField control={joinForm.control} name="firstName" render={({ field }) => (
+              <FormItem>
+                <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">First</Label>
+                <FormControl>
+                  <Input placeholder="John" className="h-11 bg-muted/50 border-none" autoFocus={autoFocusFirstName} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={joinForm.control} name="lastName" render={({ field }) => (
+              <FormItem>
+                <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Last</Label>
+                <FormControl>
+                  <Input placeholder="Doe" className="h-11 bg-muted/50 border-none" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+
+          <FormField control={joinForm.control} name="teamName" render={({ field }) => (
+            <FormItem>
+              <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">
+                Nickname <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
+              </Label>
+              <FormControl>
+                <Input placeholder="The Dink Masters" className="h-11 bg-muted/50 border-none" maxLength={NICKNAME_MAX_LENGTH} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={joinForm.control} name="skillLevel" render={({ field }) => (
+            <FormItem>
+              <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Skill Level</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {SKILL_LEVELS.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => field.onChange(s.value)}
+                    className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
+                      field.value === s.value
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 bg-muted/30 hover:border-border"
+                    }`}
+                  >
+                    <span className="text-xl">{s.emoji}</span>
+                    <span className="text-xs font-bold">{s.label}</span>
+                    <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <Button
+            type="submit"
+            className="w-full h-14 text-lg font-bold rounded-xl mt-2"
+            disabled={joinTournament.isPending}
+          >
+            {joinTournament.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : "JOIN TOURNAMENT"}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
 
   useEffect(() => {
     if (!isEditingName) setTournamentName(tournament.name);
@@ -399,6 +482,38 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         </div>
       </div>
 
+      {showAuthPrompt && (
+        <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
+            <h2 className="mt-1 text-xl font-semibold text-foreground">
+              {isHost ? "Sign in to manage this tournament" : "Play with your PB&J account"}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isHost ? "Sign in for the full host experience and synced account access." : "Track your rank, badges, and match history."}
+            </p>
+          </div>
+          <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+            Create account
+          </Button>
+          <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+            Already have an account? Sign in
+          </Button>
+          <button
+            type="button"
+            onClick={() => setShowGuestJoin((prev) => !prev)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+          >
+            Continue as guest
+          </button>
+          {showGuestJoin && (
+            <div ref={guestJoinRef} className="pt-2">
+              {renderJoinForm(true)}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Cancelled banner for non-hosts */}
       {isCancelled && !isHost && (
         <div className="bg-muted/60 border border-border/60 rounded-3xl p-6 flex items-center gap-4">
@@ -573,78 +688,8 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                   You've already been added by the host — look for your name in the list.
                 </div>
               ) : (
-              (isHost || (!user && showGuestJoin)) && (
-              <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
-                <Form {...joinForm}>
-                  <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField control={joinForm.control} name="firstName" render={({ field }) => (
-                        <FormItem>
-                          <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">First</Label>
-                          <FormControl>
-                            <Input placeholder="John" className="h-11 bg-muted/50 border-none" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={joinForm.control} name="lastName" render={({ field }) => (
-                        <FormItem>
-                          <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Last</Label>
-                          <FormControl>
-                            <Input placeholder="Doe" className="h-11 bg-muted/50 border-none" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-
-                    <FormField control={joinForm.control} name="teamName" render={({ field }) => (
-                      <FormItem>
-                        <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">
-                          Nickname <span className="normal-case tracking-normal font-normal text-muted-foreground/60">(optional)</span>
-                        </Label>
-                        <FormControl>
-                          <Input placeholder="The Dink Masters" className="h-11 bg-muted/50 border-none" maxLength={NICKNAME_MAX_LENGTH} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-
-                    <FormField control={joinForm.control} name="skillLevel" render={({ field }) => (
-                      <FormItem>
-                        <Label className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Skill Level</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {SKILL_LEVELS.map((s) => (
-                            <button
-                              key={s.value}
-                              type="button"
-                              onClick={() => field.onChange(s.value)}
-                              className={`flex flex-col items-center gap-1 rounded-xl p-3 border-2 transition-all ${
-                                field.value === s.value
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border/50 bg-muted/30 hover:border-border"
-                              }`}
-                            >
-                              <span className="text-xl">{s.emoji}</span>
-                              <span className="text-xs font-bold">{s.label}</span>
-                              <span className="text-[10px] text-muted-foreground text-center leading-tight">{s.desc}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-
-                    <Button
-                      type="submit"
-                      className="w-full h-14 text-lg font-bold rounded-xl mt-2"
-                      disabled={joinTournament.isPending}
-                    >
-                      {joinTournament.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : "JOIN TOURNAMENT"}
-                    </Button>
-                  </form>
-                </Form>
-              </div>
+              (isHost && !!user) && (
+              renderJoinForm(false)
               )
               )}
             </>

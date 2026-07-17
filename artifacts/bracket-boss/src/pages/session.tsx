@@ -317,7 +317,17 @@ const SKILL_LEVELS = [
   { value: "advanced", label: "Advanced", emoji: "🔴", desc: "Experienced competitor" },
 ] as const;
 
-function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined: () => void; isHost?: boolean }) {
+function JoinForm({
+  sessionId,
+  onJoined,
+  isHost,
+  autoFocusOnMount = false,
+}: {
+  sessionId: string;
+  onJoined: () => void;
+  isHost?: boolean;
+  autoFocusOnMount?: boolean;
+}) {
   const { user } = useUser();
   const { data: profile } = useGetMyProfile({
     query: { retry: false, queryKey: ["myProfile"], enabled: !!user && !isHost },
@@ -327,6 +337,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
   const [team, setTeam] = useState("");
   const [skill, setSkill] = useState<string>("intermediate");
   const [alreadyAdded, setAlreadyAdded] = useState(false);
+  const firstInputRef = useRef<HTMLInputElement>(null);
   const addPlayer = useAddSessionPlayer();
   const { toast } = useToast();
 
@@ -339,6 +350,11 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
     const nickname = ((profile as any)?.nickname ?? "").trim();
     if (!team && nickname) setTeam(nickname);
   }, [isLoggedIn, isHost, user, profile, first, last, team]);
+
+  useEffect(() => {
+    if (!autoFocusOnMount) return;
+    firstInputRef.current?.focus();
+  }, [autoFocusOnMount]);
 
   if (alreadyAdded) {
     return (
@@ -392,6 +408,7 @@ function JoinForm({ sessionId, onJoined, isHost }: { sessionId: string; onJoined
         <div>
           <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">First</label>
           <Input
+            ref={firstInputRef}
             value={first}
             onChange={(e) => setFirst(e.target.value)}
             placeholder="John"
@@ -1121,6 +1138,7 @@ export default function SessionPage() {
   const { isSignedIn } = useUser();
   const sessionId = params.sessionId!;
   const [showGuestJoin, setShowGuestJoin] = useState(false);
+  const guestJoinRef = useRef<HTMLDivElement>(null);
 
   const urlParams = new URLSearchParams(search);
   const tokenFromUrl = urlParams.get("token");
@@ -1184,6 +1202,14 @@ export default function SessionPage() {
   const hostUrl = hostToken ? `${window.location.origin}/s/${sessionId}?token=${hostToken}` : null;
   const signupPath = `/sign-up?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const signinPath = `/sign-in?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
+  const showAuthPrompt = !isClosed && !isSignedIn;
+
+  useEffect(() => {
+    if (!showGuestJoin || !guestJoinRef.current) return;
+    guestJoinRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const input = guestJoinRef.current.querySelector("input");
+    if (input instanceof HTMLInputElement) input.focus();
+  }, [showGuestJoin]);
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
@@ -1226,12 +1252,16 @@ export default function SessionPage() {
           </div>
         )}
 
-        {!isClosed && !isHost && !isSignedIn && (
+        {showAuthPrompt && (
           <div className="rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
-              <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
-              <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+              <h3 className="text-lg font-bold text-foreground">
+                {isHost ? "Sign in to manage this session" : "Play with your PB&J account"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {isHost ? "Sign in for the full host experience and synced account access." : "Track your rank, badges, and match history."}
+              </p>
             </div>
             <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
               Create account
@@ -1246,6 +1276,11 @@ export default function SessionPage() {
             >
               Continue as guest
             </button>
+            {showGuestJoin && (
+              <div ref={guestJoinRef} className="pt-2">
+                <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} autoFocusOnMount />
+              </div>
+            )}
           </div>
         )}
 
@@ -1273,7 +1308,7 @@ export default function SessionPage() {
               <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
             </Show>
 
-            {(isHost || (!isSignedIn && showGuestJoin)) && (
+            {(isHost && isSignedIn) && (
               <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
             )}
 
