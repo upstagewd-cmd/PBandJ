@@ -78,10 +78,19 @@ playerStatsRouter.get("/", async (_req, res) => {
       db.select().from(matchesTable),
       db.select().from(teamsTable),
     ]);
-    const nicknameMap = await getNicknameMap(allPlayers.map((p) => p.clerkUserId));
-    const clerkImageMap = await getClerkImageMap(allPlayers.map((p) => p.clerkUserId));
+    // Only compute one leaderboard row per signed-in identity.
+    const seenClerk = new Set<string>();
+    const uniquePlayers = allPlayers.filter((player) => {
+      if (!player.clerkUserId) return true;
+      if (seenClerk.has(player.clerkUserId)) return false;
+      seenClerk.add(player.clerkUserId);
+      return true;
+    });
 
-    const summaries = await Promise.all(allPlayers.map(async (player) => {
+    const nicknameMap = await getNicknameMap(uniquePlayers.map((p) => p.clerkUserId));
+    const clerkImageMap = await getClerkImageMap(uniquePlayers.map((p) => p.clerkUserId));
+
+    const summaries = await Promise.all(uniquePlayers.map(async (player) => {
       const identityPlayers = getIdentityPlayers(allPlayers, player);
       const identityPlayerIds = new Set(identityPlayers.map((p) => p.id));
       const identityTeamIds = getTeamIdsForPlayers(allTeams, identityPlayerIds);
