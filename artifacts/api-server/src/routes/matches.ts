@@ -4,8 +4,9 @@ import { db, tournamentsTable, matchesTable, playersTable, teamsTable, openPlayP
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { UpdateMatchBody, UndoLastMatchBody } from "@workspace/api-zod";
 import { getTournamentFull } from "../lib/tournament-helpers";
-import { broadcastTournamentUpdate } from "../lib/ws";
+import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { computeElo } from "../lib/elo";
+import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
 
 export const matchesRouter = Router({ mergeParams: true });
 
@@ -177,6 +178,9 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
             const delta = team1Won ? loserDelta : winnerDelta;
             await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + delta) }).where(eq(playersTable.id, p.id));
           }
+
+          const awards = await autoAwardBadgesForPlayers([...team1PlayerIds, ...team2PlayerIds]);
+          broadcastBadgeUnlocked(tournamentId, awards);
 
           // ── Add both losing team players to open play pool ─────────────
           const loserTeamId = loserId(match);

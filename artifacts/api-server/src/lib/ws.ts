@@ -53,3 +53,24 @@ export function broadcastMatchDeleted(tournamentId: string, matchId: string) {
     }
   }
 }
+
+export function broadcastBadgeUnlocked(
+  tournamentId: string,
+  awards: Array<{
+    grantId: string;
+    playerId: string;
+    clerkUserId: string | null;
+    playerName: string;
+    badgeId: string;
+    badgeName: string;
+    badgeIcon: string;
+  }>
+) {
+  if (awards.length === 0) return;
+  const message = JSON.stringify({ type: "badge_unlocked", awards });
+  for (const client of clients) {
+    if (client.tournamentId === tournamentId && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(message);
+    }
+  }
+}

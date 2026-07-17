@@ -41,7 +41,13 @@ profileRouter.get("/me", async (req, res) => {
 
     const allBadgeRows = allPlayerIds.length
       ? await db
-          .select({ badge: badgesTable, playerId: playerBadgesTable.playerId })
+          .select({
+            badge: badgesTable,
+            playerId: playerBadgesTable.playerId,
+            grantId: playerBadgesTable.id,
+            grantedAt: playerBadgesTable.grantedAt,
+            grantedBy: playerBadgesTable.grantedBy,
+          })
           .from(playerBadgesTable)
           .innerJoin(badgesTable, eq(playerBadgesTable.badgeId, badgesTable.id))
           .where(
@@ -52,19 +58,22 @@ profileRouter.get("/me", async (req, res) => {
           )
       : [];
 
-    const seenBadgeIds = new Set<string>();
-    const badges = allBadgeRows
-      .filter((r) => {
-        if (seenBadgeIds.has(r.badge.id)) return false;
-        seenBadgeIds.add(r.badge.id);
-        return true;
-      })
-      .map((r) => ({
-        id: r.badge.id,
-        name: r.badge.name,
-        icon: r.badge.icon,
-        description: r.badge.description,
-      }));
+    const latestBadgeGrantByBadgeId = new Map<string, (typeof allBadgeRows)[number]>();
+    for (const row of allBadgeRows) {
+      const current = latestBadgeGrantByBadgeId.get(row.badge.id);
+      if (!current || row.grantedAt.getTime() > current.grantedAt.getTime()) {
+        latestBadgeGrantByBadgeId.set(row.badge.id, row);
+      }
+    }
+    const badges = [...latestBadgeGrantByBadgeId.values()].map((row) => ({
+      id: row.badge.id,
+      name: row.badge.name,
+      icon: row.badge.icon,
+      description: row.badge.description,
+      grantId: row.grantId,
+      grantedAt: row.grantedAt.toISOString(),
+      grantedBy: row.grantedBy,
+    }));
 
     if (competitivePlayers.length === 0) {
       res.json({

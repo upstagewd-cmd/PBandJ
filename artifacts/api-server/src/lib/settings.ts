@@ -25,6 +25,15 @@ export async function getSystemSettingNumber(key: string, fallback: number): Pro
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+export async function getSystemSettingBoolean(key: string, fallback: boolean): Promise<boolean> {
+  await ensureDefaultSettings();
+  const [row] = await db.select({ value: systemSettingsTable.value }).from(systemSettingsTable).where(eq(systemSettingsTable.key, key));
+  const raw = (row?.value ?? String(fallback)).trim().toLowerCase();
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return fallback;
+}
+
 export async function getStartingEloForSkill(skillLevel?: string | null): Promise<number> {
   const fallback = await getSystemSettingNumber("elo_initial", 1200);
   if (!skillLevel) return fallback;

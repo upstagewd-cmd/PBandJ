@@ -16,6 +16,7 @@ import PlayersPage from "@/pages/players";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin/index";
 import OnboardingSkillPage from "@/pages/onboarding-skill";
+import { useBadgeUnlockToasts } from "@/hooks/use-badge-unlock-toasts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -167,6 +168,8 @@ function ClerkQueryClientCacheInvalidator() {
 }
 
 function Router() {
+  useBadgeUnlockToasts();
+
   return (
     <Switch>
       <Route path="/" component={Home} />

@@ -5,9 +5,10 @@ import { eq, and, inArray } from "drizzle-orm";
 import { LogOpenPlayMatchBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
-import { broadcastTournamentUpdate } from "../lib/ws";
+import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
+import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
@@ -179,6 +180,9 @@ openPlayRouter.post("/matches", async (req: Request<{ tournamentId: string }>, r
         await db.update(playersTable).set({ eloRating: Math.max(800, (p.eloRating ?? 1200) + loserDelta) }).where(eq(playersTable.id, id));
       }
     }
+
+    const awards = await autoAwardBadgesForPlayers(allIds);
+    broadcastBadgeUnlocked(tournamentId, awards);
 
     const state = await getOpenPlayState(tournamentId);
     res.status(201).json(state);
