@@ -87,6 +87,7 @@ function SignInPage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const next = new URLSearchParams(search).get("next")?.trim() ?? "";
+  const nextPath = next.startsWith("/") ? next : "";
   const signUpUrl = `${basePath}/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   const handleBack = () => {
@@ -111,6 +112,8 @@ function SignInPage() {
           routing="path"
           path={`${basePath}/sign-in`}
           signUpUrl={signUpUrl}
+          forceRedirectUrl={nextPath || undefined}
+          fallbackRedirectUrl={basePath || "/"}
           appearance={clerkAppearance}
         />
       </div>
