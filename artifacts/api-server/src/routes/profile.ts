@@ -124,6 +124,7 @@ profileRouter.get("/me", async (req, res) => {
     }
 
     const playerIds = competitivePlayers.map((p) => p.id);
+    const identityPlayers = players;
 
     // Fetch all teams this user belongs to (need team IDs for match lookup)
     const userTeamsEarly = playerIds.length
