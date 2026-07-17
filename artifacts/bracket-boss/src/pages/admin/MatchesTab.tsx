@@ -22,6 +22,14 @@ interface OpenMatch {
   tournament: { id: string; name: string } | null;
 }
 
+interface AdminPlayer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  teamName: string | null;
+  tournamentId: string;
+}
+
 function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -34,6 +42,7 @@ export function MatchesTab({ code }: { code: string }) {
   const { toast } = useToast();
   const [bracket, setBracket] = useState<BracketMatch[]>([]);
   const [openPlay, setOpenPlay] = useState<OpenMatch[]>([]);
+  const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [tab, setTab] = useState<"bracket" | "open">("bracket");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -42,9 +51,13 @@ export function MatchesTab({ code }: { code: string }) {
 
   const load = async () => {
     try {
-      const data = await adminGet<{ bracket: BracketMatch[]; openPlay: OpenMatch[] }>(code, "/matches");
-      setBracket(data.bracket);
-      setOpenPlay(data.openPlay);
+      const [matchesData, playersData] = await Promise.all([
+        adminGet<{ bracket: BracketMatch[]; openPlay: OpenMatch[] }>(code, "/matches"),
+        adminGet<AdminPlayer[]>(code, "/players"),
+      ]);
+      setBracket(matchesData.bracket);
+      setOpenPlay(matchesData.openPlay);
+      setPlayers(playersData);
     } catch { /* ignore */ }
     setLoading(false);
   };
@@ -135,6 +148,13 @@ export function MatchesTab({ code }: { code: string }) {
         {tab === "bracket" && filteredBracket.map(({ match: m, tournament: t }) => (
           <div key={m.id} className="bg-card border border-border/50 rounded-xl p-3">
             {editId === m.id ? (
+              (() => {
+                const winnerValue = (editForm.winnerId ?? m.winnerId ?? "") as string;
+                const tournamentPlayers = players.filter((p) => p.tournamentId === m.tournamentId);
+                const winnerInOptions = winnerValue
+                  ? tournamentPlayers.some((p) => p.id === winnerValue)
+                  : true;
+                return (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">{t?.name} · {bracketLabel[m.bracket] ?? m.bracket} R{m.round}</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -148,14 +168,30 @@ export function MatchesTab({ code }: { code: string }) {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Winner ID</label>
-                  <Input value={String(editForm.winnerId ?? "")} onChange={(e) => setEditForm((f) => ({ ...f, winnerId: e.target.value || null }))} placeholder="Player ID" />
+                  <label className="text-xs text-muted-foreground">Winner</label>
+                  <select
+                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                    value={winnerValue}
+                    onChange={(e) => setEditForm((f) => ({ ...f, winnerId: e.target.value || null }))}
+                  >
+                    <option value="">No winner</option>
+                    {!winnerInOptions && winnerValue ? (
+                      <option value={winnerValue}>{winnerValue}</option>
+                    ) : null}
+                    {tournamentPlayers.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.teamName?.trim() || `${player.firstName} ${player.lastName}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => saveBracket(m.id)}><Check className="w-3 h-3 mr-1" />Save</Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancel</Button>
                 </div>
               </div>
+                );
+              })()
             ) : (
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">

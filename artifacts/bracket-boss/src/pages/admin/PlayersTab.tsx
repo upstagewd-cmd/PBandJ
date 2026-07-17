@@ -121,7 +121,7 @@ export function PlayersTab({ code }: { code: string }) {
     setEditForm({
       firstName: p.firstName,
       lastName: p.lastName,
-      partnerName: p.partnerName ?? "",
+      teamName: p.teamName ?? "",
       eloRating: p.eloRating,
       skillLevel: p.skillLevel ?? "",
       avatarUrl: p.avatarUrl ?? "",
@@ -332,7 +332,7 @@ export function PlayersTab({ code }: { code: string }) {
                     <Input placeholder="First" value={editForm.firstName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} />
                     <Input placeholder="Last" value={editForm.lastName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} />
                   </div>
-                  <Input placeholder="Partner name" value={editForm.partnerName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, partnerName: e.target.value }))} />
+                  <Input placeholder="Nickname" value={editForm.teamName ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, teamName: e.target.value }))} />
                   <div className="flex gap-2 items-center">
                     <label className="text-xs text-muted-foreground w-12 shrink-0">ELO</label>
                     <Input type="number" value={editForm.eloRating ?? 1200} onChange={(e) => setEditForm((f) => ({ ...f, eloRating: Number(e.target.value) }))} />
