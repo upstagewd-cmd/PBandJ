@@ -31,9 +31,7 @@ import {
   Unlock,
   Loader2,
   Check,
-  Shield,
   Link,
-  Sparkles,
   Pencil,
   Shuffle,
   RefreshCw,
@@ -198,6 +196,7 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const [isEditingName, setIsEditingName] = useState(false);
   const [tournamentName, setTournamentName] = useState(tournament.name);
   const [showGuestJoin, setShowGuestJoin] = useState(false);
+  const [showInviteQr, setShowInviteQr] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
 
@@ -362,86 +361,66 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
 
       <div className="rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              {isCancelled ? "Cancelled" : tournament.registrationLocked ? "Registration locked" : "Matchday lobby"}
-            </div>
-            <div className="space-y-2">
-              {isHost && !isCancelled ? (
-                isEditingName ? (
-                  <input
-                    ref={nameInputRef}
-                    className="w-full border-none bg-transparent text-center text-2xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
-                    value={tournamentName}
-                    onChange={(e) => setTournamentName(e.target.value)}
-                    onBlur={handleNameBlur}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") nameInputRef.current?.blur();
-                      if (e.key === "Escape") {
-                        setTournamentName(tournament.name);
-                        setIsEditingName(false);
-                      }
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingName(true)}
-                    className="group flex items-center gap-2 text-left"
-                  >
-                    <h1 className="text-2xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
-                    <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
-                  </button>
-                )
+          <div className="space-y-2 min-w-0">
+            {isHost && !isCancelled ? (
+              isEditingName ? (
+                <input
+                  ref={nameInputRef}
+                  className="w-full border-none bg-transparent text-2xl font-extrabold tracking-tight text-primary outline-none focus:ring-0"
+                  value={tournamentName}
+                  onChange={(e) => setTournamentName(e.target.value)}
+                  onBlur={handleNameBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") nameInputRef.current?.blur();
+                    if (e.key === "Escape") {
+                      setTournamentName(tournament.name);
+                      setIsEditingName(false);
+                    }
+                  }}
+                />
               ) : (
-                <h1 className={`text-2xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
-              )}
-              <p className="text-sm text-muted-foreground sm:text-base">
-                {isCancelled
-                  ? "This tournament is paused. The roster is still visible below."
-                  : tournament.players.length > 0
-                    ? `${tournament.players.length} player${tournament.players.length === 1 ? "" : "s"} are already here.`
-                    : "Invite players and get the field ready for the first serve."}
-              </p>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingName(true)}
+                  className="group flex items-center gap-2 text-left min-w-0"
+                >
+                  <h1 className="text-2xl font-extrabold tracking-tight text-primary truncate">{tournament.name}</h1>
+                  <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </button>
+              )
+            ) : (
+              <h1 className={`text-2xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
+            )}
           </div>
           <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3 text-right shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Players</p>
             <p className="text-2xl font-bold text-foreground">{tournament.players.length}</p>
           </div>
         </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {[
-            { title: "Invite", description: "Share the link", active: true },
-            { title: "Build teams", description: "Pair players by skill", active: tournament.players.length >= 2 },
-            { title: "Start", description: "Launch the bracket", active: canStart },
-          ].map((step) => (
-            <div
-              key={step.title}
-              className={`rounded-2xl border px-3 py-3 ${step.active ? "border-primary/20 bg-primary/10" : "border-border/40 bg-background/50"}`}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">{step.title}</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{step.description}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-          <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
-            {isCancelled ? "Cancelled" : "Lobby"}
-          </p>
-          {isHost && (
-            <CancelTournamentButton
-              tournamentId={tournament.id}
-              hostToken={hostToken!}
-              isCancelled={isCancelled}
-              onChanged={refetch}
-            />
-          )}
-        </div>
       </div>
+
+      {!isCancelled && !isHost && !user && (
+        <div className="bg-card border border-primary/30 rounded-3xl p-5 space-y-4 shadow-xl">
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
+            <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
+            <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+          </div>
+          <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+            Create account
+          </Button>
+          <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+            Already have an account? Sign in
+          </Button>
+          <button
+            type="button"
+            onClick={() => setShowGuestJoin((prev) => !prev)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Continue as guest
+          </button>
+        </div>
+      )}
 
       {/* Cancelled banner for non-hosts */}
       {isCancelled && !isHost && (
@@ -469,13 +448,26 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         </div>
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          <div className="rounded-[24px] border border-border/50 bg-background/70 p-4 lg:min-w-[188px]">
-            <div className="mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
-              <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
-            </div>
-          </div>
-
           <div className="flex-1 space-y-3">
+            <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">QR code</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full px-3 py-1 text-xs font-semibold"
+                  onClick={() => setShowInviteQr((prev) => !prev)}
+                >
+                  {showInviteQr ? "Hide QR code" : "Show QR code"}
+                </Button>
+              </div>
+              {showInviteQr && (
+                <div className="mt-3 mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
+                  <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
+                </div>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Player link</p>
@@ -577,35 +569,12 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                 <QuickJoinCard tournament={tournament} onJoined={refetch} />
               </Show>
 
-              {!isHost && !user && (
-                <div className="bg-card border border-primary/30 rounded-3xl p-5 space-y-4 shadow-xl">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
-                    <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
-                    <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
-                  </div>
-                  <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
-                    Create account
-                  </Button>
-                  <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
-                    Already have an account? Sign in
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuestJoin((prev) => !prev)}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Continue as guest
-                  </button>
-                </div>
-              )}
-
               {joinAlreadyAdded ? (
                 <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">
                   You've already been added by the host — look for your name in the list.
                 </div>
               ) : (
-              (isHost || !!user || showGuestJoin) && (
+              (isHost || (!user && showGuestJoin)) && (
               <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl">
                 <Form {...joinForm}>
                   <form onSubmit={joinForm.handleSubmit(onJoin)} className="space-y-4">
@@ -692,7 +661,15 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
 
           {isHost && !isCancelled && (
             <div className="pt-4 border-t border-border/50 space-y-3">
-              <h3 className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Host Controls</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Host Controls</h3>
+                <CancelTournamentButton
+                  tournamentId={tournament.id}
+                  hostToken={hostToken!}
+                  isCancelled={isCancelled}
+                  onChanged={refetch}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline" className="h-12 rounded-xl font-bold"

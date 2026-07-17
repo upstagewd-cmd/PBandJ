@@ -36,7 +36,6 @@ import {
   Shuffle,
   RefreshCw,
   UserMinus,
-  Sparkles,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { upsertHistory, removeHistory } from "@/lib/history";
@@ -962,6 +961,7 @@ function MatchLogger({
 
 function ShareCard({ sessionId }: { sessionId: string }) {
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const url = `${window.location.origin}/s/${sessionId}`;
   const copy = async () => {
     await navigator.clipboard.writeText(url);
@@ -981,14 +981,27 @@ function ShareCard({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-        <div className="rounded-[24px] border border-border/50 bg-background/70 p-4 lg:min-w-[188px]">
-          <div className="mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
-            <QRCodeSVG value={url} size={148} level="H" includeMargin={false} />
-          </div>
-        </div>
-
+      <div className="mt-6 flex flex-col gap-6">
         <div className="flex-1 space-y-3">
+          <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">QR code</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                onClick={() => setShowQr((prev) => !prev)}
+              >
+                {showQr ? "Hide QR code" : "Show QR code"}
+              </Button>
+            </div>
+            {showQr && (
+              <div className="mt-3 mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
+                <QRCodeSVG value={url} size={148} level="H" includeMargin={false} />
+              </div>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Session link</p>
@@ -1156,61 +1169,26 @@ export default function SessionPage() {
       <main className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-6 py-6 space-y-6">
         <div className="rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
-                <Sparkles className="h-3.5 w-3.5" />
-                {isClosed ? "Session closed" : "Open play session"}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Activity className={`w-5 h-5 ${isClosed ? "text-muted-foreground" : "text-primary"}`} />
-                  <EditableSessionTitle session={session} hostToken={isClosed ? null : hostToken} isHost={isHost && !isClosed} />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {isClosed
-                    ? "This session is wrapped up. Scores and history remain visible below."
-                    : session.players.length > 0
-                      ? `${session.players.length} player${session.players.length === 1 ? "" : "s"} are already in the pool.`
-                      : "Invite your crew, then start pairing players for the next game."}
-                </p>
-              </div>
+            <div className="min-w-0">
+              <EditableSessionTitle session={session} hostToken={isClosed ? null : hostToken} isHost={isHost && !isClosed} />
             </div>
             <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3 text-right shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Players</p>
               <p className="text-2xl font-bold text-foreground">{session.players.length}</p>
             </div>
           </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              { title: "Invite", description: "Share the link", active: true },
-              { title: "Join", description: "Add to the pool", active: session.players.length > 0 },
-              { title: "Pair", description: "Log results", active: session.players.length >= 2 },
-            ].map((step) => (
-              <div
-                key={step.title}
-                className={`rounded-2xl border px-3 py-3 ${step.active ? "border-primary/20 bg-primary/10" : "border-border/40 bg-background/50"}`}
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">{step.title}</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">{step.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-start gap-3">
-            <p className="text-muted-foreground uppercase tracking-widest text-sm font-bold">
-              {isClosed ? "Session Closed" : "Open Play"}
-            </p>
-            {isHost && (
-              <CloseSessionButton
-                sessionId={sessionId}
-                hostToken={hostToken!}
-                isClosed={isClosed}
-                onChanged={refetch}
-              />
-            )}
-          </div>
         </div>
+
+        {isHost && (
+          <div className="flex justify-start">
+            <CloseSessionButton
+              sessionId={sessionId}
+              hostToken={hostToken!}
+              isClosed={isClosed}
+              onChanged={refetch}
+            />
+          </div>
+        )}
 
         {/* Closed banner for non-hosts */}
         {isClosed && !isHost && (
@@ -1222,6 +1200,29 @@ export default function SessionPage() {
               <p className="font-bold text-sm">This session has ended</p>
               <p className="text-xs text-muted-foreground">The host has closed it. Scores and history are preserved below.</p>
             </div>
+          </div>
+        )}
+
+        {!isClosed && !isHost && !isSignedIn && (
+          <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4 shadow-sm">
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
+              <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
+              <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
+            </div>
+            <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
+              Create account
+            </Button>
+            <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
+              Already have an account? Sign in
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowGuestJoin((prev) => !prev)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Continue as guest
+            </button>
           </div>
         )}
 
@@ -1255,30 +1256,7 @@ export default function SessionPage() {
               <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
             </Show>
 
-            {!isHost && !isSignedIn && (
-              <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4 shadow-sm">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Account recommended</p>
-                  <h3 className="text-lg font-bold text-foreground">Play with your PB&amp;J account</h3>
-                  <p className="text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
-                </div>
-                <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
-                  Create account
-                </Button>
-                <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
-                  Already have an account? Sign in
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => setShowGuestJoin((prev) => !prev)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Continue as guest
-                </button>
-              </div>
-            )}
-
-            {(isHost || isSignedIn || showGuestJoin) && (
+            {(isHost || (!isSignedIn && showGuestJoin)) && (
               <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
             )}
 
