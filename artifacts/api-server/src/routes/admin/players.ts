@@ -48,6 +48,15 @@ adminPlayersRouter.patch("/:playerId", async (req, res) => {
     res.status(404).json({ error: "Player not found" });
     return;
   }
+
+  // Keep avatar consistent across all rows for the same signed-in user identity.
+  if (avatarUrl !== undefined && updated.clerkUserId) {
+    await db
+      .update(playersTable)
+      .set({ avatarUrl: updated.avatarUrl ?? null })
+      .where(eq(playersTable.clerkUserId, updated.clerkUserId));
+  }
+
   res.json({ ...updated, rank: await getRank(updated.eloRating) });
 });
 

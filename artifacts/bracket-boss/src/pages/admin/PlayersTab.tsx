@@ -123,6 +123,7 @@ export function PlayersTab({ code }: { code: string }) {
 
   const handleMergeClick = (id: string) => {
     if (!mergeMode) { setMergeMode(true); setMergeA(id); return; }
+    if (!mergeA) { setMergeA(id); return; }
     if (mergeA === id) { setMergeMode(false); setMergeA(null); return; }
     const a = players.find((p) => p.id === mergeA);
     const b = players.find((p) => p.id === id);
