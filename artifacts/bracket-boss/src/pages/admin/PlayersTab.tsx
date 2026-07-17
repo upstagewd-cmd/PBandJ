@@ -46,18 +46,30 @@ export function PlayersTab({ code }: { code: string }) {
     if (!file) return;
     setUploadingAvatar(true);
     try {
+      const contentType = file.type || "application/octet-stream";
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+        body: JSON.stringify({ name: file.name, size: file.size, contentType }),
       });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      if (!urlRes.ok) {
+        const body = await urlRes.text();
+        throw new Error(body || "Failed to get upload URL");
+      }
       const { uploadURL, objectPath } = await urlRes.json();
-      const uploadRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      if (!uploadRes.ok) throw new Error("Upload failed");
+      // Keep PUT minimal to avoid signature/cors mismatch on some object-store providers.
+      const uploadRes = await fetch(uploadURL, { method: "PUT", body: file });
+      if (!uploadRes.ok) {
+        const body = await uploadRes.text();
+        throw new Error(body || "Upload failed");
+      }
       setEditForm((f) => ({ ...f, avatarUrl: objectPath }));
-    } catch {
-      toast({ title: "Avatar upload failed", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Avatar upload failed",
+        description: err instanceof Error ? err.message : "Could not upload image",
+        variant: "destructive",
+      });
     } finally {
       setUploadingAvatar(false);
       e.target.value = "";
@@ -235,17 +247,7 @@ export function PlayersTab({ code }: { code: string }) {
           return (
             <div
               key={p.id}
-              role={mergeMode ? "button" : undefined}
-              tabIndex={mergeMode ? 0 : undefined}
-              aria-pressed={mergeMode ? isMergeA : undefined}
-              onClick={mergeMode ? () => handleMergeClick(p.id) : undefined}
-              onKeyDown={mergeMode ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleMergeClick(p.id);
-                }
-              } : undefined}
-              className={`bg-card border rounded-xl p-3 space-y-2 transition-all ${
+              className={`relative bg-card border rounded-xl p-3 space-y-2 transition-all ${
                 isMergeA
                   ? "border-primary ring-2 ring-primary/20"
                   : isMergeTarget
@@ -253,6 +255,14 @@ export function PlayersTab({ code }: { code: string }) {
                     : "border-border/50"
               } ${mergeMode ? "cursor-pointer hover:shadow-sm" : ""}`}
             >
+              {mergeMode && !isEditTarget && (
+                <button
+                  type="button"
+                  className="absolute inset-0 z-10 rounded-xl"
+                  onClick={() => handleMergeClick(p.id)}
+                  aria-label={`Select ${p.firstName} ${p.lastName} for merge`}
+                />
+              )}
               {isEditTarget ? (
                 <div className="space-y-2">
                   {/* Avatar picker */}

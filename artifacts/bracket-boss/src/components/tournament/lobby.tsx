@@ -367,7 +367,7 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                 isEditingName ? (
                   <input
                     ref={nameInputRef}
-                    className="w-full border-none bg-transparent text-center text-4xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
+                    className="w-full border-none bg-transparent text-center text-2xl font-extrabold tracking-tight text-primary outline-none focus:ring-0 sm:text-left"
                     value={tournamentName}
                     onChange={(e) => setTournamentName(e.target.value)}
                     onBlur={handleNameBlur}
@@ -385,12 +385,12 @@ export function TournamentLobby({ tournament, hostToken }: LobbyProps) {
                     onClick={() => setIsEditingName(true)}
                     className="group flex items-center gap-2 text-left"
                   >
-                    <h1 className="text-4xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-primary">{tournament.name}</h1>
                     <Pencil className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                   </button>
                 )
               ) : (
-                <h1 className={`text-4xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
+                <h1 className={`text-2xl font-extrabold tracking-tight ${isCancelled ? "text-muted-foreground" : "text-primary"}`}>{tournament.name}</h1>
               )}
               <p className="text-sm text-muted-foreground sm:text-base">
                 {isCancelled
@@ -987,16 +987,16 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
     if (!file || !myToken) return;
     setUploading(true);
     try {
+      const contentType = file.type || "application/octet-stream";
       const urlRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+        body: JSON.stringify({ name: file.name, size: file.size, contentType }),
       });
       if (!urlRes.ok) throw new Error("Failed to get upload URL");
       const { uploadURL, objectPath } = await urlRes.json();
       const uploadRes = await fetch(uploadURL, {
         method: "PUT",
-        headers: { "Content-Type": file.type },
         body: file,
       });
       if (!uploadRes.ok) throw new Error("Upload failed");
