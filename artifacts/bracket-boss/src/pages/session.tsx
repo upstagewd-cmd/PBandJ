@@ -1162,6 +1162,13 @@ export default function SessionPage() {
     },
   });
 
+  useEffect(() => {
+    if (!showGuestJoin || !guestJoinRef.current) return;
+    guestJoinRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const input = guestJoinRef.current.querySelector("input");
+    if (input instanceof HTMLInputElement) input.focus();
+  }, [showGuestJoin]);
+
   // Track visit history — must be before early returns to keep hooks order stable
   useEffect(() => {
     if (session) {
@@ -1203,13 +1210,6 @@ export default function SessionPage() {
   const signupPath = `/sign-up?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const signinPath = `/sign-in?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const showAuthPrompt = !isClosed && !isSignedIn;
-
-  useEffect(() => {
-    if (!showGuestJoin || !guestJoinRef.current) return;
-    guestJoinRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    const input = guestJoinRef.current.querySelector("input");
-    if (input instanceof HTMLInputElement) input.focus();
-  }, [showGuestJoin]);
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">

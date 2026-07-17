@@ -649,29 +649,6 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         <div className="space-y-4">
           {isCancelled ? null : !tournament.registrationLocked ? (
             <>
-              {!isHost && !user && (
-                <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">Ready to play?</p>
-                    <h2 className="mt-1 text-xl font-semibold text-foreground">Play with your PB&amp;J account</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">Track your rank, badges, and match history.</p>
-                  </div>
-                  <Button className="w-full h-11 font-bold" onClick={() => setLocation(signupPath)}>
-                    Create account
-                  </Button>
-                  <Button variant="outline" className="w-full h-11 font-bold" onClick={() => setLocation(signinPath)}>
-                    Already have an account? Sign in
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuestJoin((prev) => !prev)}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
-                  >
-                    Continue as guest
-                  </button>
-                </div>
-              )}
-
               {isHost && (
                 <KnownPlayerPicker
                   onSelect={handleSelectKnownPlayer}
