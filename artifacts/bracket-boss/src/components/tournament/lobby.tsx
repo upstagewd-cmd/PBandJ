@@ -482,6 +482,12 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         </div>
       </div>
 
+      {!isCancelled && !tournament.registrationLocked && (
+        <Show when="signed-in">
+          <QuickJoinCard tournament={tournament} onJoined={refetch} />
+        </Show>
+      )}
+
       {showAuthPrompt && (
         <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4 space-y-3">
           <div>
@@ -655,10 +661,6 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                   isPending={joinTournament.isPending}
                 />
               )}
-
-              <Show when="signed-in">
-                <QuickJoinCard tournament={tournament} onJoined={refetch} />
-              </Show>
 
               {joinAlreadyAdded ? (
                 <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">

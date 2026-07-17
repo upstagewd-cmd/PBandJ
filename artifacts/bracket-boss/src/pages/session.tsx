@@ -1239,6 +1239,12 @@ export default function SessionPage() {
           </div>
         )}
 
+        {!isClosed && (
+          <Show when="signed-in">
+            <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
+          </Show>
+        )}
+
         {/* Closed banner for non-hosts */}
         {isClosed && !isHost && (
           <div className="bg-muted/60 border border-border/60 rounded-2xl p-5 flex items-center gap-4">
@@ -1303,10 +1309,6 @@ export default function SessionPage() {
                 onAdded={() => refetch()}
               />
             )}
-
-            <Show when="signed-in">
-              <QuickJoinCard sessionId={sessionId} players={session.players} onJoined={() => refetch()} />
-            </Show>
 
             {(isHost && isSignedIn) && (
               <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
