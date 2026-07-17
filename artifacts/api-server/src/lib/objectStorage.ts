@@ -88,6 +88,22 @@ export class ObjectStorageService {
     });
   }
 
+  async uploadObjectEntity(buffer: Buffer, contentType?: string): Promise<string> {
+    const objectId = randomUUID();
+    const key = `${this.getPrivateObjectDir()}/uploads/${objectId}`;
+
+    await objectStorageClient.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+        Body: buffer,
+        ...(contentType ? { ContentType: contentType } : {}),
+      })
+    );
+
+    return `/objects/uploads/${objectId}`;
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (rawPath.startsWith("/objects/")) {
       return rawPath;

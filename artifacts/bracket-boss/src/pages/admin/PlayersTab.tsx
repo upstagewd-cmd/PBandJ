@@ -47,22 +47,43 @@ export function PlayersTab({ code }: { code: string }) {
     setUploadingAvatar(true);
     try {
       const contentType = file.type || "application/octet-stream";
-      const urlRes = await fetch("/api/storage/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType }),
-      });
-      if (!urlRes.ok) {
-        const body = await urlRes.text();
-        throw new Error(body || "Failed to get upload URL");
+      let objectPath: string | null = null;
+
+      try {
+        const urlRes = await fetch("/api/storage/uploads/request-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: file.name, size: file.size, contentType }),
+        });
+        if (!urlRes.ok) {
+          const body = await urlRes.text();
+          throw new Error(body || "Failed to get upload URL");
+        }
+        const signed = await urlRes.json() as { uploadURL: string; objectPath: string };
+        const uploadRes = await fetch(signed.uploadURL, { method: "PUT", body: file });
+        if (!uploadRes.ok) {
+          const body = await uploadRes.text();
+          throw new Error(body || "Upload failed");
+        }
+        objectPath = signed.objectPath;
+      } catch {
+        const fallbackRes = await fetch(
+          `/api/storage/uploads/direct?name=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(contentType)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: file,
+          }
+        );
+        if (!fallbackRes.ok) {
+          const body = await fallbackRes.text();
+          throw new Error(body || "Fallback upload failed");
+        }
+        const fallback = await fallbackRes.json() as { objectPath: string };
+        objectPath = fallback.objectPath;
       }
-      const { uploadURL, objectPath } = await urlRes.json();
-      // Keep PUT minimal to avoid signature/cors mismatch on some object-store providers.
-      const uploadRes = await fetch(uploadURL, { method: "PUT", body: file });
-      if (!uploadRes.ok) {
-        const body = await uploadRes.text();
-        throw new Error(body || "Upload failed");
-      }
+
+      if (!objectPath) throw new Error("Missing uploaded object path");
       setEditForm((f) => ({ ...f, avatarUrl: objectPath }));
     } catch (err) {
       toast({
@@ -169,6 +190,14 @@ export function PlayersTab({ code }: { code: string }) {
     setPendingDelete(null);
   };
 
+  const startMergeMode = () => {
+    setEditId(null);
+    setPendingDelete(null);
+    setPendingMerge(null);
+    setMergeA(null);
+    setMergeMode(true);
+  };
+
   if (loading) return <p className="text-muted-foreground p-4">Loading players…</p>;
 
   const keepPlayer = pendingMerge ? players.find((p) => p.id === pendingMerge.keepId) : null;
@@ -220,7 +249,7 @@ export function PlayersTab({ code }: { code: string }) {
             <X className="w-4 h-4 mr-1" /> Cancel
           </Button>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setMergeMode(true)}>
+          <Button variant="outline" size="sm" onClick={startMergeMode}>
             <GitMerge className="w-4 h-4 mr-1" /> Merge
           </Button>
         )}
@@ -348,10 +377,13 @@ export function PlayersTab({ code }: { code: string }) {
                         type="button"
                         size="sm"
                         variant={isMergeA ? "default" : "outline"}
-                        onClick={() => handleMergeClick(p.id)}
-                        className={`min-w-10 ${isMergeA ? "shadow-md shadow-primary/20" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMergeClick(p.id);
+                        }}
+                        className={`relative z-20 min-w-16 ${isMergeA ? "shadow-md shadow-primary/20" : ""}`}
                       >
-                        <GitMerge className="w-3 h-3" />
+                        {isMergeA ? "Keep" : "Select"}
                       </Button>
                     ) : (
                       <>

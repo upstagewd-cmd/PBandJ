@@ -988,18 +988,37 @@ function PlayerRow({ player, index, tournamentId, myToken, isHost, hostToken, on
     setUploading(true);
     try {
       const contentType = file.type || "application/octet-stream";
-      const urlRes = await fetch("/api/storage/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType }),
-      });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await urlRes.json();
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error("Upload failed");
+      let objectPath: string | null = null;
+
+      try {
+        const urlRes = await fetch("/api/storage/uploads/request-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: file.name, size: file.size, contentType }),
+        });
+        if (!urlRes.ok) throw new Error("Failed to get upload URL");
+        const signed = await urlRes.json() as { uploadURL: string; objectPath: string };
+        const uploadRes = await fetch(signed.uploadURL, {
+          method: "PUT",
+          body: file,
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        objectPath = signed.objectPath;
+      } catch {
+        const fallbackRes = await fetch(
+          `/api/storage/uploads/direct?name=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(contentType)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: file,
+          }
+        );
+        if (!fallbackRes.ok) throw new Error("Fallback upload failed");
+        const fallback = await fallbackRes.json() as { objectPath: string };
+        objectPath = fallback.objectPath;
+      }
+
+      if (!objectPath) throw new Error("Missing uploaded object path");
       updatePlayer.mutate(
         { tournamentId, playerId: player.id, data: { playerToken: myToken, avatarUrl: objectPath } },
         { onSettled: refetch, onError: () => toast({ title: "Couldn't save avatar", variant: "destructive" }) }

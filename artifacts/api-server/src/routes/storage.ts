@@ -43,6 +43,54 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   }
 });
 
+// Fallback binary upload path for clients that cannot PUT directly to object storage.
+router.post("/storage/uploads/direct", async (req: Request, res: Response) => {
+  const rawName = req.query.name;
+  const rawContentType = req.query.contentType;
+  const name = typeof rawName === "string" ? rawName : "upload";
+  const contentType = typeof rawContentType === "string" ? rawContentType : undefined;
+
+  const MAX_BYTES = 6 * 1024 * 1024;
+  let size = 0;
+  const chunks: Buffer[] = [];
+
+  req.on("data", (chunk: Buffer) => {
+    size += chunk.length;
+    if (size > MAX_BYTES) {
+      req.destroy(new Error("Payload too large"));
+      return;
+    }
+    chunks.push(chunk);
+  });
+
+  req.on("error", (err) => {
+    req.log.error({ err }, "Direct upload stream failed");
+    if (!res.headersSent) {
+      res.status(400).json({ error: "Failed to read upload stream" });
+    }
+  });
+
+  req.on("end", async () => {
+    try {
+      if (chunks.length === 0) {
+        res.status(400).json({ error: "Missing upload body" });
+        return;
+      }
+
+      const objectPath = await objectStorageService.uploadObjectEntity(
+        Buffer.concat(chunks),
+        contentType
+      );
+
+      req.log.info({ name, size }, "Direct upload stored");
+      res.json({ objectPath });
+    } catch (error) {
+      req.log.error({ err: error }, "Direct upload failed");
+      res.status(500).json({ error: "Failed to store upload" });
+    }
+  });
+});
+
 /**
  * GET /storage/public-objects/*
  *
