@@ -26,6 +26,15 @@ interface Player {
   rank: { title: string; emoji: string };
 }
 
+interface EditPayload {
+  firstName?: string;
+  lastName?: string;
+  teamName?: string | null;
+  eloRating?: number;
+  skillLevel?: string | null;
+  avatarUrl?: string | null;
+}
+
 export function PlayersTab({ code }: { code: string }) {
   const { toast } = useToast();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -33,6 +42,7 @@ export function PlayersTab({ code }: { code: string }) {
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Player>>({});
+  const [editOriginal, setEditOriginal] = useState<Player | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeA, setMergeA] = useState<string | null>(null);
   const [pendingMerge, setPendingMerge] = useState<{ keepId: string; mergeId: string } | null>(null);
@@ -118,6 +128,7 @@ export function PlayersTab({ code }: { code: string }) {
 
   const startEdit = (p: Player) => {
     setEditId(p.id);
+    setEditOriginal(p);
     setEditForm({
       firstName: p.firstName,
       lastName: p.lastName,
@@ -129,12 +140,56 @@ export function PlayersTab({ code }: { code: string }) {
   };
 
   const saveEdit = async () => {
-    if (!editId) return;
+    if (!editId || !editOriginal) return;
+
+    const normalizedFirstName = (editForm.firstName ?? "").toString().trim();
+    const normalizedLastName = (editForm.lastName ?? "").toString().trim();
+    const normalizedTeamName = (editForm.teamName ?? "").toString().trim();
+    const normalizedAvatarUrl = (editForm.avatarUrl ?? "").toString().trim();
+
+    if (!normalizedFirstName || !normalizedLastName) {
+      toast({
+        title: "Missing name",
+        description: "First and last name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload: EditPayload = {};
+    if (normalizedFirstName !== editOriginal.firstName) payload.firstName = normalizedFirstName;
+    if (normalizedLastName !== editOriginal.lastName) payload.lastName = normalizedLastName;
+
+    const originalTeamName = (editOriginal.teamName ?? "").trim();
+    if (normalizedTeamName !== originalTeamName) {
+      payload.teamName = normalizedTeamName || null;
+    }
+
+    if ((editForm.eloRating ?? editOriginal.eloRating) !== editOriginal.eloRating) {
+      payload.eloRating = Number(editForm.eloRating ?? editOriginal.eloRating);
+    }
+
+    const nextSkillLevel = (editForm.skillLevel ?? "") || null;
+    const originalSkillLevel = editOriginal.skillLevel ?? null;
+    if (nextSkillLevel !== originalSkillLevel) payload.skillLevel = nextSkillLevel;
+
+    const originalAvatarUrl = (editOriginal.avatarUrl ?? "").trim();
+    if (normalizedAvatarUrl !== originalAvatarUrl) {
+      payload.avatarUrl = normalizedAvatarUrl || null;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setEditId(null);
+      setEditOriginal(null);
+      return;
+    }
+
     setSaving(true);
     try {
-      await adminPatch(code, `/players/${editId}`, editForm);
+      await adminPatch(code, `/players/${editId}`, payload);
       toast({ title: "Player updated" });
       setEditId(null);
+      setEditOriginal(null);
       await load();
     } catch (e) {
       toast({ title: "Error", description: String(e), variant: "destructive" });
@@ -188,6 +243,7 @@ export function PlayersTab({ code }: { code: string }) {
     setMergeA(null);
     setPendingMerge(null);
     setPendingDelete(null);
+    setEditOriginal(null);
   };
 
   const startMergeMode = () => {
@@ -359,7 +415,7 @@ export function PlayersTab({ code }: { code: string }) {
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveEdit} disabled={saving}><Check className="w-3 h-3 mr-1" />Save</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancel</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditId(null); setEditOriginal(null); }}>Cancel</Button>
                   </div>
                 </div>
               ) : (

@@ -49,13 +49,22 @@ adminRatingsRouter.get("/", async (req, res) => {
     .from(playersTable)
     .orderBy(desc(playersTable.eloRating), desc(playersTable.joinedAt));
 
-  const seen = new Set<string>();
-  const uniquePlayers = players.filter((player) => {
+  const byIdentity = new Map<string, (typeof players)[number]>();
+  for (const player of players) {
     const key = getIdentityKey(player);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const existing = byIdentity.get(key);
+    if (!existing) {
+      byIdentity.set(key, player);
+      continue;
+    }
+
+    // Preserve ranked ordering while backfilling a missing avatar from another row.
+    if (!existing.avatarUrl && player.avatarUrl) {
+      byIdentity.set(key, { ...existing, avatarUrl: player.avatarUrl });
+    }
+  }
+
+  const uniquePlayers = [...byIdentity.values()];
 
   const ranked = await Promise.all(uniquePlayers.map(async (p) => ({
     ...p,

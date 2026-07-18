@@ -8,6 +8,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { getRank } from "../../lib/ranks.js";
+import { isNicknameTakenGlobal } from "../../lib/user-display.js";
 
 export const adminPlayersRouter = Router();
 
@@ -29,14 +30,80 @@ adminPlayersRouter.patch("/:playerId", async (req, res) => {
   const { firstName, lastName, partnerName, teamName, eloRating, avatarUrl, skillLevel } =
     req.body as Record<string, unknown>;
 
+  const [existing] = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, playerId));
+  if (!existing) {
+    res.status(404).json({ error: "Player not found" });
+    return;
+  }
+
   const updates: Record<string, unknown> = {};
-  if (firstName !== undefined) updates.firstName = firstName;
-  if (lastName !== undefined) updates.lastName = lastName;
-  if (partnerName !== undefined) updates.partnerName = partnerName;
-  if (teamName !== undefined) updates.teamName = teamName;
-  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
-  if (eloRating !== undefined) updates.eloRating = Number(eloRating);
+  if (firstName !== undefined) {
+    if (typeof firstName !== "string" || !firstName.trim()) {
+      res.status(400).json({ error: "firstName must be a non-empty string" });
+      return;
+    }
+    updates.firstName = firstName.trim();
+  }
+
+  if (lastName !== undefined) {
+    if (typeof lastName !== "string" || !lastName.trim()) {
+      res.status(400).json({ error: "lastName must be a non-empty string" });
+      return;
+    }
+    updates.lastName = lastName.trim();
+  }
+
+  if (partnerName !== undefined) {
+    updates.partnerName = typeof partnerName === "string" ? (partnerName.trim() || null) : null;
+  }
+
+  if (teamName !== undefined) {
+    if (teamName !== null && typeof teamName !== "string") {
+      res.status(400).json({ error: "teamName must be a string or null" });
+      return;
+    }
+
+    const normalizedTeamName = typeof teamName === "string" ? teamName.trim() : "";
+    if (normalizedTeamName) {
+      const taken = await isNicknameTakenGlobal(normalizedTeamName, {
+        excludeClerkUserId: existing.clerkUserId ?? null,
+        excludePlayerId: existing.id,
+      });
+      if (taken) {
+        res.status(409).json({ error: "nickname_taken", message: "That nickname is already taken. Try another one." });
+        return;
+      }
+    }
+
+    updates.teamName = normalizedTeamName || null;
+  }
+
+  if (avatarUrl !== undefined) {
+    if (avatarUrl !== null && typeof avatarUrl !== "string") {
+      res.status(400).json({ error: "avatarUrl must be a string or null" });
+      return;
+    }
+    updates.avatarUrl = typeof avatarUrl === "string" ? (avatarUrl.trim() || null) : null;
+  }
+
+  if (eloRating !== undefined) {
+    const parsed = Number(eloRating);
+    if (!Number.isFinite(parsed)) {
+      res.status(400).json({ error: "eloRating must be a valid number" });
+      return;
+    }
+    updates.eloRating = parsed;
+  }
+
   if (skillLevel !== undefined) updates.skillLevel = skillLevel;
+
+  if (Object.keys(updates).length === 0) {
+    res.json({ ...existing, rank: await getRank(existing.eloRating) });
+    return;
+  }
 
   const [updated] = await db
     .update(playersTable)

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, RefreshCw, RotateCcw, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 
 interface RatedPlayer {
   id: string; firstName: string; lastName: string; partnerName: string | null;
@@ -119,9 +120,7 @@ export function RatingsTab({ code }: { code: string }) {
         {filtered.map((p, i) => (
           <div key={p.id} className="bg-card border border-border/50 rounded-xl p-3 flex items-center gap-3">
             <span className="text-xs font-mono text-muted-foreground w-5 text-right shrink-0">{i + 1}</span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
-              {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover" /> : `${p.firstName[0]}${p.lastName[0]}`}
-            </div>
+            <PlayerAvatar player={p} size="md" className="rounded-lg" />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm truncate">{p.firstName} {p.lastName}{p.partnerName ? ` + ${p.partnerName}` : ""}</p>
               <p className="text-xs text-muted-foreground">{p.rank.emoji} {p.rank.title}</p>

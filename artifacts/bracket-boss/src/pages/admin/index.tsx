@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, Home } from "lucide-react";
 import { adminFetch } from "./useAdmin";
 import { PlayersTab } from "./PlayersTab";
 import { MatchesTab } from "./MatchesTab";
@@ -27,6 +28,7 @@ type TabId = (typeof TABS)[number]["id"];
 const CODE_KEY = "pbj_admin_code";
 
 export default function AdminPage() {
+  const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
   const urlCode = params.get("code") ?? "";
@@ -114,12 +116,22 @@ export default function AdminPage() {
           <Shield className="w-5 h-5 text-primary" />
           <h1 className="font-display text-xl">PB&J Admin</h1>
         </div>
-        <button
-          className="text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => { localStorage.removeItem(CODE_KEY); setStatus("idle"); setInput(""); }}
-        >
-          Lock
-        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs"
+            onClick={() => setLocation("/")}
+          >
+            <Home className="w-3 h-3 mr-1" /> Home
+          </Button>
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { localStorage.removeItem(CODE_KEY); setStatus("idle"); setInput(""); }}
+          >
+            Lock
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto pb-1">

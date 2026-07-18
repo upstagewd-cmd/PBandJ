@@ -474,7 +474,7 @@ export default function Pbj101Page() {
 
   return (
     <div
-      className="flex min-h-[100dvh] w-full items-center justify-center px-4 py-24"
+      className="flex min-h-[100dvh] w-full items-start justify-center px-4 pb-10 pt-6"
       style={{
         fontFamily: "'Inter', sans-serif",
         background: `radial-gradient(circle at 20% 0%, #1c1c1c 0%, ${T.black} 55%)`,
