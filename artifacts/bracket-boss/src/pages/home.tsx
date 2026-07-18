@@ -127,6 +127,14 @@ export default function Home() {
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
 
+      <button
+        type="button"
+        onClick={() => setLocation("/pbj-101")}
+        className="absolute top-4 left-4 z-50 rounded-full bg-[#2A2A2A] px-3 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-[#3A3A3A]"
+      >
+        Rules 101
+      </button>
+
       {/* Account bar */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
         <Show when="signed-out">

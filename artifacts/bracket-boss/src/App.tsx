@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, useSearch, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -188,35 +188,11 @@ function RouteLoadingFallback() {
   );
 }
 
-function Pbj101Launcher() {
-  const [location, setLocation] = useLocation();
-  const isActive = location === "/pbj-101";
-
-  return (
-    <button
-      type="button"
-      aria-current={isActive ? "page" : undefined}
-      onClick={() => {
-        if (!isActive) setLocation("/pbj-101");
-      }}
-      className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-full bg-[#111111] px-3 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-[#2A2A2A]"
-      style={{
-        top: "max(1rem, env(safe-area-inset-top))",
-        left: "max(1rem, env(safe-area-inset-left))",
-      }}
-    >
-      <BookOpen className="h-4 w-4" />
-      PBJ 101
-    </button>
-  );
-}
-
 function Router() {
   useBadgeUnlockToasts();
 
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
-      <Pbj101Launcher />
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/sign-in/*?" component={SignInPage} />
