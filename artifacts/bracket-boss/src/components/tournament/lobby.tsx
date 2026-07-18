@@ -17,6 +17,7 @@ import {
   getGetTournamentQueryKey,
 } from "@workspace/api-client-react";
 import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
+import { StepNav, StepFooterNav, StepPanel, type StepDefinition } from "@/components/ui/step-flow";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +202,7 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const guestJoinRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
+  const [hostStep, setHostStep] = useState(0);
 
   const updateTournament = useUpdateTournament();
   const startTournament = useStartTournament();
@@ -440,6 +442,308 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const hasTeams = (tournament.teams?.length ?? 0) > 0;
   const canStart = hasTeams && (tournament.teams?.length ?? 0) >= 2;
 
+  const hostSteps: StepDefinition[] = [
+    { id: "invite", label: "Invite" },
+    { id: "players", label: "Players", badge: tournament.players.length },
+    { id: "teams", label: "Teams", badge: tournament.teams?.length ?? 0 },
+    { id: "start", label: "Start" },
+  ];
+
+  const renderInviteCard = () => (
+    <div className="rounded-[32px] border border-border/50 bg-card/90 p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Invite players</p>
+          <h2 className="mt-2 text-xl font-semibold text-foreground">Share the court and get the field moving</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Use the player link for guests or the host link for co-hosts.</p>
+        </div>
+        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+          <Link className="h-5 w-5" />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+        <div className="flex-1 space-y-3">
+          <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">QR code</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                onClick={() => setShowInviteQr((prev) => !prev)}
+              >
+                {showInviteQr ? "Hide QR code" : "Show QR code"}
+              </Button>
+            </div>
+            {showInviteQr && (
+              <div className="mt-3 mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
+                <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Player link</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                onClick={() => { playerCopy.copy(playerUrl); toast({ title: "Player link copied!" }); }}
+              >
+                {playerCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                {playerCopy.copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <Input readOnly value={playerUrl} className="mt-3 h-11 font-mono text-xs bg-muted border-none" />
+          </div>
+          {isHost && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Host link</p>
+                <Button
+                  size="sm"
+                  className="rounded-full px-3 py-1 text-xs font-semibold"
+                  disabled={!hostUrl}
+                  onClick={() => {
+                    if (!hostUrl) return;
+                    hostCopy.copy(hostUrl);
+                    toast({ title: "Host link copied!" });
+                  }}
+                >
+                  {hostCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                  {hostCopy.copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <Input readOnly value={hostUrl ?? "Host link unavailable"} className="mt-3 h-11 font-mono text-xs bg-background border-primary/20" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPlayerList = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Users className="w-6 h-6 text-primary" />
+          Players
+          <span className="text-muted-foreground ml-1">({tournament.players.length})</span>
+        </h2>
+      </div>
+
+      <div className="bg-card border border-border/50 rounded-3xl p-4 shadow-xl min-h-[200px]">
+        {tournament.players.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 py-8">
+            <Users className="w-12 h-12 opacity-20" />
+            <p className="font-medium">No one has joined yet.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {tournament.players.map((p, i) => {
+              const myToken = getMyPlayerToken(tournament.id, p.id);
+              return (
+                <PlayerRow
+                  key={p.id}
+                  player={p}
+                  index={i}
+                  tournamentId={tournament.id}
+                  myToken={myToken}
+                  isHost={isHost && !isCancelled}
+                  hostToken={hostToken}
+                  onRemove={() =>
+                    removePlayer.mutate(
+                      { tournamentId: tournament.id, playerId: p.id, data: { hostToken: hostToken! } },
+                      { onSettled: refetch }
+                    )
+                  }
+                />
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderJoinControls = () =>
+    isCancelled ? null : !tournament.registrationLocked ? (
+      <>
+        {isHost && (
+          <KnownPlayerPicker
+            onSelect={handleSelectKnownPlayer}
+            isPending={joinTournament.isPending}
+          />
+        )}
+
+        {joinAlreadyAdded ? (
+          <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">
+            You've already been added by the host — look for your name in the list.
+          </div>
+        ) : (
+          (isHost && !!user) && renderJoinForm(false)
+        )}
+      </>
+    ) : (
+      <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center justify-center space-y-4">
+        <Lock className="w-12 h-12 text-muted-foreground" />
+        <div>
+          <h3 className="text-xl font-bold">Registration Locked</h3>
+          <p className="text-muted-foreground">Waiting for host to start...</p>
+        </div>
+      </div>
+    );
+
+  const renderRegistrationToggle = () => (
+    <Button
+      variant="outline"
+      className="w-full h-12 rounded-xl font-bold"
+      onClick={() =>
+        updateTournament.mutate(
+          { tournamentId: tournament.id, data: { registrationLocked: !tournament.registrationLocked, hostToken: hostToken! } },
+          { onSettled: refetch }
+        )
+      }
+    >
+      {tournament.registrationLocked
+        ? <><Unlock className="w-4 h-4 mr-2" /> Unlock Join</>
+        : <><Lock className="w-4 h-4 mr-2" /> Lock Join</>
+      }
+    </Button>
+  );
+
+  const renderTeamsManager = () => (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <ArrowLeftRight className="w-6 h-6 text-primary" />
+            Teams
+            {hasTeams && (
+              <span className="text-muted-foreground ml-1">({tournament.teams?.length})</span>
+            )}
+          </h2>
+          {hasTeams && (
+            <Button
+              variant="outline" size="sm"
+              onClick={handleResetTeams}
+              disabled={resetTeams.isPending}
+              className="font-bold uppercase tracking-wider text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+            >
+              <X className="w-3 h-3 mr-1.5" /> Reset
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => handleGenerateTeams("balanced")}
+            disabled={generateTeams.isPending || tournament.players.length < 2}
+            className="font-bold uppercase tracking-wider text-xs"
+          >
+            {generateTeams.isPending && teamGenerateMode === "balanced"
+              ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+              : <Shuffle className="w-3 h-3 mr-1.5" />
+            }
+            {hasTeams ? "Regenerate" : "Generate"} Balanced
+          </Button>
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => handleGenerateTeams("random")}
+            disabled={generateTeams.isPending || tournament.players.length < 2}
+            className="font-bold uppercase tracking-wider text-xs"
+          >
+            <RefreshCw className={`w-3 h-3 mr-1.5 ${generateTeams.isPending && teamGenerateMode === "random" ? "animate-spin" : ""}`} /> Random
+          </Button>
+        </div>
+      </div>
+
+      {!hasTeams ? (
+        <div className="bg-card border border-dashed border-border/60 rounded-3xl p-10 text-center text-muted-foreground space-y-3">
+          <ArrowLeftRight className="w-10 h-10 opacity-20 mx-auto" />
+          <p className="font-medium">No teams yet.</p>
+          <p className="text-sm">
+            {tournament.players.length < 2
+              ? "Add at least 2 players first, then generate teams."
+              : "Click \"Generate Balanced\" to auto-pair players by skill level."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {tournament.teams?.map((team, idx) => (
+            <TeamCard
+              key={team.id}
+              team={team}
+              index={idx}
+              tournament={tournament}
+              hostToken={hostToken!}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStartControls = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Host Controls</h3>
+        <CancelTournamentButton
+          tournamentId={tournament.id}
+          hostToken={hostToken!}
+          isCancelled={isCancelled}
+          onChanged={refetch}
+        />
+      </div>
+      <Button
+        className="w-full h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white"
+        disabled={!canStart || startTournament.isPending}
+        onClick={() => startTournament.mutate(
+          { tournamentId: tournament.id, data: { hostToken: hostToken!, byeStrategy } },
+          { onSettled: refetch }
+        )}
+      >
+        {startTournament.isPending
+          ? <Loader2 className="w-5 h-5 animate-spin" />
+          : <><Play className="w-4 h-4 mr-2 fill-current" /> Start Tournament</>
+        }
+      </Button>
+
+      <div className="rounded-2xl border border-border/50 bg-muted/30 p-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Odd Teams Bye Strategy</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={byeStrategy === "highestSeeded" ? "default" : "outline"}
+            className="h-9 rounded-lg"
+            onClick={() => setByeStrategy("highestSeeded")}
+          >
+            Highest Seeded
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={byeStrategy === "random" ? "default" : "outline"}
+            className="h-9 rounded-lg"
+            onClick={() => setByeStrategy("random")}
+          >
+            Random
+          </Button>
+        </div>
+      </div>
+      {!canStart && (
+        <p className="text-xs text-muted-foreground text-center">
+          {hasTeams
+            ? "Need at least 2 teams to start"
+            : "Generate teams above before starting"}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
@@ -534,323 +838,83 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
         </div>
       )}
 
-      <div className="rounded-[32px] border border-border/50 bg-card/90 p-6 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.28)]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Invite players</p>
-            <h2 className="mt-2 text-xl font-semibold text-foreground">Share the court and get the field moving</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Use the player link for guests or the host link for co-hosts.</p>
-          </div>
-          <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-            <Link className="h-5 w-5" />
-          </div>
-        </div>
+      {isHost && !isCancelled ? (
+        <>
+          {renderPlayerList()}
 
-        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          <div className="flex-1 space-y-3">
-            <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">QR code</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
-                  onClick={() => setShowInviteQr((prev) => !prev)}
-                >
-                  {showInviteQr ? "Hide QR code" : "Show QR code"}
-                </Button>
-              </div>
-              {showInviteQr && (
-                <div className="mt-3 mx-auto flex w-fit items-center justify-center rounded-2xl bg-white p-3 shadow-sm">
-                  <QRCodeSVG value={playerUrl} size={148} level="H" includeMargin={false} />
-                </div>
-              )}
-            </div>
+          <div className="space-y-4">
+            <StepNav steps={hostSteps} current={hostStep} onSelect={setHostStep} />
 
-            <div className="rounded-2xl border border-border/50 bg-background/70 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Player link</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
-                  onClick={() => { playerCopy.copy(playerUrl); toast({ title: "Player link copied!" }); }}
-                >
-                  {playerCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
-                  {playerCopy.copied ? "Copied" : "Copy"}
-                </Button>
-              </div>
-              <Input readOnly value={playerUrl} className="mt-3 h-11 font-mono text-xs bg-muted border-none" />
-            </div>
-            {isHost && (
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Host link</p>
-                  <Button
-                    size="sm"
-                    className="rounded-full px-3 py-1 text-xs font-semibold"
-                    disabled={!hostUrl}
-                    onClick={() => {
-                      if (!hostUrl) return;
-                      hostCopy.copy(hostUrl);
-                      toast({ title: "Host link copied!" });
-                    }}
-                  >
-                    {hostCopy.copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
-                    {hostCopy.copied ? "Copied" : "Copy"}
-                  </Button>
-                </div>
-                <Input readOnly value={hostUrl ?? "Host link unavailable"} className="mt-3 h-11 font-mono text-xs bg-background border-primary/20" />
-              </div>
+            {hostStep === 0 && (
+              <StepPanel>
+                {renderInviteCard()}
+                <StepFooterNav hideBack nextLabel="Next: Players" onNext={() => setHostStep(1)} />
+              </StepPanel>
+            )}
+
+            {hostStep === 1 && (
+              <StepPanel>
+                {renderRegistrationToggle()}
+                {renderJoinControls()}
+                <StepFooterNav
+                  backLabel="Invite"
+                  nextLabel="Next: Teams"
+                  onBack={() => setHostStep(0)}
+                  onNext={() => setHostStep(2)}
+                />
+              </StepPanel>
+            )}
+
+            {hostStep === 2 && (
+              <StepPanel>
+                {renderTeamsManager()}
+                <StepFooterNav
+                  backLabel="Players"
+                  nextLabel="Next: Start"
+                  onBack={() => setHostStep(1)}
+                  onNext={() => setHostStep(3)}
+                />
+              </StepPanel>
+            )}
+
+            {hostStep === 3 && (
+              <StepPanel>
+                {renderStartControls()}
+                <StepFooterNav backLabel="Teams" hideNext onBack={() => setHostStep(2)} />
+              </StepPanel>
             )}
           </div>
-        </div>
-      </div>
+        </>
+      ) : (
+        <>
+          {renderInviteCard()}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-        {/* Players List */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="w-6 h-6 text-primary" />
-              Players
-              <span className="text-muted-foreground ml-1">({tournament.players.length})</span>
-            </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {renderPlayerList()}
+            <div className="space-y-4">{renderJoinControls()}</div>
           </div>
 
-          <div className="bg-card border border-border/50 rounded-3xl p-4 shadow-xl min-h-[200px]">
-            {tournament.players.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 py-8">
-                <Users className="w-12 h-12 opacity-20" />
-                <p className="font-medium">No one has joined yet.</p>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {tournament.players.map((p, i) => {
-                  const myToken = getMyPlayerToken(tournament.id, p.id);
-                  return (
-                    <PlayerRow
-                      key={p.id}
-                      player={p}
-                      index={i}
-                      tournamentId={tournament.id}
-                      myToken={myToken}
-                      isHost={isHost && !isCancelled}
-                      hostToken={hostToken}
-                      onRemove={() =>
-                        removePlayer.mutate(
-                          { tournamentId: tournament.id, playerId: p.id, data: { hostToken: hostToken! } },
-                          { onSettled: refetch }
-                        )
-                      }
-                    />
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* Right column: Join form OR host team/start controls */}
-        <div className="space-y-4">
-          {isCancelled ? null : !tournament.registrationLocked ? (
-            <>
-              {isHost && (
-                <KnownPlayerPicker
-                  onSelect={handleSelectKnownPlayer}
-                  isPending={joinTournament.isPending}
-                />
-              )}
-
-              {joinAlreadyAdded ? (
-                <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 text-sm text-muted-foreground text-center">
-                  You've already been added by the host — look for your name in the list.
-                </div>
-              ) : (
-              (isHost && !!user) && (
-              renderJoinForm(false)
-              )
-              )}
-            </>
-          ) : (
-            <div className="bg-muted/50 border border-border/50 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center justify-center space-y-4">
-              <Lock className="w-12 h-12 text-muted-foreground" />
-              <div>
-                <h3 className="text-xl font-bold">Registration Locked</h3>
-                <p className="text-muted-foreground">Waiting for host to start...</p>
-              </div>
-            </div>
-          )}
-
-          {isHost && !isCancelled && (
-            <div className="pt-4 border-t border-border/50 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="uppercase text-xs font-bold tracking-widest text-muted-foreground">Host Controls</h3>
-                <CancelTournamentButton
-                  tournamentId={tournament.id}
-                  hostToken={hostToken!}
-                  isCancelled={isCancelled}
-                  onChanged={refetch}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline" className="h-12 rounded-xl font-bold"
-                  onClick={() =>
-                    updateTournament.mutate(
-                      { tournamentId: tournament.id, data: { registrationLocked: !tournament.registrationLocked, hostToken: hostToken! } },
-                      { onSettled: refetch }
-                    )
-                  }
-                >
-                  {tournament.registrationLocked
-                    ? <><Unlock className="w-4 h-4 mr-2" /> Unlock Join</>
-                    : <><Lock className="w-4 h-4 mr-2" /> Lock Join</>
-                  }
-                </Button>
-                <Button
-                  className="h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white"
-                  disabled={!canStart || startTournament.isPending}
-                  onClick={() => startTournament.mutate(
-                    { tournamentId: tournament.id, data: { hostToken: hostToken!, byeStrategy } },
-                    { onSettled: refetch }
-                  )}
-                >
-                  {startTournament.isPending
-                    ? <Loader2 className="w-5 h-5 animate-spin" />
-                    : <><Play className="w-4 h-4 mr-2 fill-current" /> Start</>
-                  }
-                </Button>
-              </div>
-
-              <div className="rounded-2xl border border-border/50 bg-muted/30 p-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Odd Teams Bye Strategy</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={byeStrategy === "highestSeeded" ? "default" : "outline"}
-                    className="h-9 rounded-lg"
-                    onClick={() => setByeStrategy("highestSeeded")}
-                  >
-                    Highest Seeded
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={byeStrategy === "random" ? "default" : "outline"}
-                    className="h-9 rounded-lg"
-                    onClick={() => setByeStrategy("random")}
-                  >
-                    Random
-                  </Button>
-                </div>
-              </div>
-              {!canStart && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {hasTeams
-                    ? "Need at least 2 teams to start"
-                    : "Generate teams below before starting"}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Teams Section — host only, active only */}
-      {isHost && !isCancelled && (
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center gap-2">
+          {/* Teams view for non-hosts when teams exist */}
+          {!isHost && hasTeams && (
+            <div className="space-y-4">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <ArrowLeftRight className="w-6 h-6 text-primary" />
                 Teams
-                {hasTeams && (
-                  <span className="text-muted-foreground ml-1">({tournament.teams?.length})</span>
-                )}
               </h2>
-              {hasTeams && (
-                <Button
-                  variant="outline" size="sm"
-                  onClick={handleResetTeams}
-                  disabled={resetTeams.isPending}
-                  className="font-bold uppercase tracking-wider text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                >
-                  <X className="w-3 h-3 mr-1.5" /> Reset
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Button
-                variant="outline" size="sm"
-                onClick={() => handleGenerateTeams("balanced")}
-                disabled={generateTeams.isPending || tournament.players.length < 2}
-                className="font-bold uppercase tracking-wider text-xs"
-              >
-                {generateTeams.isPending && teamGenerateMode === "balanced"
-                  ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                  : <Shuffle className="w-3 h-3 mr-1.5" />
-                }
-                {hasTeams ? "Regenerate" : "Generate"} Balanced
-              </Button>
-              <Button
-                variant="ghost" size="sm"
-                onClick={() => handleGenerateTeams("random")}
-                disabled={generateTeams.isPending || tournament.players.length < 2}
-                className="font-bold uppercase tracking-wider text-xs"
-              >
-                <RefreshCw className={`w-3 h-3 mr-1.5 ${generateTeams.isPending && teamGenerateMode === "random" ? "animate-spin" : ""}`} /> Random
-              </Button>
-            </div>
-          </div>
-
-          {!hasTeams ? (
-            <div className="bg-card border border-dashed border-border/60 rounded-3xl p-10 text-center text-muted-foreground space-y-3">
-              <ArrowLeftRight className="w-10 h-10 opacity-20 mx-auto" />
-              <p className="font-medium">No teams yet.</p>
-              <p className="text-sm">
-                {tournament.players.length < 2
-                  ? "Add at least 2 players first, then generate teams."
-                  : "Click \"Generate Balanced\" to auto-pair players by skill level."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {tournament.teams?.map((team, idx) => (
-                <TeamCard
-                  key={team.id}
-                  team={team}
-                  index={idx}
-                  tournament={tournament}
-                  hostToken={hostToken!}
-                />
-              ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {tournament.teams?.map((team, idx) => (
+                  <TeamCard
+                    key={team.id}
+                    team={team}
+                    index={idx}
+                    tournament={tournament}
+                    hostToken={null}
+                  />
+                ))}
+              </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Teams view for non-hosts when teams exist */}
-      {!isHost && hasTeams && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <ArrowLeftRight className="w-6 h-6 text-primary" />
-            Teams
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {tournament.teams?.map((team, idx) => (
-              <TeamCard
-                key={team.id}
-                team={team}
-                index={idx}
-                tournament={tournament}
-                hostToken={null}
-              />
-            ))}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

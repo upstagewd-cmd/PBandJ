@@ -17,6 +17,7 @@ import {
   KnownPlayer,
 } from "@workspace/api-client-react";
 import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
+import { StepNav, StepFooterNav, StepPanel, type StepDefinition } from "@/components/ui/step-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -1139,6 +1140,7 @@ export default function SessionPage() {
   const sessionId = params.sessionId!;
   const [showGuestJoin, setShowGuestJoin] = useState(false);
   const guestJoinRef = useRef<HTMLDivElement>(null);
+  const [hostStep, setHostStep] = useState(0);
 
   const urlParams = new URLSearchParams(search);
   const tokenFromUrl = urlParams.get("token");
@@ -1210,6 +1212,67 @@ export default function SessionPage() {
   const signupPath = `/sign-up?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const signinPath = `/sign-in?next=${encodeURIComponent(`/s/${sessionId}${search || ""}`)}`;
   const showAuthPrompt = !isClosed && !isSignedIn;
+
+  const hostSteps: StepDefinition[] = [
+    { id: "share", label: "Share" },
+    { id: "roster", label: "Roster", badge: session.players.length },
+    { id: "pairs", label: "Pairs" },
+    { id: "log", label: "Log Match" },
+  ];
+
+  const renderShareCard = () => <ShareCard sessionId={sessionId} isHost={isHost} hostUrl={hostUrl} />;
+
+  const renderPlayerPool = () => (
+    <PlayerPool
+      players={session.players}
+      sessionId={session.id}
+      hostToken={isClosed ? null : hostToken}
+      onRemoved={refetch}
+    />
+  );
+
+  const renderRosterControls = () => (
+    <>
+      {isHost && (
+        <HostAddExistingPlayer
+          sessionId={sessionId}
+          players={session.players}
+          onAdded={() => refetch()}
+        />
+      )}
+      {(isHost && isSignedIn) && (
+        <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
+      )}
+    </>
+  );
+
+  const renderPairing = () =>
+    session.players.length >= 2 ? (
+      <PairingManager
+        sessionId={sessionId}
+        players={session.players}
+        hostToken={hostToken!}
+        onChanged={() => refetch()}
+      />
+    ) : (
+      <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+        Add at least 2 players to build pairs.
+      </div>
+    );
+
+  const renderMatchLogger = () =>
+    session.players.length >= 2 ? (
+      <MatchLogger
+        sessionId={sessionId}
+        players={session.players}
+        hostToken={hostToken!}
+        onLogged={() => refetch()}
+      />
+    ) : (
+      <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+        Add at least 2 players to log a match.
+      </div>
+    );
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col">
@@ -1290,49 +1353,59 @@ export default function SessionPage() {
           </div>
         )}
 
-        {!isClosed && <ShareCard sessionId={sessionId} isHost={isHost} hostUrl={hostUrl} />}
-
-        <PlayerPool
-          players={session.players}
-          sessionId={session.id}
-          hostToken={isClosed ? null : hostToken}
-          onRemoved={refetch}
-        />
-
-        {/* Host: add existing / quick-join / join form — active only */}
-        {!isClosed && (
+        {isHost && !isClosed ? (
           <>
-            {isHost && (
-              <HostAddExistingPlayer
-                sessionId={sessionId}
-                players={session.players}
-                onAdded={() => refetch()}
-              />
-            )}
+            {renderPlayerPool()}
 
-            {(isHost && isSignedIn) && (
-              <JoinForm sessionId={sessionId} onJoined={() => refetch()} isHost={isHost} />
-            )}
+            <div className="space-y-4">
+              <StepNav steps={hostSteps} current={hostStep} onSelect={setHostStep} />
 
-            {isHost && session.players.length >= 2 && (
-              <PairingManager
-                sessionId={sessionId}
-                players={session.players}
-                hostToken={hostToken!}
-                onChanged={() => refetch()}
-              />
-            )}
+              {hostStep === 0 && (
+                <StepPanel>
+                  {renderShareCard()}
+                  <StepFooterNav hideBack nextLabel="Next: Roster" onNext={() => setHostStep(1)} />
+                </StepPanel>
+              )}
 
-            {isHost && session.players.length >= 2 && (
-              <MatchLogger
-                sessionId={sessionId}
-                players={session.players}
-                hostToken={hostToken!}
-                onLogged={() => refetch()}
-              />
-            )}
+              {hostStep === 1 && (
+                <StepPanel>
+                  {renderRosterControls()}
+                  <StepFooterNav
+                    backLabel="Share"
+                    nextLabel="Next: Pairs"
+                    onBack={() => setHostStep(0)}
+                    onNext={() => setHostStep(2)}
+                  />
+                </StepPanel>
+              )}
 
-            {!isHost && session.players.length >= 2 && session.recentMatches.length === 0 && (
+              {hostStep === 2 && (
+                <StepPanel>
+                  {renderPairing()}
+                  <StepFooterNav
+                    backLabel="Roster"
+                    nextLabel="Next: Log Match"
+                    onBack={() => setHostStep(1)}
+                    onNext={() => setHostStep(3)}
+                  />
+                </StepPanel>
+              )}
+
+              {hostStep === 3 && (
+                <StepPanel>
+                  {renderMatchLogger()}
+                  <StepFooterNav backLabel="Pairs" hideNext onBack={() => setHostStep(2)} />
+                </StepPanel>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {!isClosed && renderShareCard()}
+
+            {renderPlayerPool()}
+
+            {!isClosed && !isHost && session.players.length >= 2 && session.recentMatches.length === 0 && (
               <p className="text-center text-muted-foreground text-sm">
                 The host can record match results here.
               </p>
