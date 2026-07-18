@@ -19,6 +19,30 @@ function getPlatform(): Platform {
   return "desktop";
 }
 
+function isIosSafari(): boolean {
+  const ua = navigator.userAgent;
+  const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  if (!isIosDevice) return false;
+
+  return !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser/i.test(ua);
+}
+
+function isAndroidChrome(): boolean {
+  const ua = navigator.userAgent;
+  if (!/android/i.test(ua)) return false;
+
+  const isChrome = /Chrome\//i.test(ua) && /Google Inc\./i.test(navigator.vendor);
+  const isOtherAndroidBrowser = /EdgA|OPR|SamsungBrowser|Firefox|DuckDuckGo|YaBrowser/i.test(ua);
+
+  return isChrome && !isOtherAndroidBrowser;
+}
+
+function supportsInstallPrompt(platform: Platform): boolean {
+  if (platform === "ios") return isIosSafari();
+  if (platform === "android") return isAndroidChrome();
+  return false;
+}
+
 function isRunningAsPWA(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -55,6 +79,7 @@ function markInstalled(): void {
 
 export function useInstallPrompt() {
   const platform = getPlatform();
+  const isSupportedBrowser = supportsInstallPrompt(platform);
   const [isPWA] = useState(() => {
     const pwa = isRunningAsPWA();
     // If already running as a PWA (e.g., iOS standalone launch), persist the
@@ -89,12 +114,12 @@ export function useInstallPrompt() {
 
   // Auto-show after 2 seconds on mobile (but not if desktop)
   useEffect(() => {
-    if (platform !== "desktop" && !isPWA && !installed && !dismissed) {
+    if (isSupportedBrowser && !isPWA && !installed && !dismissed) {
       const timer = setTimeout(() => setAutoShowReady(true), 2000);
       return () => clearTimeout(timer);
     }
     return;
-  }, [platform, isPWA, installed, dismissed]);
+  }, [isSupportedBrowser, isPWA, installed, dismissed]);
 
   const dismiss = () => {
     try {
@@ -120,9 +145,12 @@ export function useInstallPrompt() {
     setAutoShowReady(false);
   };
 
-  const shouldShow = !isPWA && !installed && ((autoShowReady && !dismissed) || manuallyTriggered);
+  const canShowInstallButton = isSupportedBrowser && !isPWA && !installed;
+
+  const shouldShow = canShowInstallButton && ((autoShowReady && !dismissed) || manuallyTriggered);
 
   const manualShow = () => {
+    if (!canShowInstallButton) return;
     setManuallyTriggered(true);
   };
 
@@ -130,6 +158,7 @@ export function useInstallPrompt() {
     shouldShow,
     platform,
     isPWA,
+    canShowInstallButton,
     dismiss,
     triggerInstall,
     deferredPrompt,

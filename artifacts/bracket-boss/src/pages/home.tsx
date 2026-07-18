@@ -91,12 +91,7 @@ export default function Home() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const installPrompt = useInstallPrompt();
-  const { platform, isPWA, manualShow, deferredPrompt } = installPrompt;
-
-  // Show install button if:
-  // - On iOS (all browsers support PWA via share menu), or
-  // - On Android/Desktop AND browser supports beforeinstallprompt (deferredPrompt available)
-  const canShowInstallButton = !isPWA && (platform === "ios" || !!deferredPrompt);
+  const { manualShow, canShowInstallButton } = installPrompt;
 
   const handleCreateTournament = () => {
     createTournament.mutate(
@@ -131,19 +126,6 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/8 blur-[100px] rounded-full pointer-events-none" />
-
-      {/* Install App button (mobile & desktop where supported) */}
-      {canShowInstallButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-4 left-4 text-muted-foreground hover:text-foreground font-semibold"
-          onClick={manualShow}
-        >
-          <Download className="w-4 h-4 mr-1" />
-          Install App
-        </Button>
-      )}
 
       {/* Account bar */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
@@ -273,6 +255,18 @@ export default function Home() {
         >
           Browse players & leaderboard
         </button>
+
+        {canShowInstallButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full rounded-2xl border-border/70 bg-background/80 px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            onClick={manualShow}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Install App
+          </Button>
+        )}
 
         {/* Recent Games */}
         <RecentGames />

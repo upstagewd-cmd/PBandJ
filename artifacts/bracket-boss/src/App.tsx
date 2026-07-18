@@ -1,22 +1,24 @@
-import { useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, useSearch, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
-import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import TournamentPage from "@/pages/tournament";
-import SessionPage from "@/pages/session";
-import PlayerStatsPage from "@/pages/player-stats";
-import PlayersPage from "@/pages/players";
-import ProfilePage from "@/pages/profile";
-import AdminPage from "@/pages/admin/index";
-import OnboardingSkillPage from "@/pages/onboarding-skill";
 import { useBadgeUnlockToasts } from "@/hooks/use-badge-unlock-toasts";
+
+const TournamentPage = lazy(() => import("@/pages/tournament"));
+const SessionPage = lazy(() => import("@/pages/session"));
+const PlayerStatsPage = lazy(() => import("@/pages/player-stats"));
+const PlayersPage = lazy(() => import("@/pages/players"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const AdminPage = lazy(() => import("@/pages/admin/index"));
+const OnboardingSkillPage = lazy(() => import("@/pages/onboarding-skill"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Pbj101Page = lazy(() => import("@/pages/pbj-101"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -178,23 +180,58 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <div className="text-sm font-semibold text-muted-foreground">Loading...</div>
+    </div>
+  );
+}
+
+function Pbj101Launcher() {
+  const [location, setLocation] = useLocation();
+  const isActive = location === "/pbj-101";
+
+  return (
+    <button
+      type="button"
+      aria-current={isActive ? "page" : undefined}
+      onClick={() => {
+        if (!isActive) setLocation("/pbj-101");
+      }}
+      className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-full bg-[#111111] px-3 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-[#2A2A2A]"
+      style={{
+        top: "max(1rem, env(safe-area-inset-top))",
+        left: "max(1rem, env(safe-area-inset-left))",
+      }}
+    >
+      <BookOpen className="h-4 w-4" />
+      PBJ 101
+    </button>
+  );
+}
+
 function Router() {
   useBadgeUnlockToasts();
 
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/sign-in/*?" component={SignInPage} />     
-<Route path="/sign-up/*?" component={SignUpPage} />
-  <Route path="/onboarding/skill" component={OnboardingSkillPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/admin" component={AdminPage} />
-      <Route path="/t/:tournamentId" component={TournamentPage} />
-      <Route path="/s/:sessionId" component={SessionPage} />
-      <Route path="/players" component={PlayersPage} />
-      <Route path="/player/:playerId" component={PlayerStatsPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Pbj101Launcher />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/sign-up/*?" component={SignUpPage} />
+        <Route path="/onboarding/skill" component={OnboardingSkillPage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/admin" component={AdminPage} />
+        <Route path="/t/:tournamentId" component={TournamentPage} />
+        <Route path="/s/:sessionId" component={SessionPage} />
+        <Route path="/players" component={PlayersPage} />
+        <Route path="/player/:playerId" component={PlayerStatsPage} />
+        <Route path="/pbj-101" component={Pbj101Page} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
