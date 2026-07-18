@@ -35,6 +35,35 @@ function getSessionMatchesForIdentity(allSessionMatches: DbSessionMatch[], sessi
   );
 }
 
+function countTournamentTitles(
+  completedMatches: Array<typeof matchesTable.$inferSelect>,
+  winnerIds: Set<string>
+): number {
+  const byTournament = new Map<string, Array<typeof matchesTable.$inferSelect>>();
+  for (const match of completedMatches) {
+    const list = byTournament.get(match.tournamentId) ?? [];
+    list.push(match);
+    byTournament.set(match.tournamentId, list);
+  }
+
+  let titles = 0;
+
+  for (const tournamentMatches of byTournament.values()) {
+    const gfReset = tournamentMatches.find((m) => m.bracket === "grand_finals_reset");
+    const gf = tournamentMatches.find((m) => m.bracket === "grand_finals");
+    const seFinal = tournamentMatches
+      .filter((m) => m.bracket === "winner")
+      .sort((a, b) => b.round - a.round || b.matchNumber - a.matchNumber)[0];
+
+    const championship = gfReset ?? gf ?? seFinal;
+    if (championship?.winnerId && winnerIds.has(championship.winnerId)) {
+      titles++;
+    }
+  }
+
+  return titles;
+}
+
 profileRouter.get("/me", async (req, res) => {
   try {
     const auth = getAuth(req);
@@ -168,16 +197,13 @@ profileRouter.get("/me", async (req, res) => {
     const sessionIdentityMatches = getSessionMatchesForIdentity(allSessionMatches, sessionPlayerIdSet);
 
     let totalWins = 0;
-    let tournamentWins = 0;
     for (const m of completedMatches) {
       const isWinner = winnerIds.has(m.winnerId ?? "");
       if (isWinner) {
         totalWins++;
-        if (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset") {
-          tournamentWins++;
-        }
       }
     }
+    const tournamentWins = countTournamentTitles(completedMatches, winnerIds);
     for (const m of openPlayIdentityMatches) {
       const winningSide = m.winnerTeam === 1
         ? [m.teamOnePOneId, m.teamOnePTwoId]

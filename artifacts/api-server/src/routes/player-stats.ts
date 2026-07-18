@@ -62,6 +62,35 @@ function getSessionMatchesForIdentity(allSessionMatches: DbSessionMatch[], sessi
   );
 }
 
+function countTournamentTitles(
+  completedMatches: Array<typeof matchesTable.$inferSelect>,
+  winnerIds: Set<string>
+): number {
+  const byTournament = new Map<string, Array<typeof matchesTable.$inferSelect>>();
+  for (const match of completedMatches) {
+    const list = byTournament.get(match.tournamentId) ?? [];
+    list.push(match);
+    byTournament.set(match.tournamentId, list);
+  }
+
+  let titles = 0;
+
+  for (const tournamentMatches of byTournament.values()) {
+    const gfReset = tournamentMatches.find((m) => m.bracket === "grand_finals_reset");
+    const gf = tournamentMatches.find((m) => m.bracket === "grand_finals");
+    const seFinal = tournamentMatches
+      .filter((m) => m.bracket === "winner")
+      .sort((a, b) => b.round - a.round || b.matchNumber - a.matchNumber)[0];
+
+    const championship = gfReset ?? gf ?? seFinal;
+    if (championship?.winnerId && winnerIds.has(championship.winnerId)) {
+      titles++;
+    }
+  }
+
+  return titles;
+}
+
 // GET /api/players/known — all players, deduplicated by clerkUserId (signed-in) or full name (guests)
 playerStatsRouter.get("/known", async (_req, res) => {
   try {
@@ -137,7 +166,7 @@ playerStatsRouter.get("/", async (_req, res) => {
 
       const identityMatches = getMatchesForIdentity(allMatches, identityIds);
       const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
-      const tournamentWins = completedMatches.filter((m) => identityIds.has(m.winnerId ?? "")).length;
+        const tournamentWins = countTournamentTitles(completedMatches, identityIds);
       const openPlayWins = openPlayIdentityMatches.filter((m) =>
         (m.winnerTeam === 1
           ? [m.teamOnePOneId, m.teamOnePTwoId]
@@ -250,9 +279,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const losses = matchesPlayed - wins;
     const winPct = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
 
-    const tournamentWinsDisplay = completedMatches.filter(
-      (m) => identityIds.has(m.winnerId ?? "") && (m.bracket === "grand_finals" || m.bracket === "grand_finals_reset")
-    ).length;
+    const tournamentWinsDisplay = countTournamentTitles(completedMatches, identityIds);
     const tournamentsPlayed = new Set(competitiveIdentityPlayers.map((candidate) => candidate.tournamentId)).size;
 
     const recentCompleted = completedMatches
