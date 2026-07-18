@@ -99,7 +99,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/HostTokenInput"
+              $ref: "#/components/schemas/StartTournamentInput"
       responses:
         "200":
           description: OK
@@ -1232,6 +1232,19 @@ components:
       properties:
         hostToken:
           type: string
+
+    ByeStrategy:
+      type: string
+      enum: [highestSeeded, random]
+
+    StartTournamentInput:
+      type: object
+      required: [hostToken]
+      properties:
+        hostToken:
+          type: string
+        byeStrategy:
+          $ref: "#/components/schemas/ByeStrategy"
 
     SessionInput:
       type: object

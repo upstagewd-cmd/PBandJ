@@ -26,6 +26,8 @@ interface PlayerSeed {
   seed: number;
 }
 
+export type ByeStrategy = "highestSeeded" | "random";
+
 function nextPowerOf2(n: number): number {
   let p = 1;
   while (p < n) p *= 2;
@@ -58,6 +60,73 @@ function makeMatch(
   };
 }
 
+function buildSeedLayout(size: number): number[] {
+  if (size === 1) return [1];
+  const prev = buildSeedLayout(size / 2);
+  const out: number[] = [];
+  for (const seed of prev) {
+    out.push(seed, size + 1 - seed);
+  }
+  return out;
+}
+
+function shufflePlayers(players: PlayerSeed[]): PlayerSeed[] {
+  const shuffled = [...players];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function assertBracketIntegrity(matches: MatchSlot[], rounds: number, playerIds: Set<string>): void {
+  const idSet = new Set<string>();
+  const byId = new Map<string, MatchSlot>();
+
+  for (const match of matches) {
+    if (idSet.has(match.id)) {
+      throw new Error(`Invalid bracket: duplicate match id ${match.id}`);
+    }
+    idSet.add(match.id);
+    byId.set(match.id, match);
+  }
+
+  const finals = matches.filter((m) => m.round === rounds);
+  if (finals.length !== 1) {
+    throw new Error(`Invalid bracket: expected 1 final match in round ${rounds}, found ${finals.length}`);
+  }
+
+  for (const match of matches) {
+    if (!match.nextWinnerMatchId) continue;
+
+    const next = byId.get(match.nextWinnerMatchId);
+    if (!next) {
+      throw new Error(`Invalid bracket: missing next winner match ${match.nextWinnerMatchId}`);
+    }
+    if (next.round !== match.round + 1) {
+      throw new Error(
+        `Invalid bracket: match ${match.id} in round ${match.round} routes to non-adjacent round ${next.round}`
+      );
+    }
+    if (match.nextWinnerSlot !== "one" && match.nextWinnerSlot !== "two") {
+      throw new Error(`Invalid bracket: match ${match.id} has invalid nextWinnerSlot ${String(match.nextWinnerSlot)}`);
+    }
+  }
+
+  for (const match of matches) {
+    const sides = [match.playerOneId, match.playerTwoId].filter(Boolean) as string[];
+    for (const side of sides) {
+      if (!playerIds.has(side)) {
+        throw new Error(`Invalid bracket: unknown team id ${side} in match ${match.id}`);
+      }
+    }
+
+    if (match.status === "active" && !match.playerOneId && !match.playerTwoId) {
+      throw new Error(`Invalid bracket: active match ${match.id} has no players`);
+    }
+  }
+}
+
 /**
  * Generates a single-elimination bracket.
  *
@@ -73,98 +142,15 @@ function makeMatch(
  */
 export function generateSingleEliminationBracket(
   tournamentId: string,
-  players: PlayerSeed[]
+  players: PlayerSeed[],
+  options?: { byeStrategy?: ByeStrategy }
 ): MatchSlot[] {
   const n = players.length;
   if (n < 2) return [];
 
-  if (n === 3) {
-    const sorted = [...players].sort((a, b) => a.seed - b.seed);
-    const [topSeed, secondSeed, thirdSeed] = sorted.map((p) => p.id);
+  const byeStrategy = options?.byeStrategy ?? "highestSeeded";
 
-    const semifinal = makeMatch(tournamentId, "winner", 1, 1);
-    semifinal.playerOneId = secondSeed;
-    semifinal.playerTwoId = thirdSeed;
-    semifinal.status = "active";
-
-    const final = makeMatch(tournamentId, "winner", 2, 1);
-    final.playerOneId = topSeed;
-    final.playerTwoId = null;
-    final.status = "pending";
-
-    semifinal.nextWinnerMatchId = final.id;
-    semifinal.nextWinnerSlot = "two";
-
-    return [semifinal, final];
-  }
-
-  if (n === 6) {
-    const sorted = [...players].sort((a, b) => a.seed - b.seed);
-    const bracketSize = 8;
-    const wbRounds = Math.log2(bracketSize);
-    const wb: MatchSlot[][] = [[]];
-    for (let r = 1; r <= wbRounds; r++) {
-      const count = bracketSize / Math.pow(2, r);
-      wb.push(Array.from({ length: count }, (_, i) => makeMatch(tournamentId, "winner", r, i + 1)));
-    }
-
-    const matchMap = new Map<string, MatchSlot>();
-    for (const round of wb) for (const match of round) matchMap.set(match.id, match);
-
-    const quarterFinals = wb[1];
-    const semis = wb[2];
-    const finals = wb[3];
-
-    const [topSeed, secondSeed, thirdSeed, fourthSeed, fifthSeed, sixthSeed] = sorted.map((p) => p.id);
-    quarterFinals[0].playerOneId = topSeed;
-    quarterFinals[0].playerTwoId = fourthSeed;
-    quarterFinals[0].status = "active";
-    quarterFinals[1].playerOneId = secondSeed;
-    quarterFinals[1].playerTwoId = thirdSeed;
-    quarterFinals[1].status = "active";
-    quarterFinals[2].playerOneId = fifthSeed;
-    quarterFinals[2].playerTwoId = sixthSeed;
-    quarterFinals[2].status = "active";
-
-    semis[0].playerOneId = quarterFinals[0].id;
-    semis[0].playerTwoId = quarterFinals[1].id;
-    semis[0].status = "active";
-    semis[1].playerOneId = null;
-    semis[1].playerTwoId = null;
-    semis[1].status = "bye";
-    semis[1].isBye = true;
-    semis[1].winnerId = topSeed;
-
-    finals[0].playerOneId = semis[0].id;
-    finals[0].playerTwoId = semis[1].id;
-    finals[0].status = "active";
-
-    for (let r = 1; r <= wbRounds; r++) {
-      wb[r].forEach((match, i) => {
-        const m = i + 1;
-        if (r < wbRounds) {
-          const nextM = Math.ceil(m / 2);
-          match.nextWinnerMatchId = wb[r + 1][nextM - 1].id;
-          match.nextWinnerSlot = m % 2 === 1 ? "one" : "two";
-        }
-      });
-    }
-
-    const allMatches: MatchSlot[] = [];
-    for (let r = 1; r <= wbRounds; r++) allMatches.push(...wb[r]);
-
-    for (const match of allMatches) {
-      if (match.playerOneId && match.playerTwoId) {
-        match.status = "active";
-      } else if (match.playerOneId || match.playerTwoId) {
-        applyBye(match, matchMap);
-      }
-    }
-
-    return allMatches;
-  }
-
-  const bracketSize = Math.max(4, nextPowerOf2(n));
+  const bracketSize = nextPowerOf2(n);
   const wbRounds = Math.log2(bracketSize);
 
   // ── Build match grid (1-indexed by round) ───────────────────────────────
@@ -192,15 +178,26 @@ export function generateSingleEliminationBracket(
   }
 
   // ── Assign players to Round 1 ────────────────────────────────────────────
-  const sorted = [...players].sort((a, b) => a.seed - b.seed);
+  const seededPlayers =
+    byeStrategy === "random"
+      ? shufflePlayers(players).map((p, i) => ({ ...p, seed: i + 1 }))
+      : [...players].sort((a, b) => a.seed - b.seed);
+
+  const seedLayout = buildSeedLayout(bracketSize);
+  const r1Slots = new Array<string | null>(bracketSize).fill(null);
+
+  for (const p of seededPlayers) {
+    const seedPosition = seedLayout.indexOf(p.seed);
+    if (seedPosition >= 0) {
+      r1Slots[seedPosition] = p.id;
+    }
+  }
+
   const wbR1 = wb[1];
 
-  sorted.forEach((p, i) => {
-    const matchIdx = Math.floor(i / 2);
-    const slot = i % 2 === 0 ? "playerOneId" : "playerTwoId";
-    if (matchIdx < wbR1.length) {
-      wbR1[matchIdx][slot] = p.id;
-    }
+  wbR1.forEach((match, i) => {
+    match.playerOneId = r1Slots[i * 2] ?? null;
+    match.playerTwoId = r1Slots[i * 2 + 1] ?? null;
   });
 
   // ── Collect all matches ──────────────────────────────────────────────────
@@ -215,7 +212,7 @@ export function generateSingleEliminationBracket(
       if (match.playerOneId && match.playerTwoId) {
         match.status = "active";
       } else if (match.playerOneId || match.playerTwoId) {
-        applyBye(match, matchMap);
+        cascadeBye(match, matchMap);
       }
       // Ghost matches (no players) handled in the pass below
     }
@@ -253,6 +250,8 @@ export function generateSingleEliminationBracket(
       }
     }
   }
+
+  assertBracketIntegrity(allMatches, wbRounds, new Set(players.map((p) => p.id)));
 
   return allMatches;
 }

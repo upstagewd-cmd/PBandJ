@@ -7,7 +7,7 @@ import {
   UpdateTournamentBody,
   StartTournamentBody,
 } from "@workspace/api-zod";
-import { generateSingleEliminationBracket } from "../lib/bracket";
+import { generateSingleEliminationBracket, type ByeStrategy } from "../lib/bracket";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getNicknameMap } from "../lib/user-display";
@@ -159,7 +159,8 @@ tournamentsRouter.post("/:tournamentId/start", async (req: Request<{ tournamentI
 
     // Generate single-elimination bracket using team IDs
     const seededTeams = shuffled.map((t, i) => ({ id: t.id, seed: i + 1 }));
-    const bracketMatches = generateSingleEliminationBracket(tournamentId, seededTeams);
+    const byeStrategy: ByeStrategy = body.byeStrategy ?? "highestSeeded";
+    const bracketMatches = generateSingleEliminationBracket(tournamentId, seededTeams, { byeStrategy });
 
     if (bracketMatches.length > 0) {
       await db.insert(matchesTable).values(bracketMatches);

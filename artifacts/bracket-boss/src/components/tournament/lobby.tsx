@@ -197,6 +197,7 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
   const [tournamentName, setTournamentName] = useState(tournament.name);
   const [showGuestJoin, setShowGuestJoin] = useState(false);
   const [showInviteQr, setShowInviteQr] = useState(false);
+  const [byeStrategy, setByeStrategy] = useState<"highestSeeded" | "random">("highestSeeded");
   const guestJoinRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [teamGenerateMode, setTeamGenerateMode] = useState<"balanced" | "random" | null>(null);
@@ -712,7 +713,7 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                   className="h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white"
                   disabled={!canStart || startTournament.isPending}
                   onClick={() => startTournament.mutate(
-                    { tournamentId: tournament.id, data: { hostToken: hostToken! } },
+                    { tournamentId: tournament.id, data: { hostToken: hostToken!, byeStrategy } },
                     { onSettled: refetch }
                   )}
                 >
@@ -721,6 +722,30 @@ export function TournamentLobby({ tournament, hostToken, returnPath }: LobbyProp
                     : <><Play className="w-4 h-4 mr-2 fill-current" /> Start</>
                   }
                 </Button>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/30 p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Odd Teams Bye Strategy</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={byeStrategy === "highestSeeded" ? "default" : "outline"}
+                    className="h-9 rounded-lg"
+                    onClick={() => setByeStrategy("highestSeeded")}
+                  >
+                    Highest Seeded
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={byeStrategy === "random" ? "default" : "outline"}
+                    className="h-9 rounded-lg"
+                    onClick={() => setByeStrategy("random")}
+                  >
+                    Random
+                  </Button>
+                </div>
               </div>
               {!canStart && (
                 <p className="text-xs text-muted-foreground text-center">
