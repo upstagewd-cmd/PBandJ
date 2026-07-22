@@ -4,6 +4,7 @@ import {
   matchesTable,
   openPlayMatchesTable,
   sessionMatchesTable,
+  sessionPlayersTable,
   sessionsTable,
   playersTable,
   teamsTable,
@@ -83,7 +84,76 @@ adminMatchesRouter.get("/", async (req, res) => {
     })),
   ].sort((a, b) => b.match.playedAt.getTime() - a.match.playedAt.getTime());
 
-  res.json({ bracket, openPlay: mergedOpenPlay });
+  const [allTournaments, allSessions] = await Promise.all([
+    db
+      .select({
+        id: tournamentsTable.id,
+        name: tournamentsTable.name,
+        status: tournamentsTable.status,
+        createdAt: tournamentsTable.createdAt,
+      })
+      .from(tournamentsTable)
+      .orderBy(desc(tournamentsTable.createdAt)),
+    db
+      .select({
+        id: sessionsTable.id,
+        name: sessionsTable.name,
+        status: sessionsTable.status,
+        createdAt: sessionsTable.createdAt,
+      })
+      .from(sessionsTable)
+      .orderBy(desc(sessionsTable.createdAt)),
+  ]);
+
+  const tournamentPlayerCounts = allTournaments.length
+    ? await Promise.all(
+        allTournaments.map(async (tournament) => {
+          const rows = await db
+            .select({ id: playersTable.id })
+            .from(playersTable)
+            .where(eq(playersTable.tournamentId, tournament.id));
+          return [tournament.id, rows.length] as const;
+        }),
+      )
+    : [];
+
+  const sessionPlayerCounts = allSessions.length
+    ? await Promise.all(
+        allSessions.map(async (session) => {
+          const rows = await db
+            .select({ id: sessionPlayersTable.id })
+            .from(sessionPlayersTable)
+            .where(eq(sessionPlayersTable.sessionId, session.id));
+          return [session.id, rows.length] as const;
+        }),
+      )
+    : [];
+
+  const tournamentCountsMap = new Map(tournamentPlayerCounts);
+  const sessionCountsMap = new Map(sessionPlayerCounts);
+
+  const liveOpen = [
+    ...allTournaments.map((tournament) => ({
+      id: tournament.id,
+      type: "tournament" as const,
+      name: tournament.name,
+      href: `/t/${tournament.id}`,
+      statusLabel: tournament.status,
+      playerCount: tournamentCountsMap.get(tournament.id) ?? 0,
+      createdAt: tournament.createdAt.toISOString(),
+    })),
+    ...allSessions.map((session) => ({
+      id: session.id,
+      type: "open_play" as const,
+      name: session.name,
+      href: `/s/${session.id}`,
+      statusLabel: session.status,
+      playerCount: sessionCountsMap.get(session.id) ?? 0,
+      createdAt: session.createdAt.toISOString(),
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  res.json({ bracket, openPlay: mergedOpenPlay, liveOpen });
 });
 
 adminMatchesRouter.patch("/:matchId", async (req, res) => {
