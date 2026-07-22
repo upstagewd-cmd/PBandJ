@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const SETTING_LABELS: Record<string, { label: string; description: string; type: "number" | "boolean" }> = {
+const SETTING_LABELS: Record<string, { label: string; description: string; type: "number" | "boolean" | "text" }> = {
   elo_k_factor:         { label: "ELO K-Factor", description: "Controls how much each match shifts ratings (default 32)", type: "number" },
   elo_initial:          { label: "Initial ELO", description: "Starting rating for all new players (default 1200)", type: "number" },
   elo_minimum:          { label: "Minimum ELO", description: "Lowest a rating can fall to (default 800)", type: "number" },
@@ -14,6 +14,8 @@ const SETTING_LABELS: Record<string, { label: string; description: string; type:
   skill_advanced:       { label: "Advanced Seed ELO", description: "Starting ELO when skill level is Advanced", type: "number" },
   tournament_creation_enabled: { label: "Tournament Creation", description: "Allow users to create new tournaments", type: "boolean" },
   open_play_creation_enabled:  { label: "Open Play Creation", description: "Allow users to start open play sessions", type: "boolean" },
+  app_banner_enabled: { label: "App Banner", description: "Show a scrolling announcement banner across the app", type: "boolean" },
+  app_banner_message: { label: "App Banner Message", description: "Message text shown in the scrolling banner", type: "text" },
   badge_system_enabled: { label: "Badge System", description: "Enable or disable the badge system entirely", type: "boolean" },
   rank_system_enabled:  { label: "Rank System", description: "Enable or disable rank display throughout the app", type: "boolean" },
 };
@@ -78,6 +80,13 @@ export function SettingsTab({ code }: { code: string }) {
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${local[key] === "true" ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
+              ) : meta.type === "text" ? (
+                <Input
+                  type="text"
+                  value={local[key] ?? ""}
+                  onChange={(e) => setLocal((l) => ({ ...l, [key]: e.target.value }))}
+                  className={`w-full sm:w-96 ${local[key] !== settings[key] ? "border-primary" : ""}`}
+                />
               ) : (
                 <Input
                   type="number"

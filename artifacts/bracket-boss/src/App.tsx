@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
+import { AppMessageBanner } from "@/components/ui/app-message-banner";
 import Home from "@/pages/home";
 import { useBadgeUnlockToasts } from "@/hooks/use-badge-unlock-toasts";
 
@@ -190,23 +191,28 @@ function RouteLoadingFallback() {
 
 function Router() {
   useBadgeUnlockToasts();
+  const [path] = useLocation();
+  const showGlobalBanner = !path.startsWith("/admin");
 
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/sign-in/*?" component={SignInPage} />
-        <Route path="/sign-up/*?" component={SignUpPage} />
-        <Route path="/onboarding/skill" component={OnboardingSkillPage} />
-        <Route path="/profile" component={ProfilePage} />
-        <Route path="/admin" component={AdminPage} />
-        <Route path="/t/:tournamentId" component={TournamentPage} />
-        <Route path="/s/:sessionId" component={SessionPage} />
-        <Route path="/players" component={PlayersPage} />
-        <Route path="/player/:playerId" component={PlayerStatsPage} />
-        <Route path="/pbj-101" component={Pbj101Page} />
-        <Route component={NotFound} />
-      </Switch>
+      <div className="min-h-[100dvh] w-full">
+        {showGlobalBanner && <AppMessageBanner />}
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/sign-in/*?" component={SignInPage} />
+          <Route path="/sign-up/*?" component={SignUpPage} />
+          <Route path="/onboarding/skill" component={OnboardingSkillPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/t/:tournamentId" component={TournamentPage} />
+          <Route path="/s/:sessionId" component={SessionPage} />
+          <Route path="/players" component={PlayersPage} />
+          <Route path="/player/:playerId" component={PlayerStatsPage} />
+          <Route path="/pbj-101" component={Pbj101Page} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
     </Suspense>
   );
 }

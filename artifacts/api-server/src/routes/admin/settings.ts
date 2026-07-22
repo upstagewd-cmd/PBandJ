@@ -14,6 +14,8 @@ const DEFAULTS: Record<string, string> = {
   skill_advanced: "2000",
   tournament_creation_enabled: "true",
   open_play_creation_enabled: "true",
+  app_banner_enabled: "false",
+  app_banner_message: "Welcome to PB&J! Sign-up and check the Rules 101 page before your first match.",
   badge_system_enabled: "true",
   rank_system_enabled: "true",
 };

@@ -163,3 +163,36 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.app-banner-root {
+  width: 100%;
+}
+
+.app-banner-marquee {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.app-banner-track {
+  display: inline-flex;
+  min-width: 200%;
+  animation: app-banner-scroll 24s linear infinite;
+}
+
+.app-banner-item {
+  display: inline-block;
+  padding: 0.4rem 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes app-banner-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

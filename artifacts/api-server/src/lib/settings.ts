@@ -34,6 +34,15 @@ export async function getSystemSettingBoolean(key: string, fallback: boolean): P
   return fallback;
 }
 
+export async function getSystemSettingString(key: string, fallback: string): Promise<string> {
+  await ensureDefaultSettings();
+  const [row] = await db.select({ value: systemSettingsTable.value }).from(systemSettingsTable).where(eq(systemSettingsTable.key, key));
+  const raw = row?.value;
+  if (typeof raw !== "string") return fallback;
+  const trimmed = raw.trim();
+  return trimmed || fallback;
+}
+
 export async function getEloKFactor(): Promise<number> {
   return getSystemSettingNumber("elo_k_factor", 32);
 }
