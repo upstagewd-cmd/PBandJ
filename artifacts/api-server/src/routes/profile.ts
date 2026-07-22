@@ -523,6 +523,11 @@ profileRouter.put("/me/name", async (req, res) => {
       lastName: lastName.trim(),
     });
 
+    await db
+      .update(playersTable)
+      .set({ firstName: firstName.trim(), lastName: lastName.trim() })
+      .where(eq(playersTable.clerkUserId, clerkUserId));
+
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to update user name via Clerk");
