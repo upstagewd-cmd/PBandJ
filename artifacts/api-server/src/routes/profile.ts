@@ -87,6 +87,9 @@ profileRouter.get("/me", async (req, res) => {
     const competitivePlayers = players.filter(
       (player) => player.tournamentId !== USER_REGISTRY_TOURNAMENT_ID
     );
+    const registryPlayer = players.find(
+      (player) => player.tournamentId === USER_REGISTRY_TOURNAMENT_ID
+    );
 
     // Fetch stored skill preference
     const [userProfile] = await db
@@ -133,10 +136,12 @@ profileRouter.get("/me", async (req, res) => {
     }));
 
     if (competitivePlayers.length === 0) {
+      const seedElo = registryPlayer?.eloRating ?? 1200;
+      const seedRank = await getRank(seedElo);
       res.json({
-        eloRating: 1200,
-        rankTitle: "New Seed",
-        rankEmoji: "🌱",
+        eloRating: seedElo,
+        rankTitle: seedRank.title,
+        rankEmoji: seedRank.emoji,
         nickname,
         skillLevel,
         totalWins: 0,
