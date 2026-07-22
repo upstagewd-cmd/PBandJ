@@ -8,6 +8,16 @@ import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from 
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
 
+type LiveMatchItem = {
+  id: string;
+  type: "tournament" | "open_play";
+  name: string;
+  href: string;
+  statusLabel: string;
+  playerCount: number;
+  createdAt: string;
+};
+
 function RecentGames() {
   const [, setLocation] = useLocation();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -90,6 +100,8 @@ export default function Home() {
   const [tournamentCreationEnabled, setTournamentCreationEnabled] = useState(true);
   const [openPlayCreationEnabled, setOpenPlayCreationEnabled] = useState(true);
   const [adminBypass, setAdminBypass] = useState(false);
+  const [liveItems, setLiveItems] = useState<LiveMatchItem[]>([]);
+  const [liveLoaded, setLiveLoaded] = useState(false);
   const { user } = useUser();
   const { signOut } = useClerk();
   const installPrompt = useInstallPrompt();
@@ -132,9 +144,28 @@ export default function Home() {
       }
     };
 
-    void Promise.all([loadCreationSettings(), verifyAdminBypass()]);
+    const loadLiveMatches = async () => {
+      try {
+        const res = await fetch("/api/settings/live", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json() as { items?: LiveMatchItem[] };
+        if (cancelled) return;
+        setLiveItems(data.items ?? []);
+      } catch {
+        if (!cancelled) setLiveItems([]);
+      } finally {
+        if (!cancelled) setLiveLoaded(true);
+      }
+    };
+
+    void Promise.all([loadCreationSettings(), verifyAdminBypass(), loadLiveMatches()]);
+    const refresh = window.setInterval(() => {
+      void loadLiveMatches();
+    }, 15_000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(refresh);
     };
   }, [adminCode]);
 
@@ -361,6 +392,40 @@ export default function Home() {
         >
           Browse players & leaderboard
         </button>
+
+        <div className="w-full rounded-2xl border border-border/60 bg-card/80 p-4 text-left space-y-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Join a Live Match</h3>
+          </div>
+
+          {!liveLoaded ? (
+            <p className="text-xs text-muted-foreground">Loading live matches…</p>
+          ) : liveItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No live matches right now. Check back soon.</p>
+          ) : (
+            <div className="space-y-2">
+              {liveItems.map((item) => (
+                <button
+                  key={`${item.type}_${item.id}`}
+                  type="button"
+                  onClick={() => setLocation(item.href)}
+                  className="w-full rounded-xl border border-border/50 bg-background/80 px-3 py-2 text-left transition-colors hover:bg-background"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.type === "tournament" ? "Tournament" : "Open Play"} · {item.statusLabel} · {item.playerCount} players
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {canShowInstallButton && (
           <Button
