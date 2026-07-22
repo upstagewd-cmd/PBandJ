@@ -11,6 +11,7 @@ import { generateSingleEliminationBracket, type ByeStrategy } from "../lib/brack
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getNicknameMap } from "../lib/user-display";
+import { getSystemSettingBoolean } from "../lib/settings";
 
 export const tournamentsRouter = Router();
 
@@ -26,6 +27,15 @@ function generateTournamentId(): string {
 // POST /api/tournaments
 tournamentsRouter.post("/", async (req, res) => {
   try {
+    const creationEnabled = await getSystemSettingBoolean("tournament_creation_enabled", true);
+    const adminCode = req.headers["x-admin-code"] as string | undefined;
+    const passcode = process.env.ADMIN_PASSCODE ?? "pbj2024";
+    const isAdminBypass = !!adminCode && adminCode === passcode;
+    if (!creationEnabled && !isAdminBypass) {
+      res.status(403).json({ error: "creation_locked", message: "Match creation is locked by the admin." });
+      return;
+    }
+
     const body = CreateTournamentBody.parse(req.body ?? {});
     const id = generateTournamentId();
     const hostToken = randomUUID();

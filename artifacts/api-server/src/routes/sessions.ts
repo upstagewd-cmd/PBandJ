@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
 import { computeElo } from "../lib/elo";
 import { getRank } from "../lib/ranks";
-import { getStartingEloForSkill, getEloKFactor } from "../lib/settings";
+import { getStartingEloForSkill, getEloKFactor, getSystemSettingBoolean } from "../lib/settings";
 import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
 
@@ -109,6 +109,15 @@ async function getSessionFull(sessionId: string) {
 
 sessionsRouter.post("/", async (req, res) => {
   try {
+    const creationEnabled = await getSystemSettingBoolean("open_play_creation_enabled", true);
+    const adminCode = req.headers["x-admin-code"] as string | undefined;
+    const passcode = process.env.ADMIN_PASSCODE ?? "pbj2024";
+    const isAdminBypass = !!adminCode && adminCode === passcode;
+    if (!creationEnabled && !isAdminBypass) {
+      res.status(403).json({ error: "creation_locked", message: "Match creation is locked by the admin." });
+      return;
+    }
+
     const body = CreateSessionBody.safeParse(req.body ?? {}).success ? CreateSessionBody.parse(req.body ?? {}) : { name: undefined };
     const id = generateSessionId();
     const hostToken = randomUUID();

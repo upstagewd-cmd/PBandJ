@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Show, useUser, useClerk } from "@clerk/react";
-import { useCreateTournament, useCreateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, Download } from "lucide-react";
+import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, Download, Lock } from "lucide-react";
 import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
@@ -86,41 +85,130 @@ function RecentGames() {
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const createTournament = useCreateTournament();
-  const createSession = useCreateSession();
+  const [creatingTournament, setCreatingTournament] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [tournamentCreationEnabled, setTournamentCreationEnabled] = useState(true);
+  const [openPlayCreationEnabled, setOpenPlayCreationEnabled] = useState(true);
+  const [adminBypass, setAdminBypass] = useState(false);
   const { user } = useUser();
   const { signOut } = useClerk();
   const installPrompt = useInstallPrompt();
   const { manualShow, canShowInstallButton } = installPrompt;
+  const adminCode = typeof window !== "undefined" ? localStorage.getItem("pbj_admin_code") : null;
 
-  const handleCreateTournament = () => {
-    createTournament.mutate(
-      { data: { name: defaultGameName() } },
-      {
-        onSuccess: (data) => {
-          localStorage.setItem(`hostToken_${data.id}`, data.hostToken);
-          setLocation(`/t/${data.id}`);
-        },
-        onError: () => {
-          toast({ title: "Error", description: "Failed to create tournament. Please try again.", variant: "destructive" });
-        },
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCreationSettings = async () => {
+      try {
+        const res = await fetch("/api/settings/public", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json() as {
+          tournamentCreationEnabled?: boolean;
+          openPlayCreationEnabled?: boolean;
+        };
+        if (cancelled) return;
+        setTournamentCreationEnabled(data.tournamentCreationEnabled ?? true);
+        setOpenPlayCreationEnabled(data.openPlayCreationEnabled ?? true);
+      } catch {
+        // Keep defaults enabled if settings endpoint is unavailable.
       }
-    );
+    };
+
+    const verifyAdminBypass = async () => {
+      if (!adminCode) {
+        if (!cancelled) setAdminBypass(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/admin/verify", {
+          headers: { "x-admin-code": adminCode },
+          credentials: "include",
+        });
+        if (!cancelled) setAdminBypass(res.ok);
+      } catch {
+        if (!cancelled) setAdminBypass(false);
+      }
+    };
+
+    void Promise.all([loadCreationSettings(), verifyAdminBypass()]);
+    return () => {
+      cancelled = true;
+    };
+  }, [adminCode]);
+
+  const createLockedMessage = "Match creation is locked by the admin.";
+  const canCreateTournament = tournamentCreationEnabled || adminBypass;
+  const canCreateOpenPlay = openPlayCreationEnabled || adminBypass;
+  const isCreating = creatingTournament || creatingSession;
+
+  const handleCreateTournament = async () => {
+    if (!canCreateTournament) return;
+
+    setCreatingTournament(true);
+    try {
+      const res = await fetch("/api/tournaments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminBypass && adminCode ? { "x-admin-code": adminCode } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ name: defaultGameName() }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string; message?: string }));
+        if (res.status === 403 && body?.error === "creation_locked") {
+          toast({ title: createLockedMessage, variant: "destructive" });
+          return;
+        }
+        throw new Error(body?.message || "Failed to create tournament");
+      }
+
+      const data = await res.json() as { id: string; hostToken: string };
+      localStorage.setItem(`hostToken_${data.id}`, data.hostToken);
+      setLocation(`/t/${data.id}`);
+    } catch {
+      toast({ title: "Error", description: "Failed to create tournament. Please try again.", variant: "destructive" });
+    } finally {
+      setCreatingTournament(false);
+    }
   };
 
-  const handleCreateSession = () => {
-    createSession.mutate(
-      { data: { name: defaultGameName() } },
-      {
-        onSuccess: (data) => {
-          localStorage.setItem(`sessionToken_${data.id}`, data.hostToken);
-          setLocation(`/s/${data.id}`);
+  const handleCreateSession = async () => {
+    if (!canCreateOpenPlay) return;
+
+    setCreatingSession(true);
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminBypass && adminCode ? { "x-admin-code": adminCode } : {}),
         },
-        onError: () => {
-          toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
-        },
+        credentials: "include",
+        body: JSON.stringify({ name: defaultGameName() }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string; message?: string }));
+        if (res.status === 403 && body?.error === "creation_locked") {
+          toast({ title: createLockedMessage, variant: "destructive" });
+          return;
+        }
+        throw new Error(body?.message || "Failed to create session");
       }
-    );
+
+      const data = await res.json() as { id: string; hostToken: string };
+      localStorage.setItem(`sessionToken_${data.id}`, data.hostToken);
+      setLocation(`/s/${data.id}`);
+    } catch {
+      toast({ title: "Error", description: "Failed to create session. Please try again.", variant: "destructive" });
+    } finally {
+      setCreatingSession(false);
+    }
   };
 
   return (
@@ -214,14 +302,19 @@ export default function Home() {
           size="lg"
           className="w-full h-16 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,100,50,0.3)] hover:shadow-[0_0_30px_rgba(255,100,50,0.4)]"
           onClick={handleCreateTournament}
-          disabled={createTournament.isPending || createSession.isPending}
+          disabled={isCreating || !canCreateTournament}
         >
-          {createTournament.isPending ? (
+          {creatingTournament ? (
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+          ) : !canCreateTournament ? (
+            <><Lock className="mr-2.5 h-5 w-5" /> CREATE TOURNAMENT</>
           ) : (
             <><Trophy className="mr-2.5 h-5 w-5" /> CREATE TOURNAMENT</>
           )}
         </Button>
+        {!canCreateTournament && (
+          <p className="text-xs text-muted-foreground">Match creation is locked by the admin.</p>
+        )}
 
         {/* Divider */}
         <div className="flex items-center gap-3">
@@ -236,14 +329,19 @@ export default function Home() {
           variant="outline"
           className="w-full h-14 text-base font-bold rounded-2xl transition-transform active:scale-95 border-[#2A2A2A] text-[#2A2A2A] hover:bg-[#2A2A2A]/5"
           onClick={handleCreateSession}
-          disabled={createTournament.isPending || createSession.isPending}
+          disabled={isCreating || !canCreateOpenPlay}
         >
-          {createSession.isPending ? (
+          {creatingSession ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : !canCreateOpenPlay ? (
+            <><Lock className="mr-2.5 h-5 w-5" /> START OPEN PLAY</>
           ) : (
             <><Activity className="mr-2.5 h-5 w-5" /> START OPEN PLAY</>
           )}
         </Button>
+        {!canCreateOpenPlay && (
+          <p className="text-xs text-muted-foreground">Match creation is locked by the admin.</p>
+        )}
 
         <Show when="signed-out">
           <p className="text-muted-foreground/60 text-xs">

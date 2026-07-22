@@ -7,6 +7,7 @@ import { teamsRouter } from "./teams";
 import { openPlayRouter } from "./open-play";
 import { playerStatsRouter } from "./player-stats";
 import { profileRouter } from "./profile";
+import { appSettingsRouter } from "./app-settings";
 import storageRouter from "./storage";
 import { adminRouter } from "./admin/index.js";
 import { sessionsRouter } from "./sessions";
@@ -22,6 +23,7 @@ router.use("/tournaments/:tournamentId/matches", matchesRouter);
 router.use("/tournaments/:tournamentId/open-play", openPlayRouter);
 router.use("/players", playerStatsRouter);
 router.use("/profile", profileRouter);
+router.use("/settings", appSettingsRouter);
 router.use("/admin", adminRouter);
 router.use("/sessions", sessionsRouter);
 

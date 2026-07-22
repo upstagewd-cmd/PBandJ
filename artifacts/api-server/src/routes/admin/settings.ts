@@ -12,6 +12,8 @@ const DEFAULTS: Record<string, string> = {
   skill_beginner: "1000",
   skill_intermediate: "1500",
   skill_advanced: "2000",
+  tournament_creation_enabled: "true",
+  open_play_creation_enabled: "true",
   badge_system_enabled: "true",
   rank_system_enabled: "true",
 };

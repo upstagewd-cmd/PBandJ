@@ -12,6 +12,8 @@ const SETTING_LABELS: Record<string, { label: string; description: string; type:
   skill_beginner:       { label: "Beginner Seed ELO", description: "Starting ELO when skill level is Beginner", type: "number" },
   skill_intermediate:   { label: "Intermediate Seed ELO", description: "Starting ELO when skill level is Intermediate", type: "number" },
   skill_advanced:       { label: "Advanced Seed ELO", description: "Starting ELO when skill level is Advanced", type: "number" },
+  tournament_creation_enabled: { label: "Tournament Creation", description: "Allow users to create new tournaments", type: "boolean" },
+  open_play_creation_enabled:  { label: "Open Play Creation", description: "Allow users to start open play sessions", type: "boolean" },
   badge_system_enabled: { label: "Badge System", description: "Enable or disable the badge system entirely", type: "boolean" },
   rank_system_enabled:  { label: "Rank System", description: "Enable or disable rank display throughout the app", type: "boolean" },
 };
