@@ -13,11 +13,11 @@ export function BadgeInfoChip({ badge }: { badge: BadgeInfo }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="flex items-center gap-1.5 bg-sky/10 border border-sky/20 rounded-full px-3 py-1 transition-colors hover:bg-sky/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
           aria-label={`View badge details for ${badge.name}`}
         >
           <span className="text-base leading-none">{badge.icon}</span>
-          <span className="text-xs font-bold text-primary">{badge.name}</span>
+          <span className="text-xs font-bold text-sky">{badge.name}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3" align="start">

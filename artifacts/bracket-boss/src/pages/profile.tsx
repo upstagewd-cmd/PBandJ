@@ -457,7 +457,7 @@ export default function ProfilePage() {
                   value={profile.totalLosses}
                 />
                 <StatCard
-                  icon={<Trophy className="w-5 h-5 text-yellow-500" />}
+                  icon={<Trophy className="w-5 h-5 text-gold" />}
                   label="Titles"
                   value={profile.tournamentWins}
                   sub={`${profile.tournamentsPlayed} tournament${profile.tournamentsPlayed !== 1 ? "s" : ""}`}

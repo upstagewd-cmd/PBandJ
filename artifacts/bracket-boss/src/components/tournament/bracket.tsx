@@ -320,7 +320,7 @@ function MatchCard({
   const canPickWinner = isHost && isActive && match.playerOneId && match.playerTwoId;
   const parseScore = (s: string) => { const n = parseInt(s, 10); return isNaN(n) ? undefined : n; };
 
-  const accentClass = isChampionship ? "border-yellow-500/40" : "border-primary/40";
+  const accentClass = isChampionship ? "border-gold/40" : "border-primary/40";
 
   const rowBg = (playerId: string | null | undefined) => {
     if (!playerId || !isDone) return "";
@@ -342,7 +342,7 @@ function MatchCard({
         ${isActive ? accentClass : "border-border"}
         ${isBye ? "opacity-50" : ""}
         ${isPendingStatus && !isBye ? "opacity-50" : ""}
-        ${isChampionship ? "ring-2 ring-yellow-500/30" : ""}
+        ${isChampionship ? "ring-2 ring-gold/30" : ""}
       `}
     >
       {/* Score row */}
@@ -378,7 +378,7 @@ function MatchCard({
           />
         )}
         {isDone && match.winnerId === match.playerOneId && (
-          isChampionship ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" /> : <CheckMark />
+          isChampionship ? <Crown className="w-4 h-4 text-gold shrink-0" /> : <CheckMark />
         )}
       </div>
 
@@ -403,7 +403,7 @@ function MatchCard({
             />
           )}
           {isDone && match.winnerId === match.playerTwoId && (
-            isChampionship ? <Crown className="w-4 h-4 text-yellow-500 shrink-0" /> : <CheckMark />
+            isChampionship ? <Crown className="w-4 h-4 text-gold shrink-0" /> : <CheckMark />
           )}
         </div>
       )}
@@ -450,7 +450,7 @@ function TeamSlot({
           {name ?? "TBD"}
         </span>
         {isWinner && isChampionship && (
-          <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">Champions 🏆</span>
+          <span className="text-[10px] text-gold font-bold uppercase tracking-wider">Champions 🏆</span>
         )}
       </div>
     </div>

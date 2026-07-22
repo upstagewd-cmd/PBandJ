@@ -155,7 +155,7 @@ export default function PlayersPage() {
                     </div>
                     <div className="rounded-2xl border border-border/50 bg-muted/40 px-3 py-2 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Trophy className="w-4 h-4 text-yellow-500" />
+                        <Trophy className="w-4 h-4 text-gold" />
                         <span className="font-semibold text-foreground">{player.matchesPlayed}</span>
                         <span>matches</span>
                       </div>

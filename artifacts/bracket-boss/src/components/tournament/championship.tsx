@@ -36,14 +36,14 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
         angle: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: ['#ff4500', '#ff8c00', '#ffd700']
+        colors: ['#F8B321', '#B7E334', '#F12E8A']
       });
       confetti({
         particleCount: 5,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
-        colors: ['#ff4500', '#ff8c00', '#ffd700']
+        colors: ['#F8B321', '#B7E334', '#F12E8A']
       });
 
       if (Date.now() < end) {
@@ -69,10 +69,10 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-12 animate-in fade-in zoom-in-95 duration-700">
       
       <div className="text-center space-y-4">
-        <div className="mx-auto w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mb-6">
-          <Trophy className="w-10 h-10 text-yellow-500" />
+        <div className="mx-auto w-20 h-20 bg-gold/20 rounded-full flex items-center justify-center mb-6">
+          <Trophy className="w-10 h-10 text-gold" />
         </div>
-        <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-yellow-400 to-orange-600 pb-2">
+        <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-gold drop-shadow-[0_0_28px_rgba(248,179,33,0.35)] pb-2">
           CHAMPION
         </h1>
         <p className="text-2xl font-bold text-muted-foreground">{tournament.name}</p>
@@ -90,9 +90,9 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
         </div>
 
         {/* First Place */}
-        <div className="order-1 md:order-2 bg-gradient-to-b from-primary/20 to-card border-2 border-primary rounded-3xl p-8 text-center shadow-[0_0_40px_rgba(255,100,50,0.3)] z-10">
+        <div className="order-1 md:order-2 bg-gradient-to-b from-gold/20 to-card border-2 border-gold rounded-3xl p-8 text-center shadow-[0_0_40px_rgba(248,179,33,0.3)] z-10">
           <div className="text-6xl mb-6">🥇</div>
-          <h3 className="text-primary uppercase text-sm tracking-widest font-black mb-2">1st Place</h3>
+          <h3 className="text-gold uppercase text-sm tracking-widest font-black mb-2">1st Place</h3>
           <div className="text-3xl md:text-4xl font-extrabold leading-tight space-y-1">
             {championLines.length > 0 ? championLines.map((line) => <p key={line}>{line}</p>) : <p>{getPlayerDisplayName((summary as any).champion)}</p>}
           </div>
@@ -134,7 +134,7 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
       <div className="flex justify-center pt-8">
         <Button 
           size="lg" 
-          className="h-16 px-12 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,100,50,0.3)] hover:shadow-[0_0_30px_rgba(255,100,50,0.4)]"
+          className="h-16 px-12 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(248,179,33,0.3)] hover:shadow-[0_0_30px_rgba(248,179,33,0.4)]"
           onClick={() => setLocation('/')}
         >
           CREATE NEW TOURNAMENT

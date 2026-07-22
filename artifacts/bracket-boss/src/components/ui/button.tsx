@@ -12,7 +12,8 @@ const buttonVariants = cva(
       variant: {
         default:
            // @replit: no hover, and add primary border
-           "bg-primary text-primary-foreground border border-primary-border",
+           // Subtle Electric Lime glow behind primary CTAs per brand direction.
+           "bg-primary text-primary-foreground border border-primary-border shadow-[0_0_20px_-6px_hsl(var(--primary)/0.5)]",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm border-destructive-border",
         outline:

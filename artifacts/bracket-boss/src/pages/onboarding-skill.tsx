@@ -199,7 +199,8 @@ export default function OnboardingSkillPage() {
   return (
     <>
       <Show when="signed-in">
-        <div className="min-h-[100dvh] w-full px-4 py-8 max-w-xl mx-auto flex items-center">
+        <div className="min-h-[100dvh] w-full bg-onboarding-gradient flex items-center">
+          <div className="w-full px-4 py-8 max-w-xl mx-auto">
           <div className="w-full bg-card border border-border/50 rounded-3xl p-6 shadow-xl space-y-5">
             <div className="space-y-1 text-center">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Welcome to PB&J</p>
@@ -330,6 +331,7 @@ export default function OnboardingSkillPage() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       </Show>

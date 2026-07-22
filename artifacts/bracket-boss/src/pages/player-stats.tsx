@@ -78,7 +78,7 @@ export default function PlayerStatsPage() {
         <StatCard icon={<TrendingUp className="w-5 h-5 text-green-400" />} label="Wins" value={wins} sub={`${winPct}% win rate`} />
         <StatCard icon={<Target className="w-5 h-5 text-muted-foreground" />} label="Losses" value={losses} />
         <StatCard
-          icon={<Trophy className="w-5 h-5 text-yellow-500" />}
+          icon={<Trophy className="w-5 h-5 text-gold" />}
           label="Titles"
           value={tournamentWins}
           sub={`${tournamentsPlayed} tournament${tournamentsPlayed !== 1 ? "s" : ""}`}
