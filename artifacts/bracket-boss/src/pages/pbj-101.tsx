@@ -302,8 +302,23 @@ function RecapVisual() {
   );
 }
 
+function GlossaryVisual() {
+  return (
+    <CourtShell maxHeight={220}>
+      <circle cx={100} cy={150} r={32} fill={T.lime} opacity="0.16" />
+      <circle cx={100} cy={150} r={22} fill="none" stroke={T.lime} strokeWidth="1.6" />
+      <text x="100" y="146" textAnchor="middle" fontSize="14" fontWeight="700" fill={T.white} fontFamily="'JetBrains Mono', monospace">
+        A-Z
+      </text>
+      <text x="100" y="160" textAnchor="middle" fontSize="7.5" fill={T.stone} fontFamily="'JetBrains Mono', monospace" letterSpacing="1.2">
+        GLOSSARY
+      </text>
+    </CourtShell>
+  );
+}
+
 type Slide = {
-  kind?: "intro" | "recap";
+  kind?: "intro" | "recap" | "glossary";
   eyebrow?: string;
   title: string;
   body?: string;
@@ -312,6 +327,7 @@ type Slide = {
   tag?: string;
   list?: string[];
   recap?: string[];
+  glossary?: Array<{ term: string; definition: string }>;
   visual: ReactNode;
 };
 
@@ -419,6 +435,40 @@ const SLIDES: Slide[] = [
       "Win by two, starting from 11",
     ],
     visual: <RecapVisual />,
+  },
+  {
+    kind: "glossary",
+    eyebrow: "Glossary",
+    title: "Pickleball terms you'll hear often",
+    body: "Quick definitions for common terms used in Rules 101 and open play.",
+    glossary: [
+      { term: "Carry", definition: "Hitting the ball so it does not rebound cleanly and instead is carried along the paddle face during forward motion." },
+      { term: "Cross-court", definition: "The court diagonally opposite your court position." },
+      { term: "Dead ball", definition: "The term for the ball after a fault is declared and play is stopped." },
+      { term: "Dink shot", definition: "A soft shot intended to arc over the net and land in the non-volley zone." },
+      { term: "Double bounce", definition: "A ball that bounces more than once on one side before return; after the serve, each side must allow one bounce before volleying." },
+      { term: "Double hit", definition: "One side contacts the ball twice before it is returned over the net, by one player or both teammates." },
+      { term: "Drop shot", definition: "A groundstroke that lands short of the opponent's position." },
+      { term: "Drop shot volley", definition: "A volley that absorbs pace and drops short near the net, often against opponents near the baseline." },
+      { term: "Fault", definition: "Any rule violation that stops play." },
+      { term: "First serve", definition: "To start a game, only one partner on the first serving side serves; after that first fault, serve goes to the opponents." },
+      { term: "Groundstroke", definition: "Hitting the ball after one bounce." },
+      { term: "Half volley", definition: "A groundstroke made immediately after the bounce, before the ball rises to full height." },
+      { term: "Hinder", definition: "Any element or occurrence that affects play." },
+      { term: "Let", definition: "A serve that hits the net cord and lands in the service court; it can also mean a rally replayed for any reason." },
+      { term: "Line calls", definition: "If any part of the ball lands on a line, it is in, except on the non-volley line during a serve." },
+      { term: "Lob", definition: "A high, deep return meant to push the opposing side back toward the baseline." },
+      { term: "Non-volley zone (the kitchen)", definition: "The court area next to the net where players cannot volley; the surrounding lines are included in this zone." },
+      { term: "Overhead slam / smash", definition: "A hard overhand shot, usually taken off a lob, high return, or high bounce." },
+      { term: "Passing shot", definition: "A volley or groundstroke aimed away from a player to make a return difficult or impossible." },
+      { term: "Rally", definition: "Continuous play after the serve and before a fault." },
+      { term: "Replays", definition: "Rallies replayed for any reason, with no point or side out awarded." },
+      { term: "Second serve", definition: "The state when a serving side has used its first of two serves during regular doubles rotation." },
+      { term: "Service court", definition: "The area on either side of the centerline, bounded by the non-volley line, baseline, and sideline; all lines are included except the non-volley line." },
+      { term: "Side out", definition: "Declared when one side loses service and the other side is awarded service." },
+      { term: "Volley", definition: "Hitting the ball in the air during a rally before it bounces." },
+    ],
+    visual: <GlossaryVisual />,
   },
 ];
 
@@ -565,6 +615,26 @@ export default function Pbj101Page() {
                     </li>
                   ))}
                 </ol>
+              </div>
+            </div>
+          )}
+
+          {slide.kind === "glossary" && (
+            <div className="flex flex-col gap-4">
+              <div className="mx-auto w-36">{slide.visual}</div>
+              <div className="flex flex-col gap-2.5">
+                <span className="pb-mono text-center text-xs uppercase tracking-widest" style={{ color: T.lime }}>{slide.eyebrow}</span>
+                <h1 className="pb-display text-center text-2xl leading-tight" style={{ color: T.white, fontWeight: 600 }}>{slide.title}</h1>
+                {slide.body && <p className="text-center text-[13.5px] leading-relaxed" style={{ color: bodyColor }}>{slide.body}</p>}
+
+                <ul className="mt-1 flex flex-col gap-2.5">
+                  {slide.glossary?.map((item) => (
+                    <li key={item.term} className="rounded-xl border px-3 py-2.5" style={{ borderColor: "rgba(233,231,225,0.14)", background: "rgba(255,255,255,0.02)" }}>
+                      <p className="pb-mono text-[11px] uppercase tracking-wide" style={{ color: T.lime }}>{item.term}</p>
+                      <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.stone }}>{item.definition}</p>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}
