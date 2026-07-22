@@ -7,6 +7,7 @@ import { adminRatingsRouter } from "./ratings.js";
 import { adminRanksRouter } from "./ranks.js";
 import { adminBadgesRouter } from "./badges.js";
 import { adminSettingsRouter } from "./settings.js";
+import { adminSessionsRouter } from "./sessions.js";
 
 export const adminRouter = Router();
 
@@ -21,3 +22,4 @@ adminRouter.use("/ratings", adminRatingsRouter);
 adminRouter.use("/ranks", adminRanksRouter);
 adminRouter.use("/badges", adminBadgesRouter);
 adminRouter.use("/settings", adminSettingsRouter);
+adminRouter.use("/sessions", adminSessionsRouter);

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { adminGet, adminPatch, adminDelete } from "./useAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Pencil, Trash2, Check } from "lucide-react";
+import { Search, Pencil, Trash2, Check, Flag, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BracketMatch {
@@ -75,6 +75,12 @@ export function MatchesTab({ code }: { code: string }) {
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, unknown>>({});
+  const [pendingSourceAction, setPendingSourceAction] = useState<{
+    id: string;
+    name: string;
+    type: "tournament" | "open_play";
+    action: "close" | "cancel" | "delete";
+  } | null>(null);
 
   const load = async () => {
     try {
@@ -144,6 +150,45 @@ export function MatchesTab({ code }: { code: string }) {
     setPendingDelete(null);
   };
 
+  const queueSourceAction = (
+    id: string,
+    name: string,
+    type: "tournament" | "open_play",
+    action: "close" | "cancel" | "delete",
+  ) => {
+    setPendingSourceAction({ id, name, type, action });
+  };
+
+  const confirmSourceAction = async () => {
+    if (!pendingSourceAction) return;
+
+    try {
+      if (pendingSourceAction.type === "tournament") {
+        if (pendingSourceAction.action === "cancel") {
+          await adminPatch(code, `/tournaments/${pendingSourceAction.id}`, { status: "cancelled" });
+          toast({ title: "Tournament cancelled" });
+        } else if (pendingSourceAction.action === "delete") {
+          await adminDelete(code, `/tournaments/${pendingSourceAction.id}`);
+          toast({ title: "Tournament deleted" });
+        }
+      } else {
+        if (pendingSourceAction.action === "close") {
+          await adminPatch(code, `/sessions/${pendingSourceAction.id}`, { status: "closed" });
+          toast({ title: "Session closed" });
+        } else if (pendingSourceAction.action === "delete") {
+          await adminDelete(code, `/sessions/${pendingSourceAction.id}`);
+          toast({ title: "Session deleted" });
+        }
+      }
+
+      await load();
+    } catch (e) {
+      toast({ title: "Error", description: String(e), variant: "destructive" });
+    }
+
+    setPendingSourceAction(null);
+  };
+
   if (loading) return <p className="text-muted-foreground p-4">Loading matches…</p>;
 
   const bracketLabel: Record<string, string> = {
@@ -158,6 +203,28 @@ export function MatchesTab({ code }: { code: string }) {
           <div className="flex gap-2">
             <Button size="sm" onClick={confirmDelete} variant="destructive">Delete</Button>
             <Button size="sm" variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {pendingSourceAction && (
+        <div className={`rounded-xl border p-4 space-y-3 ${pendingSourceAction.action === "delete" ? "bg-red-500/10 border-red-500/40" : "bg-primary/10 border-primary/40"}`}>
+          <p className={`text-sm font-bold ${pendingSourceAction.action === "delete" ? "text-red-400" : "text-primary"}`}>
+            {pendingSourceAction.action === "delete"
+              ? `Delete "${pendingSourceAction.name}" and all of its data?`
+              : pendingSourceAction.action === "cancel"
+              ? `Cancel "${pendingSourceAction.name}"?`
+              : `Close "${pendingSourceAction.name}"?`}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={confirmSourceAction}
+              variant={pendingSourceAction.action === "delete" ? "destructive" : "default"}
+            >
+              Confirm
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPendingSourceAction(null)}>Cancel</Button>
           </div>
         </div>
       )}
@@ -272,6 +339,42 @@ export function MatchesTab({ code }: { code: string }) {
                           <p className="text-xs text-muted-foreground">{item.playerCount} players</p>
                         </div>
                         <p className="text-xs text-muted-foreground/60 mt-0.5">Created {fmtDateTime(item.createdAt)}</p>
+                      </div>
+
+                      <div className="flex shrink-0 gap-1">
+                        {item.type === "tournament" && ["lobby", "active"].includes(item.statusLabel.toLowerCase()) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-yellow-400"
+                            onClick={() => queueSourceAction(item.id, item.name, item.type, "cancel")}
+                            title="Cancel"
+                          >
+                            <Flag className="w-3 h-3" />
+                          </Button>
+                        )}
+
+                        {item.type === "open_play" && item.statusLabel.toLowerCase() === "active" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary"
+                            onClick={() => queueSourceAction(item.id, item.name, item.type, "close")}
+                            title="Close"
+                          >
+                            <XCircle className="w-3 h-3" />
+                          </Button>
+                        )}
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400"
+                          onClick={() => queueSourceAction(item.id, item.name, item.type, "delete")}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
                   </div>
