@@ -15,6 +15,7 @@ interface BracketMatch {
 }
 
 interface OpenMatch {
+  sourceType: "open_play_tournament" | "open_play_session";
   match: {
     id: string; tournamentId: string; winnerTeam: number;
     scoreOne: number | null; scoreTwo: number | null; playedAt: string;
@@ -83,9 +84,9 @@ export function MatchesTab({ code }: { code: string }) {
     }
   };
 
-  const saveOpen = async (id: string) => {
+  const saveOpen = async (id: string, sourceType: OpenMatch["sourceType"]) => {
     try {
-      await adminPatch(code, `/matches/open-play/${id}`, editForm);
+      await adminPatch(code, `/matches/open-play/${id}`, { ...editForm, sourceType });
       toast({ title: "Match updated" });
       setEditId(null);
       await load();
@@ -94,9 +95,9 @@ export function MatchesTab({ code }: { code: string }) {
     }
   };
 
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; type: "bracket" | "open_play" } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; type: "bracket" | "open_play" | "open_play_session" } | null>(null);
 
-  const deleteMatch = (id: string, type: "bracket" | "open_play") => {
+  const deleteMatch = (id: string, type: "bracket" | "open_play" | "open_play_session") => {
     setPendingDelete({ id, type });
   };
 
@@ -220,8 +221,8 @@ export function MatchesTab({ code }: { code: string }) {
           </div>
         ))}
 
-        {tab === "open" && filteredOpen.map(({ match: m, tournament: t }) => (
-          <div key={m.id} className="bg-card border border-border/50 rounded-xl p-3">
+        {tab === "open" && filteredOpen.map(({ sourceType, match: m, tournament: t }) => (
+          <div key={`${sourceType}_${m.id}`} className="bg-card border border-border/50 rounded-xl p-3">
             {editId === m.id ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2">
@@ -239,7 +240,7 @@ export function MatchesTab({ code }: { code: string }) {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => saveOpen(m.id)}><Check className="w-3 h-3 mr-1" />Save</Button>
+                  <Button size="sm" onClick={() => void saveOpen(m.id, sourceType)}><Check className="w-3 h-3 mr-1" />Save</Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancel</Button>
                 </div>
               </div>
@@ -247,17 +248,17 @@ export function MatchesTab({ code }: { code: string }) {
               <div className="flex items-center gap-3">
                 <div className="flex-1">
                   <p className="text-xs font-bold text-primary">{t?.name}</p>
-                  <p className="text-sm font-bold">Open Play · Team {m.winnerTeam} won</p>
+                  <p className="text-sm font-bold">{sourceType === "open_play_session" ? "Open Play Session" : "Open Play"} · Team {m.winnerTeam} won</p>
                   <p className="text-xs text-muted-foreground">
                     {m.scoreOne !== null ? `${m.scoreOne}–${m.scoreTwo}` : "No score"}
                   </p>
                   <p className="text-xs text-muted-foreground/60 mt-0.5">{fmtDateTime(m.playedAt)}</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setEditForm({ winnerTeam: m.winnerTeam, scoreOne: m.scoreOne, scoreTwo: m.scoreTwo }); }}>
+                  <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setEditForm({ winnerTeam: m.winnerTeam, scoreOne: m.scoreOne, scoreTwo: m.scoreTwo, sourceType }); }}>
                     <Pencil className="w-3 h-3" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-red-400" onClick={() => deleteMatch(m.id, "open_play")}>
+                  <Button size="sm" variant="ghost" className="text-red-400" onClick={() => deleteMatch(m.id, sourceType === "open_play_session" ? "open_play_session" : "open_play")}>
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>

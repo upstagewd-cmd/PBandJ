@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import {
   matchesTable,
   openPlayMatchesTable,
+  sessionMatchesTable,
+  sessionsTable,
   playersTable,
   teamsTable,
   tournamentsTable,
@@ -52,7 +54,36 @@ adminMatchesRouter.get("/", async (req, res) => {
     .leftJoin(tournamentsTable, eq(openPlayMatchesTable.tournamentId, tournamentsTable.id))
     .orderBy(desc(openPlayMatchesTable.playedAt));
 
-  res.json({ bracket, openPlay });
+  const sessionOpenPlay = await db
+    .select({
+      match: sessionMatchesTable,
+      session: { id: sessionsTable.id, name: sessionsTable.name },
+    })
+    .from(sessionMatchesTable)
+    .leftJoin(sessionsTable, eq(sessionMatchesTable.sessionId, sessionsTable.id))
+    .orderBy(desc(sessionMatchesTable.playedAt));
+
+  const mergedOpenPlay = [
+    ...openPlay.map((row) => ({
+      sourceType: "open_play_tournament" as const,
+      match: row.match,
+      tournament: row.tournament,
+    })),
+    ...sessionOpenPlay.map((row) => ({
+      sourceType: "open_play_session" as const,
+      match: {
+        id: row.match.id,
+        tournamentId: row.match.sessionId,
+        winnerTeam: row.match.winnerTeam,
+        scoreOne: row.match.scoreOne,
+        scoreTwo: row.match.scoreTwo,
+        playedAt: row.match.playedAt,
+      },
+      tournament: row.session,
+    })),
+  ].sort((a, b) => b.match.playedAt.getTime() - a.match.playedAt.getTime());
+
+  res.json({ bracket, openPlay: mergedOpenPlay });
 });
 
 adminMatchesRouter.patch("/:matchId", async (req, res) => {
@@ -102,6 +133,15 @@ adminMatchesRouter.delete("/:matchId", async (req, res) => {
       return;
     }
     broadcastMatchDeleted(deleted.tournamentId, matchId);
+  } else if (type === "open_play_session") {
+    const [deleted] = await db
+      .delete(sessionMatchesTable)
+      .where(eq(sessionMatchesTable.id, matchId))
+      .returning();
+    if (!deleted) {
+      res.status(404).json({ error: "Match not found" });
+      return;
+    }
   } else {
     const [deleted] = await db
       .delete(matchesTable)
@@ -118,12 +158,28 @@ adminMatchesRouter.delete("/:matchId", async (req, res) => {
 
 adminMatchesRouter.patch("/open-play/:matchId", async (req, res) => {
   const { matchId } = req.params;
-  const { winnerTeam, scoreOne, scoreTwo } = req.body as Record<string, unknown>;
+  const { winnerTeam, scoreOne, scoreTwo, sourceType } = req.body as Record<string, unknown>;
 
   const updates: Record<string, unknown> = {};
   if (winnerTeam !== undefined) updates.winnerTeam = Number(winnerTeam);
   if (scoreOne !== undefined) updates.scoreOne = scoreOne === null ? null : Number(scoreOne);
   if (scoreTwo !== undefined) updates.scoreTwo = scoreTwo === null ? null : Number(scoreTwo);
+
+  if (sourceType === "open_play_session") {
+    const [updated] = await db
+      .update(sessionMatchesTable)
+      .set(updates)
+      .where(eq(sessionMatchesTable.id, matchId))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Match not found" });
+      return;
+    }
+
+    res.json(updated);
+    return;
+  }
 
   const [updated] = await db
     .update(openPlayMatchesTable)
