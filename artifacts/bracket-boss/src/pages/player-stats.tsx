@@ -43,33 +43,68 @@ export default function PlayerStatsPage() {
       </Button>
 
       {/* Hero card */}
-      <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-4">
-          <PlayerAvatar player={player} size="xxl" />
-          <div>
-            <h1 className="text-2xl font-extrabold">{getPlayerDisplayName(player)}</h1>
-            {getPlayerDisplaySubtext(player) && (
-              <p className="text-muted-foreground text-sm">{getPlayerDisplaySubtext(player)}</p>
-            )}
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-lg">{rankEmoji}</span>
-              <span className="text-sm font-bold text-primary">{rankTitle}</span>
-              <span className="text-xs text-muted-foreground ml-1">· {Math.round(eloRating)} ELO</span>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:items-stretch">
+        <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-card p-4 shadow-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--primary)/0.18),_transparent_60%)]" />
+          <div className="relative flex h-full min-h-72 flex-col justify-between rounded-[1.5rem] border border-border/40 bg-muted/20 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">Player Portrait</p>
+            <div className="flex flex-1 items-center justify-center py-4">
+              <PlayerAvatar player={player} size="xxl" className="h-44 w-44 rounded-[2rem] border-2 border-primary/25 text-4xl shadow-lg md:h-52 md:w-52 md:text-5xl" />
+            </div>
+            <div className="rounded-2xl border border-border/40 bg-background/75 px-4 py-3">
+              <p className="text-sm font-bold text-foreground">Community profile</p>
+              <p className="text-xs text-muted-foreground">Read-only stats and identity snapshot</p>
             </div>
           </div>
         </div>
 
-        {badges.length > 0 && (
-          <div className="pt-1 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
-            <div className="flex flex-wrap gap-2">
-              {badges.map((b) => (
-                <BadgeInfoChip key={b.id} badge={b} />
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
+        <div className="bg-card border border-border/50 rounded-[2rem] p-6 shadow-xl space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">Player Identity</p>
+            <h1 className="text-3xl font-extrabold md:text-4xl">{getPlayerDisplayName(player)}</h1>
+            {getPlayerDisplaySubtext(player) && (
+              <p className="text-base text-muted-foreground">{getPlayerDisplaySubtext(player)}</p>
+            )}
           </div>
-        )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Rank</p>
+              <p className="mt-1 text-sm font-bold text-primary">{rankEmoji} {rankTitle}</p>
+            </div>
+            <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ELO</p>
+              <p className="mt-1 text-sm font-bold text-foreground">{Math.round(eloRating)}</p>
+            </div>
+            <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Skill</p>
+              <p className="mt-1 text-sm font-bold text-foreground">{(player as any).skillLevel || "Unset"}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Tournaments</p>
+              <p className="mt-1 text-sm font-bold text-foreground">{tournamentsPlayed}</p>
+            </div>
+            <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Badges</p>
+              <p className="mt-1 text-sm font-bold text-foreground">{badges.length}</p>
+            </div>
+          </div>
+
+          {badges.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
+              <div className="flex flex-wrap gap-2">
+                {badges.map((b) => (
+                  <BadgeInfoChip key={b.id} badge={b} />
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats grid */}

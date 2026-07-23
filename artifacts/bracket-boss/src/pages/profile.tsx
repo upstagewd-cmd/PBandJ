@@ -219,64 +219,87 @@ export default function ProfilePage() {
 
         <Show when="signed-in">
           {/* Hero card */}
-          <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center gap-4">
-              {/* Clickable avatar */}
-              <button
-                onClick={handleAvatarClick}
-                className="relative w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20 shrink-0 group hover:opacity-90 transition-opacity"
-                title="Change profile photo"
-              >
-                {user?.imageUrl ? (
-                  <img src={user.imageUrl} alt="" className="w-24 h-24 object-cover" />
-                ) : (
-                  <User className="w-10 h-10 text-primary" />
-                )}
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-6 h-6 text-primary-foreground" />
+          <div className="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:items-stretch">
+            <button
+              onClick={handleAvatarClick}
+              className="group relative overflow-hidden rounded-[2rem] border border-primary/20 bg-card p-4 shadow-xl transition-opacity hover:opacity-95"
+              title="Change profile photo"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--primary)/0.18),_transparent_60%)]" />
+              <div className="relative flex h-full min-h-72 flex-col justify-between rounded-[1.5rem] border border-border/40 bg-muted/20 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">Profile Photo</p>
+                <div className="flex flex-1 items-center justify-center py-4">
+                  {user?.imageUrl ? (
+                    <img
+                      src={user.imageUrl}
+                      alt=""
+                      className="h-44 w-44 rounded-[2rem] border-2 border-primary/25 object-cover shadow-lg md:h-52 md:w-52"
+                    />
+                  ) : (
+                    <div className="flex h-44 w-44 items-center justify-center rounded-[2rem] border-2 border-primary/25 bg-primary/10 shadow-lg md:h-52 md:w-52">
+                      <User className="h-16 w-16 text-primary md:h-20 md:w-20" />
+                    </div>
+                  )}
                 </div>
-              </button>
+                <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-background/75 px-4 py-3 text-left">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Update portrait</p>
+                    <p className="text-xs text-muted-foreground">Crop and replace your profile image</p>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-2 rounded-full bg-background/90 px-4 py-2 text-sm font-bold text-foreground shadow-lg">
+                    <Camera className="h-4 w-4" /> Change photo
+                  </div>
+                </div>
+              </div>
+            </button>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelected}
-              />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelected}
+            />
 
-              <div className="min-w-0 flex-1">
+            <div className="bg-card border border-border/50 rounded-[2rem] p-6 shadow-xl space-y-5">
+              <div className="space-y-1">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">Player Identity</p>
                 {editingName ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
+                  <div className="space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <Input
                         value={nameFirst}
                         onChange={(e) => setNameFirst(e.target.value)}
                         placeholder="First"
-                        className="h-8 text-sm"
+                        className="h-10 text-sm"
                         autoFocus
                       />
                       <Input
                         value={nameLast}
                         onChange={(e) => setNameLast(e.target.value)}
                         placeholder="Last"
-                        className="h-8 text-sm"
+                        className="h-10 text-sm"
                         onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEditingName(); }}
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" className="h-7 px-3 text-xs gap-1" onClick={saveName} disabled={savingName || !nameFirst.trim() || !nameLast.trim()}>
+                      <Button size="sm" className="h-8 px-3 text-xs gap-1" onClick={saveName} disabled={savingName || !nameFirst.trim() || !nameLast.trim()}>
                         <Check className="w-3 h-3" /> Save
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-3 text-xs gap-1" onClick={cancelEditingName} disabled={savingName}>
+                      <Button size="sm" variant="ghost" className="h-8 px-3 text-xs gap-1" onClick={cancelEditingName} disabled={savingName}>
                         <X className="w-3 h-3" /> Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-2 min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <h1 className="text-2xl font-extrabold truncate">{profilePrimaryName}</h1>
+                      <h1 className="text-3xl font-extrabold truncate md:text-4xl">{profilePrimaryName}</h1>
                       <button
                         onClick={startEditingName}
                         className="text-muted-foreground active:text-foreground shrink-0"
@@ -285,41 +308,45 @@ export default function ProfilePage() {
                         <Pencil className="w-4 h-4" />
                       </button>
                     </div>
-                    {profileSubtext && (
-                      <p className="text-sm text-muted-foreground truncate">{profileSubtext}</p>
-                    )}
+                    <p className="text-base text-muted-foreground truncate">{profileSubtext || "No nickname set yet"}</p>
                   </div>
                 )}
                 {!editingName && user?.emailAddresses?.[0]?.emailAddress && (
-                  <p className="text-muted-foreground text-sm truncate">
+                  <p className="text-sm text-muted-foreground truncate">
                     {user.emailAddresses[0].emailAddress}
                   </p>
                 )}
-                {!isLoading && profile && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-lg">{profile.rankEmoji}</span>
-                    <span className="text-sm font-bold text-primary">{profile.rankTitle}</span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      · {Math.round(profile.eloRating)} ELO
-                    </span>
+              </div>
+
+              {!isLoading && profile && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Rank</p>
+                    <p className="mt-1 text-sm font-bold text-primary">{profile.rankEmoji} {profile.rankTitle}</p>
                   </div>
-                )}
-              </div>
-            </div>
-            {!isLoading && profile && (profile as any).badges?.length > 0 && (
-              <div className="space-y-2 pt-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
-                <div className="flex flex-wrap gap-2">
-                  {((profile as any).badges as Array<{ id: string; name: string; icon: string; description: string }>).map((b) => (
-                    <BadgeInfoChip key={b.id} badge={b} />
-                  ))}
+                  <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">ELO</p>
+                    <p className="mt-1 text-sm font-bold text-foreground">{Math.round(profile.eloRating)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Skill</p>
+                    <p className="mt-1 text-sm font-bold text-foreground">{(profile as any).skillLevel ? (profile as any).skillLevel : "Unset"}</p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground/60 text-center">
-              Tap your photo to change it
-            </p>
+              )}
+
+              {!isLoading && profile && (profile as any).badges?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Badges</p>
+                  <div className="flex flex-wrap gap-2">
+                    {((profile as any).badges as Array<{ id: string; name: string; icon: string; description: string }>).map((b) => (
+                      <BadgeInfoChip key={b.id} badge={b} />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/70">Tap a badge to view details.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Nickname */}
