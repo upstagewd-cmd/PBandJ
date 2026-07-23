@@ -8,6 +8,7 @@ import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { computeElo } from "../lib/elo";
 import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
 import { getEloKFactor } from "../lib/settings";
+import { awardTournamentPodium, clearTournamentPodiumAwards } from "../lib/tournament-podium";
 
 export const matchesRouter = Router({ mergeParams: true });
 
@@ -224,6 +225,8 @@ matchesRouter.patch("/:matchId", async (req: Request<{ tournamentId: string; mat
           .update(tournamentsTable)
           .set({ status: "completed", completedAt: new Date() })
           .where(eq(tournamentsTable.id, tournamentId));
+
+        await awardTournamentPodium(tournamentId);
       }
     } else {
       // Score-only update
@@ -310,6 +313,8 @@ matchesRouter.post("/undo", async (req: Request<{ tournamentId: string }>, res) 
         .update(tournamentsTable)
         .set({ status: "active", completedAt: null })
         .where(eq(tournamentsTable.id, tournamentId));
+
+      await clearTournamentPodiumAwards(tournamentId);
     }
 
     await saveMatches(toSave);

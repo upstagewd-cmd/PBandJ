@@ -6,6 +6,7 @@ import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema
 import { eq, or, and, inArray } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
+import { getTournamentPodiumPlayerCounts } from "../lib/tournament-podium";
 import { getStartingEloForSkill } from "../lib/settings";
 import { getNicknameMap, isNicknameTakenGlobal } from "../lib/user-display";
 
@@ -149,6 +150,9 @@ profileRouter.get("/me", async (req, res) => {
         matchesPlayed: 0,
         winPct: 0,
         tournamentWins: 0,
+        firstPlaceCount: 0,
+        secondPlaceCount: 0,
+        thirdPlaceCount: 0,
         tournamentsPlayed: 0,
         recentMatches: [],
         partnerStats: [],
@@ -208,7 +212,8 @@ profileRouter.get("/me", async (req, res) => {
         totalWins++;
       }
     }
-    const tournamentWins = countTournamentTitles(completedMatches, winnerIds);
+    const podiumCounts = await getTournamentPodiumPlayerCounts(playerIds);
+    const tournamentWins = podiumCounts.firstPlaceCount;
     for (const m of openPlayIdentityMatches) {
       const winningSide = m.winnerTeam === 1
         ? [m.teamOnePOneId, m.teamOnePTwoId]
@@ -495,6 +500,9 @@ profileRouter.get("/me", async (req, res) => {
       matchesPlayed: totalMatchesPlayed,
       winPct,
       tournamentWins,
+      firstPlaceCount: podiumCounts.firstPlaceCount,
+      secondPlaceCount: podiumCounts.secondPlaceCount,
+      thirdPlaceCount: podiumCounts.thirdPlaceCount,
       tournamentsPlayed,
       recentMatches,
       partnerStats,

@@ -5,6 +5,7 @@ import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
+import { getTournamentPodiumPlayerCounts } from "../lib/tournament-podium";
 
 export const playerStatsRouter = Router();
 
@@ -279,7 +280,8 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const losses = matchesPlayed - wins;
     const winPct = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
 
-    const tournamentWinsDisplay = countTournamentTitles(completedMatches, identityIds);
+    const podiumCounts = await getTournamentPodiumPlayerCounts([...identityPlayerIds]);
+    const tournamentWinsDisplay = podiumCounts.firstPlaceCount;
     const tournamentsPlayed = new Set(competitiveIdentityPlayers.map((candidate) => candidate.tournamentId)).size;
 
     const recentCompleted = completedMatches
@@ -497,6 +499,9 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
       matchesPlayed,
       winPct,
       tournamentWins: tournamentWinsDisplay,
+      firstPlaceCount: podiumCounts.firstPlaceCount,
+      secondPlaceCount: podiumCounts.secondPlaceCount,
+      thirdPlaceCount: podiumCounts.thirdPlaceCount,
       tournamentsPlayed,
       recentMatches: recentMatchesResult,
       badges: [...latestBadgeGrantByBadgeId.values()].map((r: any) => ({

@@ -12,6 +12,7 @@ import { getTournamentFull } from "../lib/tournament-helpers";
 import { broadcastTournamentUpdate } from "../lib/ws";
 import { getNicknameMap } from "../lib/user-display";
 import { getSystemSettingBoolean } from "../lib/settings";
+import { awardTournamentPodium, computeTournamentPodiumTeamIds } from "../lib/tournament-podium";
 
 export const tournamentsRouter = Router();
 
@@ -105,6 +106,10 @@ tournamentsRouter.patch("/:tournamentId", async (req: Request<{ tournamentId: st
 
     if (Object.keys(updates).length > 0) {
       await db.update(tournamentsTable).set(updates).where(eq(tournamentsTable.id, tournamentId));
+
+      if (body.status === "completed") {
+        await awardTournamentPodium(tournamentId);
+      }
     }
 
     const updated = { ...existing, ...updates };
@@ -251,15 +256,11 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
       };
     };
 
-    const championTeamId = finalMatch?.winnerId ?? null;
-    const runnerUpTeamId = finalMatch
-      ? finalMatch.playerOneId === finalMatch.winnerId
-        ? finalMatch.playerTwoId
-        : finalMatch.playerOneId
-      : null;
+    const { championTeamId, runnerUpTeamId, thirdPlaceTeamId } = await computeTournamentPodiumTeamIds(tournamentId);
 
     const champion = teamDisplay(championTeamId);
     const runnerUp = teamDisplay(runnerUpTeamId);
+    const thirdPlace = teamDisplay(thirdPlaceTeamId);
 
     const completedMatches = matches.filter((m) => m.status === "completed" && !m.isBye);
     const durationMinutes =
@@ -271,7 +272,7 @@ tournamentsRouter.get("/:tournamentId/summary", async (req: Request<{ tournament
       tournamentId,
       champion,
       runnerUp,
-      thirdPlace: null,
+      thirdPlace,
       totalMatches: completedMatches.length,
       playerCount: players.length,
       durationMinutes,

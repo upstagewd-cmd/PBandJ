@@ -460,7 +460,7 @@ export default function ProfilePage() {
                   icon={<Trophy className="w-5 h-5 text-gold" />}
                   label="Titles"
                   value={profile.tournamentWins}
-                  sub={`${profile.tournamentsPlayed} tournament${profile.tournamentsPlayed !== 1 ? "s" : ""}`}
+                  sub={`1st ${profile.firstPlaceCount ?? 0} · 2nd ${profile.secondPlaceCount ?? 0} · 3rd ${profile.thirdPlaceCount ?? 0}`}
                 />
               </div>
 

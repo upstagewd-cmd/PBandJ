@@ -6,3 +6,4 @@ export * from "./open-play";
 export * from "./admin";
 export * from "./user-profiles";
 export * from "./sessions";
+export * from "./podium";

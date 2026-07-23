@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { tournamentsTable, playersTable, matchesTable } from "@workspace/db/schema";
 import { eq, desc, count } from "drizzle-orm";
+import { awardTournamentPodium } from "../../lib/tournament-podium";
 
 export const adminTournamentsRouter = Router();
 
@@ -53,6 +54,11 @@ adminTournamentsRouter.patch("/:tournamentId", async (req, res) => {
     res.status(404).json({ error: "Tournament not found" });
     return;
   }
+
+  if (status === "completed") {
+    await awardTournamentPodium(tournamentId);
+  }
+
   res.json(updated);
 });
 

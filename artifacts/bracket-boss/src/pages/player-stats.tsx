@@ -81,7 +81,7 @@ export default function PlayerStatsPage() {
           icon={<Trophy className="w-5 h-5 text-gold" />}
           label="Titles"
           value={tournamentWins}
-          sub={`${tournamentsPlayed} tournament${tournamentsPlayed !== 1 ? "s" : ""}`}
+          sub={`1st ${(stats as any).firstPlaceCount ?? 0} · 2nd ${(stats as any).secondPlaceCount ?? 0} · 3rd ${(stats as any).thirdPlaceCount ?? 0}`}
         />
       </div>
 
