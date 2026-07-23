@@ -1,5 +1,5 @@
 import { Router, Request } from "express";
-import { db, playersTable, matchesTable, tournamentsTable, teamsTable, openPlayMatchesTable, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
+import { db, playersTable, matchesTable, tournamentsTable, teamsTable, openPlayMatchesTable, sessionsTable, sessionPlayersTable, sessionMatchesTable, userProfilesTable } from "@workspace/db";
 import { playerBadgesTable, badgesTable } from "@workspace/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
@@ -8,6 +8,8 @@ import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
 import { getTournamentPodiumPlayerCounts } from "../lib/tournament-podium";
 
 export const playerStatsRouter = Router();
+
+const VALID_SKILL_LEVELS = new Set(["beginner", "intermediate", "advanced"]);
 
 type DbPlayer = typeof playersTable.$inferSelect;
 type DbTeam = typeof teamsTable.$inferSelect;
@@ -356,6 +358,18 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
 
     const allPlayersMap = new Map(allPlayers.map((p) => [p.id, p]));
 
+    let profileSkillLevel: string | null = null;
+    if (player.clerkUserId) {
+      const [userProfile] = await db
+        .select({ skillLevel: userProfilesTable.skillLevel })
+        .from(userProfilesTable)
+        .where(eq(userProfilesTable.clerkUserId, player.clerkUserId));
+      const normalized = (userProfile?.skillLevel ?? "").trim();
+      if (VALID_SKILL_LEVELS.has(normalized)) {
+        profileSkillLevel = normalized;
+      }
+    }
+
     const recentTournamentMatches = recentCompleted.map((m) => {
       const myOnSideOne = identityIds.has(m.playerOneId ?? "");
       const oppId = myOnSideOne ? (m.playerTwoId ?? "") : (m.playerOneId ?? "");
@@ -477,6 +491,10 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
     const eloRating = Math.max(...identityPlayers.map((p) => p.eloRating ?? 1200));
     const rank = await getRank(eloRating);
     const primary = identityPlayers[0] ?? player;
+    const identitySkillLevel = [...identityPlayers]
+      .sort((a, b) => b.joinedAt.getTime() - a.joinedAt.getTime())
+      .map((candidate) => (candidate.skillLevel ?? "").trim())
+      .find((value) => VALID_SKILL_LEVELS.has(value)) ?? null;
 
     res.json({
       player: {
@@ -488,6 +506,7 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
         partnerName: primary.partnerName ?? null,
         teamName: primary.teamName ?? null,
         avatarUrl: primary.avatarUrl ?? playerImageMap.get(primary.clerkUserId ?? "") ?? null,
+        skillLevel: profileSkillLevel ?? identitySkillLevel,
         eloRating,
         rankTitle: rank.title,
         rankEmoji: rank.emoji,

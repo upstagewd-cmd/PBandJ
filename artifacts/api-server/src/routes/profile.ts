@@ -98,7 +98,15 @@ profileRouter.get("/me", async (req, res) => {
       .from(userProfilesTable)
       .where(eq(userProfilesTable.clerkUserId, clerkUserId));
     const nickname = userProfile?.nickname ?? null;
-    const skillLevel = userProfile?.skillLevel ?? null;
+    const profileSkillLevelRaw = (userProfile?.skillLevel ?? "").trim();
+    const profileSkillLevel = ["beginner", "intermediate", "advanced"].includes(profileSkillLevelRaw)
+      ? profileSkillLevelRaw
+      : null;
+    const registrySkillLevelRaw = (registryPlayer?.skillLevel ?? "").trim();
+    const registrySkillLevel = ["beginner", "intermediate", "advanced"].includes(registrySkillLevelRaw)
+      ? registrySkillLevelRaw
+      : null;
+    const skillLevel = profileSkillLevel ?? registrySkillLevel;
 
     const allBadgeRows = allPlayerIds.length
       ? await db
