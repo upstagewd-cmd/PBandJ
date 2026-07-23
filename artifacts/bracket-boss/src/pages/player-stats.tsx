@@ -45,7 +45,7 @@ export default function PlayerStatsPage() {
       {/* Hero card */}
       <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-xl space-y-4">
         <div className="flex items-center gap-4">
-          <PlayerAvatar player={player} size="xl" />
+          <PlayerAvatar player={player} size="xxl" />
           <div>
             <h1 className="text-2xl font-extrabold">{getPlayerDisplayName(player)}</h1>
             {getPlayerDisplaySubtext(player) && (
