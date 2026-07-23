@@ -24,6 +24,16 @@ interface Player {
   clerkUserId: string | null;
   tournamentId: string;
   rank: { title: string; emoji: string };
+  joinedAt?: string;
+  metadata: {
+    recordType: "registry" | "tournament";
+    tournamentName: string;
+    isSignedIn: boolean;
+    bracketMatchCount: number;
+    openPlayMatchCount: number;
+    badgeCount: number;
+    identityRecordCount: number;
+  };
 }
 
 interface EditPayload {
@@ -122,7 +132,9 @@ export function PlayersTab({ code }: { code: string }) {
     return (
       p.firstName.toLowerCase().includes(q) ||
       p.lastName.toLowerCase().includes(q) ||
-      (p.teamName ?? "").toLowerCase().includes(q)
+      (p.teamName ?? "").toLowerCase().includes(q) ||
+      p.metadata.tournamentName.toLowerCase().includes(q) ||
+      (p.metadata.isSignedIn ? "signed in" : "guest").includes(q)
     );
   });
 
@@ -238,6 +250,18 @@ export function PlayersTab({ code }: { code: string }) {
     return found ? `${found.emoji} ${found.label}` : "—";
   };
 
+  const formatJoinedAt = (value?: string) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  };
+
+  const describeRecord = (player: Player) => {
+    if (player.metadata.recordType === "registry") return "Registry record";
+    return `Tournament: ${player.metadata.tournamentName}`;
+  };
+
   const cancelAll = () => {
     setMergeMode(false);
     setMergeA(null);
@@ -270,6 +294,18 @@ export function PlayersTab({ code }: { code: string }) {
             <span className="font-bold text-foreground">{keepPlayer.firstName} {keepPlayer.lastName}</span>?
             All matches and badges will transfer. The merged player will be deleted.
           </p>
+          <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+            <div className="rounded-lg border border-primary/20 bg-background/60 p-2">
+              <p className="font-bold text-foreground">Keep</p>
+              <p>{describeRecord(keepPlayer)}</p>
+              <p>{keepPlayer.metadata.bracketMatchCount} bracket • {keepPlayer.metadata.openPlayMatchCount} open play • {keepPlayer.metadata.badgeCount} badges</p>
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-background/60 p-2">
+              <p className="font-bold text-foreground">Merge away</p>
+              <p>{describeRecord(mergePlayer)}</p>
+              <p>{mergePlayer.metadata.bracketMatchCount} bracket • {mergePlayer.metadata.openPlayMatchCount} open play • {mergePlayer.metadata.badgeCount} badges</p>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={confirmMerge} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Check className="w-3 h-3 mr-1" /> Confirm Merge
@@ -298,7 +334,7 @@ export function PlayersTab({ code }: { code: string }) {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search players…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search players, tournaments, or record type…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         {mergeMode ? (
           <Button variant="outline" size="sm" onClick={cancelAll}>
@@ -425,6 +461,14 @@ export function PlayersTab({ code }: { code: string }) {
                     <p className="font-bold text-sm truncate">{p.firstName} {p.lastName}{p.partnerName ? ` + ${p.partnerName}` : ""}</p>
                     <p className="text-xs text-muted-foreground">
                       {p.rank.emoji} {p.rank.title} · {Math.round(p.eloRating)} ELO · {skillLabel(p.skillLevel)}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {describeRecord(p)} · {p.metadata.isSignedIn ? "Signed-in" : "Guest/manual"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {p.metadata.bracketMatchCount} bracket · {p.metadata.openPlayMatchCount} open play · {p.metadata.badgeCount} badges
+                      {p.metadata.identityRecordCount > 1 ? ` · ${p.metadata.identityRecordCount} records for this identity` : ""}
+                      {formatJoinedAt(p.joinedAt) ? ` · Joined ${formatJoinedAt(p.joinedAt)}` : ""}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">

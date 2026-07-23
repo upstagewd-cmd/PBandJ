@@ -5,23 +5,70 @@ import {
   matchesTable,
   openPlayMatchesTable,
   playerBadgesTable,
+  tournamentsTable,
 } from "@workspace/db/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { getRank } from "../../lib/ranks.js";
 import { isNicknameTakenGlobal } from "../../lib/user-display.js";
+import { USER_REGISTRY_TOURNAMENT_ID } from "../../lib/player-bootstrap.js";
 
 export const adminPlayersRouter = Router();
 
 adminPlayersRouter.get("/", async (req, res) => {
-  const players = await db
-    .select()
-    .from(playersTable)
-    .orderBy(playersTable.joinedAt);
+  const [players, tournaments, bracketMatches, openPlayMatches, badgeRows] = await Promise.all([
+    db.select().from(playersTable).orderBy(sql`${playersTable.joinedAt} desc`),
+    db.select({ id: tournamentsTable.id, name: tournamentsTable.name }).from(tournamentsTable),
+    db.select().from(matchesTable),
+    db.select().from(openPlayMatchesTable),
+    db.select({ playerId: playerBadgesTable.playerId }).from(playerBadgesTable),
+  ]);
 
-  const withRank = await Promise.all(players.map(async (p) => ({
+  const tournamentNames = new Map(tournaments.map((tournament) => [tournament.id, tournament.name]));
+  const badgeCounts = new Map<string, number>();
+  for (const row of badgeRows) {
+    badgeCounts.set(row.playerId, (badgeCounts.get(row.playerId) ?? 0) + 1);
+  }
+
+  const identityCounts = new Map<string, number>();
+  for (const player of players) {
+    const identityKey = player.clerkUserId
+      ? `clerk:${player.clerkUserId}`
+      : `guest:${player.firstName.trim().toLowerCase()} ${player.lastName.trim().toLowerCase()}`;
+    identityCounts.set(identityKey, (identityCounts.get(identityKey) ?? 0) + 1);
+  }
+
+  const withRank = await Promise.all(players.map(async (p) => {
+    const identityKey = p.clerkUserId
+      ? `clerk:${p.clerkUserId}`
+      : `guest:${p.firstName.trim().toLowerCase()} ${p.lastName.trim().toLowerCase()}`;
+
+    const bracketMatchCount = bracketMatches.filter((match) =>
+      match.playerOneId === p.id || match.playerTwoId === p.id || match.winnerId === p.id
+    ).length;
+    const openPlayMatchCount = openPlayMatches.filter((match) =>
+      match.teamOnePOneId === p.id ||
+      match.teamOnePTwoId === p.id ||
+      match.teamTwoPOneId === p.id ||
+      match.teamTwoPTwoId === p.id
+    ).length;
+
+    return {
     ...p,
     rank: await getRank(p.eloRating),
-  })));
+      metadata: {
+        recordType: p.tournamentId === USER_REGISTRY_TOURNAMENT_ID ? "registry" : "tournament",
+        tournamentName:
+          p.tournamentId === USER_REGISTRY_TOURNAMENT_ID
+            ? "User Registry"
+            : (tournamentNames.get(p.tournamentId) ?? "Unknown tournament"),
+        isSignedIn: !!p.clerkUserId,
+        bracketMatchCount,
+        openPlayMatchCount,
+        badgeCount: badgeCounts.get(p.id) ?? 0,
+        identityRecordCount: identityCounts.get(identityKey) ?? 1,
+      },
+    };
+  }));
   res.json(withRank);
 });
 
