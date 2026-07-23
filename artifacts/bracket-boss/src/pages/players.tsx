@@ -126,14 +126,14 @@ export default function PlayersPage() {
                 key={player.id}
                 type="button"
                 onClick={() => setLocation(`/player/${player.id}`)}
-                className="w-full rounded-3xl border border-border/50 bg-card/90 p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                className="relative w-full rounded-3xl border border-border/50 bg-card/90 p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
               >
+                <span className="absolute right-3 top-3 inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border/60 bg-muted/40 px-1.5 text-[10px] font-bold text-muted-foreground">
+                  #{index + 1}
+                </span>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-sm font-extrabold text-primary shrink-0">
-                      {index + 1}
-                    </div>
-                    <PlayerAvatar player={player as any} size="md" />
+                    <PlayerAvatar player={player as any} size="xl" />
                     <div className="min-w-0">
                       <p className="text-base font-bold truncate">{displayName}</p>
                       {subtext && <p className="text-sm text-muted-foreground truncate">{subtext}</p>}

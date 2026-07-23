@@ -9,7 +9,7 @@ interface Player {
 
 interface PlayerAvatarProps {
   player: Player;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -17,6 +17,7 @@ const sizeMap = {
   sm: "w-7 h-7 text-[10px]",
   md: "w-9 h-9 text-xs",
   lg: "w-14 h-14 text-base",
+  xl: "w-16 h-16 text-lg",
 };
 
 function resolveAvatarSrc(avatarUrl?: string | null): string | null {

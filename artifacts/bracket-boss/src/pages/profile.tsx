@@ -224,16 +224,16 @@ export default function ProfilePage() {
               {/* Clickable avatar */}
               <button
                 onClick={handleAvatarClick}
-                className="relative w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20 shrink-0 group hover:opacity-90 transition-opacity"
+                className="relative w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20 shrink-0 group hover:opacity-90 transition-opacity"
                 title="Change profile photo"
               >
                 {user?.imageUrl ? (
-                  <img src={user.imageUrl} alt="" className="w-16 h-16 object-cover" />
+                  <img src={user.imageUrl} alt="" className="w-24 h-24 object-cover" />
                 ) : (
-                  <User className="w-8 h-8 text-primary" />
+                  <User className="w-10 h-10 text-primary" />
                 )}
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-5 h-5 text-primary-foreground" />
+                  <Camera className="w-6 h-6 text-primary-foreground" />
                 </div>
               </button>
 
