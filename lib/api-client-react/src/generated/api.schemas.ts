@@ -248,6 +248,9 @@ export interface ProfileStats {
   matchesPlayed: number;
   winPct: number;
   tournamentWins: number;
+  firstPlaceCount: number;
+  secondPlaceCount: number;
+  thirdPlaceCount: number;
   tournamentsPlayed: number;
   recentMatches: MatchHistoryEntry[];
   partnerStats: PartnerStat[];
@@ -260,6 +263,9 @@ export interface PlayerStats {
   matchesPlayed: number;
   winPct: number;
   tournamentWins: number;
+  firstPlaceCount: number;
+  secondPlaceCount: number;
+  thirdPlaceCount: number;
   recentMatches: MatchHistoryEntry[];
 }
 
