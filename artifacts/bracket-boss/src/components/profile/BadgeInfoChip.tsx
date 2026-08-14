@@ -8,6 +8,13 @@ type BadgeInfo = {
 };
 
 export function BadgeInfoChip({ badge }: { badge: BadgeInfo }) {
+  const isImageBadge = /^https?:\/\//i.test(badge.icon) || /\.png(?:$|[?#])/i.test(badge.icon);
+  const badgeIcon = isImageBadge ? (
+    <img src={badge.icon} alt="" className="h-6 w-8 rounded object-contain" />
+  ) : (
+    <span className="text-base leading-none">{badge.icon}</span>
+  );
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -16,13 +23,13 @@ export function BadgeInfoChip({ badge }: { badge: BadgeInfo }) {
           className="flex items-center gap-1.5 bg-sky/10 border border-sky/20 rounded-full px-3 py-1 transition-colors hover:bg-sky/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
           aria-label={`View badge details for ${badge.name}`}
         >
-          <span className="text-base leading-none">{badge.icon}</span>
+          {badgeIcon}
           <span className="text-xs font-bold text-sky">{badge.name}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3" align="start">
         <p className="text-sm font-bold text-foreground flex items-center gap-2">
-          <span className="text-base leading-none">{badge.icon}</span>
+          {badgeIcon}
           {badge.name}
         </p>
         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">

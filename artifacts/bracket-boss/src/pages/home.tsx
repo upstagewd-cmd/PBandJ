@@ -7,6 +7,7 @@ import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, D
 import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
+import { useListChampionships } from "@workspace/api-client-react";
 
 type LiveMatchItem = {
   id: string;
@@ -97,6 +98,7 @@ export default function Home() {
   const { toast } = useToast();
   const [creatingTournament, setCreatingTournament] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
+  const [selectedChampionshipId, setSelectedChampionshipId] = useState("");
   const [tournamentCreationEnabled, setTournamentCreationEnabled] = useState(true);
   const [openPlayCreationEnabled, setOpenPlayCreationEnabled] = useState(true);
   const [adminBypass, setAdminBypass] = useState(false);
@@ -107,6 +109,7 @@ export default function Home() {
   const installPrompt = useInstallPrompt();
   const { manualShow, canShowInstallButton } = installPrompt;
   const adminCode = typeof window !== "undefined" ? localStorage.getItem("pbj_admin_code") : null;
+  const { data: championships = [] } = useListChampionships();
 
   useEffect(() => {
     let cancelled = false;
@@ -187,7 +190,10 @@ export default function Home() {
           ...(adminBypass && adminCode ? { "x-admin-code": adminCode } : {}),
         },
         credentials: "include",
-        body: JSON.stringify({ name: defaultGameName() }),
+        body: JSON.stringify({
+          name: defaultGameName(),
+          ...(selectedChampionshipId ? { championshipId: selectedChampionshipId } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -340,6 +346,26 @@ export default function Home() {
         </div>
 
         {/* Primary: Create Tournament */}
+        {championships.length > 0 && !needsSignIn && (
+          <div className="space-y-2 text-left">
+            <label htmlFor="championship-select" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Championship on the line
+            </label>
+            <select
+              id="championship-select"
+              value={selectedChampionshipId}
+              onChange={(event) => setSelectedChampionshipId(event.target.value)}
+              className="w-full h-12 rounded-xl border border-border bg-background px-3 text-sm font-semibold"
+            >
+              <option value="">Regular tournament</option>
+              {championships.map((championship) => (
+                <option key={championship.id} value={championship.id}>
+                  {championship.name}{championship.currentPlayer1Id ? " (defended)" : " (unclaimed)"}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <Button
           size="lg"
           className="w-full h-16 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,100,50,0.3)] hover:shadow-[0_0_30px_rgba(255,100,50,0.4)]"

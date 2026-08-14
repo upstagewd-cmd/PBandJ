@@ -12,6 +12,7 @@ import { RatingsTab } from "./RatingsTab";
 import { RanksTab } from "./RanksTab";
 import { BadgesTab } from "./BadgesTab";
 import { SettingsTab } from "./SettingsTab";
+import { ChampionshipsTab } from "./ChampionshipsTab";
 
 const TABS = [
   { id: "players",     label: "👤 Players" },
@@ -20,6 +21,7 @@ const TABS = [
   { id: "ratings",     label: "📊 Ratings" },
   { id: "ranks",       label: "🥇 Rankings" },
   { id: "badges",      label: "🏅 Badges" },
+  { id: "championships", label: "🥇 Championships" },
   { id: "settings",    label: "⚙️ Settings" },
 ] as const;
 
@@ -159,6 +161,7 @@ export default function AdminPage() {
         {activeTab === "ratings"     && <RatingsTab code={code} />}
         {activeTab === "ranks"       && <RanksTab code={code} />}
         {activeTab === "badges"      && <BadgesTab code={code} />}
+        {activeTab === "championships" && <ChampionshipsTab code={code} />}
         {activeTab === "settings"    && <SettingsTab code={code} />}
       </div>
     </div>

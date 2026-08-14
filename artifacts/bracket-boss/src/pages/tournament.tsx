@@ -136,6 +136,22 @@ export default function TournamentPage() {
       </header>
 
       <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-6 py-6 md:py-8">
+        {tournament.championship && (
+          <section className="mb-6 flex items-center gap-4 rounded-2xl border border-gold/40 bg-gold/10 p-4">
+            <img
+              src={tournament.championship.imageUrl}
+              alt=""
+              className="h-20 w-28 rounded-xl object-contain bg-background/70 p-2"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-widest text-gold">Championship on the line</p>
+              <h1 className="truncate text-xl font-black text-foreground">{tournament.championship.name}</h1>
+              {tournament.championship.currentPlayer1Id && (
+                <p className="text-sm text-muted-foreground">Current holders must defend the title.</p>
+              )}
+            </div>
+          </section>
+        )}
         {tournament.status === "lobby" && (
           <TournamentLobby
             tournament={tournament}

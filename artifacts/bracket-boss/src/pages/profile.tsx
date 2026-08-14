@@ -491,6 +491,42 @@ export default function ProfilePage() {
                 />
               </div>
 
+              {((profile as any).championships as Array<{
+                id: string;
+                name: string;
+                description: string;
+                imageUrl: string;
+                lineage: Array<{ tournamentId?: string | null; eventType: string; createdAt: string }>;
+              }> | undefined)?.map((championship) => (
+                <section key={championship.id} className="space-y-3 rounded-2xl border border-gold/40 bg-gold/10 p-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={championship.imageUrl}
+                      alt={championship.name}
+                      className="h-24 w-32 rounded-xl bg-background/70 object-contain p-2"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-widest text-gold">Current championship</p>
+                      <h2 className="truncate text-xl font-black">{championship.name}</h2>
+                      <p className="text-sm text-muted-foreground">{championship.description || "Held by this winning duo."}</p>
+                    </div>
+                  </div>
+                  {championship.lineage.length > 0 && (
+                    <div className="border-t border-gold/20 pt-3">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Lineage</p>
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        {championship.lineage.map((entry, index) => (
+                          <p key={`${entry.tournamentId ?? entry.eventType}-${entry.createdAt}-${index}`}>
+                            {entry.eventType === "tournament_win" ? "Won" : "Admin update"}
+                            {entry.tournamentId ? ` · Tournament ${entry.tournamentId}` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              ))}
+
               {/* Recent matches */}
               {profile.recentMatches.length > 0 && (
                 <div className="space-y-3">

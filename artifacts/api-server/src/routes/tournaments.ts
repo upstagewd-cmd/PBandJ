@@ -1,8 +1,8 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
 import { getAuth } from "@clerk/express";
-import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, tournamentsTable, playersTable, matchesTable, teamsTable, championshipsTable } from "@workspace/db";
+import { and, eq, desc, inArray } from "drizzle-orm";
 import {
   CreateTournamentBody,
   UpdateTournamentBody,
@@ -26,6 +26,27 @@ function generateTournamentId(): string {
   return id;
 }
 
+async function getContestableChampionship(championshipId: string | undefined) {
+  if (!championshipId) return null;
+
+  const [championship] = await db
+    .select()
+    .from(championshipsTable)
+    .where(and(eq(championshipsTable.id, championshipId), eq(championshipsTable.enabled, true)));
+  if (!championship) return null;
+
+  const [activeContest] = await db
+    .select({ id: tournamentsTable.id })
+    .from(tournamentsTable)
+    .where(and(
+      eq(tournamentsTable.championshipId, championshipId),
+      inArray(tournamentsTable.status, ["lobby", "active"]),
+    ));
+  if (activeContest) return null;
+
+  return championship;
+}
+
 // POST /api/tournaments
 tournamentsRouter.post("/", async (req, res) => {
   try {
@@ -44,6 +65,11 @@ tournamentsRouter.post("/", async (req, res) => {
     }
 
     const body = CreateTournamentBody.parse(req.body ?? {});
+    const championship = await getContestableChampionship(body.championshipId);
+    if (body.championshipId && !championship) {
+      res.status(409).json({ error: "Championship is unavailable or already being contested" });
+      return;
+    }
     const id = generateTournamentId();
     const hostToken = randomUUID();
 
@@ -53,6 +79,7 @@ tournamentsRouter.post("/", async (req, res) => {
       hostToken,
       status: "lobby",
       registrationLocked: false,
+      championshipId: championship?.id ?? null,
     });
 
     res.status(201).json({
@@ -60,6 +87,7 @@ tournamentsRouter.post("/", async (req, res) => {
       name: body.name ?? "My Tournament",
       status: "lobby",
       registrationLocked: false,
+      championshipId: championship?.id ?? null,
       createdAt: new Date().toISOString(),
       hostToken,
     });
@@ -109,6 +137,18 @@ tournamentsRouter.patch("/:tournamentId", async (req: Request<{ tournamentId: st
     if (body.name !== undefined) updates.name = body.name;
     if (body.registrationLocked !== undefined) updates.registrationLocked = body.registrationLocked;
     if (body.status !== undefined) updates.status = body.status;
+    if (body.championshipId !== undefined && body.championshipId !== existing.championshipId) {
+      if (existing.status !== "lobby") {
+        res.status(400).json({ error: "Championship can only be changed while the tournament is in the lobby" });
+        return;
+      }
+      const championship = await getContestableChampionship(body.championshipId ?? undefined);
+      if (body.championshipId && !championship) {
+        res.status(409).json({ error: "Championship is unavailable or already being contested" });
+        return;
+      }
+      updates.championshipId = championship?.id ?? null;
+    }
 
     if (Object.keys(updates).length > 0) {
       await db.update(tournamentsTable).set(updates).where(eq(tournamentsTable.id, tournamentId));
@@ -127,6 +167,7 @@ tournamentsRouter.patch("/:tournamentId", async (req: Request<{ tournamentId: st
       name: updated.name,
       status: updated.status,
       registrationLocked: updated.registrationLocked,
+      championshipId: updated.championshipId ?? null,
       createdAt: updated.createdAt.toISOString(),
     });
   } catch (err) {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, playersTable, matchesTable, tournamentsTable, userProfilesTable, openPlayMatchesTable, sessionsTable, sessionPlayersTable, sessionMatchesTable } from "@workspace/db";
-import { playerBadgesTable, badgesTable, teamsTable } from "@workspace/db/schema";
+import { playerBadgesTable, badgesTable, teamsTable, championshipsTable, championshipLineageTable } from "@workspace/db/schema";
 import { eq, or, and, inArray } from "drizzle-orm";
 import { getRank } from "../lib/ranks";
 import { USER_REGISTRY_TOURNAMENT_ID } from "../lib/player-bootstrap";
@@ -144,6 +144,39 @@ profileRouter.get("/me", async (req, res) => {
       grantedBy: row.grantedBy,
     }));
 
+    const currentChampionships = allPlayerIds.length
+      ? await db.select().from(championshipsTable).where(
+          or(
+            ...allPlayerIds.flatMap((playerId) => [
+              eq(championshipsTable.currentPlayer1Id, playerId),
+              eq(championshipsTable.currentPlayer2Id, playerId),
+            ])
+          )
+        )
+      : [];
+    const championshipHistory = currentChampionships.length
+      ? await db.select().from(championshipLineageTable).where(
+          inArray(championshipLineageTable.championshipId, currentChampionships.map((championship) => championship.id))
+        )
+      : [];
+    const championships = currentChampionships.map((championship) => ({
+      id: championship.id,
+      name: championship.name,
+      description: championship.description,
+      imageUrl: championship.imageUrl,
+      currentPlayer1Id: championship.currentPlayer1Id,
+      currentPlayer2Id: championship.currentPlayer2Id,
+      lineage: championshipHistory
+        .filter((entry) => entry.championshipId === championship.id)
+        .map((entry) => ({
+          tournamentId: entry.tournamentId,
+          player1Id: entry.player1Id,
+          player2Id: entry.player2Id,
+          eventType: entry.eventType,
+          createdAt: entry.createdAt.toISOString(),
+        })),
+    }));
+
     if (competitivePlayers.length === 0) {
       const seedElo = registryPlayer?.eloRating ?? 1200;
       const seedRank = await getRank(seedElo);
@@ -165,6 +198,7 @@ profileRouter.get("/me", async (req, res) => {
         recentMatches: [],
         partnerStats: [],
         badges,
+        championships,
       });
       return;
     }
@@ -515,6 +549,7 @@ profileRouter.get("/me", async (req, res) => {
       recentMatches,
       partnerStats,
       badges,
+      championships,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get profile");

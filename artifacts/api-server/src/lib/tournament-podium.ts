@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
-import { matchesTable, teamsTable, tournamentPodiumAwardsTable } from "@workspace/db/schema";
+import { badgesTable, championshipLineageTable, championshipsTable, matchesTable, playerBadgesTable, teamsTable, tournamentPodiumAwardsTable, tournamentsTable } from "@workspace/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 type DbMatch = typeof matchesTable.$inferSelect;
 type DbTeam = typeof teamsTable.$inferSelect;
@@ -85,6 +86,78 @@ export async function awardTournamentPodium(tournamentId: string) {
   if (inserts.length > 0) {
     await db.insert(tournamentPodiumAwardsTable).values(inserts);
   }
+
+  await transferChampionshipIfNeeded(tournamentId, championTeamId, teamMap);
+}
+
+async function transferChampionshipIfNeeded(
+  tournamentId: string,
+  championTeamId: string,
+  teamMap: Map<string, DbTeam>,
+) {
+  const [tournament] = await db
+    .select({ championshipId: tournamentsTable.championshipId })
+    .from(tournamentsTable)
+    .where(eq(tournamentsTable.id, tournamentId));
+  if (!tournament?.championshipId) return;
+
+  const championPlayers = getTeamPlayerIds(teamMap.get(championTeamId));
+  if (championPlayers.length !== 2) return;
+
+  const [championship] = await db
+    .select()
+    .from(championshipsTable)
+    .where(eq(championshipsTable.id, tournament.championshipId));
+  if (!championship) return;
+
+  const [existingLineage] = await db
+    .select({ id: championshipLineageTable.id })
+    .from(championshipLineageTable)
+    .where(and(
+      eq(championshipLineageTable.championshipId, championship.id),
+      eq(championshipLineageTable.tournamentId, tournamentId),
+    ));
+  if (existingLineage) return;
+
+  const badgeId = `championship-${championship.id}`;
+  const [badge] = await db
+    .select({ id: badgesTable.id })
+    .from(badgesTable)
+    .where(eq(badgesTable.id, badgeId));
+  if (!badge) {
+    await db.insert(badgesTable).values({
+      id: badgeId,
+      name: championship.name,
+      description: `Current holders of the ${championship.name} championship.`,
+      ruleType: "championship_holder",
+      threshold: 0,
+      icon: championship.imageUrl,
+      enabled: true,
+    });
+  } else {
+    await db.update(badgesTable).set({ icon: championship.imageUrl, name: championship.name, enabled: true }).where(eq(badgesTable.id, badgeId));
+  }
+
+  await db.delete(playerBadgesTable).where(eq(playerBadgesTable.badgeId, badgeId));
+  await db.insert(playerBadgesTable).values(championPlayers.map((playerId) => ({
+    id: nanoid(8),
+    playerId,
+    badgeId,
+    grantedBy: "system",
+  })));
+  await db.insert(championshipLineageTable).values({
+    id: nanoid(10),
+    championshipId: championship.id,
+    tournamentId,
+    player1Id: championPlayers[0],
+    player2Id: championPlayers[1],
+    eventType: "tournament_win",
+  });
+  await db.update(championshipsTable).set({
+    currentPlayer1Id: championPlayers[0],
+    currentPlayer2Id: championPlayers[1],
+    updatedAt: new Date(),
+  }).where(eq(championshipsTable.id, championship.id));
 }
 
 export async function clearTournamentPodiumAwards(tournamentId: string) {

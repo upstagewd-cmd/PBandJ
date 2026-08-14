@@ -69,6 +69,17 @@ export function TournamentChampionship({ tournament }: ChampionshipProps) {
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-12 animate-in fade-in zoom-in-95 duration-700">
       
       <div className="text-center space-y-4">
+        {tournament.championship && (
+          <div className="mx-auto max-w-sm space-y-3">
+            <img
+              src={tournament.championship.imageUrl}
+              alt={tournament.championship.name}
+              className="mx-auto h-36 w-full rounded-2xl object-contain bg-gold/10 p-3"
+            />
+            <p className="text-xs font-black uppercase tracking-widest text-gold">New holders crowned</p>
+            <p className="text-lg font-bold">{tournament.championship.name}</p>
+          </div>
+        )}
         <div className="mx-auto w-20 h-20 bg-gold/20 rounded-full flex items-center justify-center mb-6">
           <Trophy className="w-10 h-10 text-gold" />
         </div>

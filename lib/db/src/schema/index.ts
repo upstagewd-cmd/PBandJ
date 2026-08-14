@@ -7,3 +7,4 @@ export * from "./admin";
 export * from "./user-profiles";
 export * from "./sessions";
 export * from "./podium";
+export * from "./championships";

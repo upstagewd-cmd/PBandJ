@@ -11,6 +11,7 @@ import { appSettingsRouter } from "./app-settings";
 import storageRouter from "./storage";
 import { adminRouter } from "./admin/index.js";
 import { sessionsRouter } from "./sessions";
+import { championshipsRouter } from "./championships";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/profile", profileRouter);
 router.use("/settings", appSettingsRouter);
 router.use("/admin", adminRouter);
 router.use("/sessions", sessionsRouter);
+router.use("/championships", championshipsRouter);
 
 export default router;

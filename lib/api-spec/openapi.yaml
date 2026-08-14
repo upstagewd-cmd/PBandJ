@@ -44,6 +44,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/TournamentWithToken"
 
+  /championships:
+    get:
+      operationId: listChampionships
+      tags: [tournaments]
+      responses:
+        "200":
+          description: Available championships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Championship"
+
   /tournaments/{tournamentId}:
     get:
       operationId: getTournament
@@ -695,6 +709,25 @@ paths:
 
 components:
   schemas:
+    Championship:
+      type: object
+      required: [id, name, description, imageUrl, enabled]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        enabled:
+          type: boolean
+        currentPlayer1Id:
+          type: ["string", "null"]
+        currentPlayer2Id:
+          type: ["string", "null"]
+
     HealthStatus:
       type: object
       properties:
@@ -715,6 +748,8 @@ components:
           enum: [lobby, active, completed, cancelled]
         registrationLocked:
           type: boolean
+        championshipId:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -732,6 +767,8 @@ components:
           enum: [lobby, active, completed, cancelled]
         registrationLocked:
           type: boolean
+        championshipId:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -794,6 +831,10 @@ components:
           enum: [lobby, active, completed, cancelled]
         registrationLocked:
           type: boolean
+        championship:
+          oneOf:
+            - $ref: "#/components/schemas/Championship"
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -929,6 +970,16 @@ components:
           type: integer
         tournamentsPlayed:
           type: integer
+        firstPlaceCount:
+          type: integer
+        secondPlaceCount:
+          type: integer
+        thirdPlaceCount:
+          type: integer
+        championships:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileChampionship"
         recentMatches:
           type: array
           items:
@@ -937,6 +988,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PartnerStat"
+
+    ProfileChampionship:
+      type: object
+      required: [id, name, description, imageUrl, lineage]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        currentPlayer1Id:
+          type: ["string", "null"]
+        currentPlayer2Id:
+          type: ["string", "null"]
+        lineage:
+          type: array
+          items:
+            type: object
+            required: [player1Id, player2Id, eventType, createdAt]
+            properties:
+              tournamentId:
+                type: ["string", "null"]
+              player1Id:
+                type: string
+              player2Id:
+                type: string
+              eventType:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
 
     PlayerStats:
       type: object
@@ -1136,6 +1221,8 @@ components:
       properties:
         name:
           type: string
+        championshipId:
+          type: string
 
     TournamentUpdate:
       type: object
@@ -1149,6 +1236,8 @@ components:
           enum: [lobby, active, completed, cancelled]
         hostToken:
           type: string
+        championshipId:
+          type: ["string", "null"]
 
     KnownPlayer:
       type: object

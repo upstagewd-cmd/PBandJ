@@ -22,6 +22,7 @@ import type {
 import type {
   AddSessionPlayerBody,
   AutoPairBody,
+  Championship,
   GenerateTeamsBody,
   HealthStatus,
   HostTokenInput,
@@ -220,6 +221,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCreateTournamentMutationOptions(options));
     }
+
+export const getListChampionshipsUrl = () => {
+
+
+
+
+  return `/api/championships`
+}
+
+export const listChampionships = async ( options?: RequestInit): Promise<Championship[]> => {
+
+  return customFetch<Championship[]>(getListChampionshipsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChampionshipsQueryKey = () => {
+    return [
+    `/api/championships`
+    ] as const;
+    }
+
+
+export const getListChampionshipsQueryOptions = <TData = Awaited<ReturnType<typeof listChampionships>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChampionships>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChampionshipsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChampionships>>> = ({ signal }) => listChampionships({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChampionships>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChampionshipsQueryResult = NonNullable<Awaited<ReturnType<typeof listChampionships>>>
+export type ListChampionshipsQueryError = ErrorType<unknown>
+
+
+
+export function useListChampionships<TData = Awaited<ReturnType<typeof listChampionships>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChampionships>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChampionshipsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetTournamentUrl = (tournamentId: string,) => {
 

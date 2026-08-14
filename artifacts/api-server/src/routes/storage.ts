@@ -10,6 +10,57 @@ import { ObjectPermission } from "../lib/objectAcl";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+function isAdminRequest(req: Request): boolean {
+  const code = req.headers["x-admin-code"] as string | undefined;
+  const passcode = process.env.ADMIN_PASSCODE ?? "pbj2024";
+  return !!code && code === passcode;
+}
+
+function getPngDimensions(buffer: Buffer): { width: number; height: number } | null {
+  if (buffer.length < 24 || !buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return null;
+  if (buffer.toString("ascii", 12, 16) !== "IHDR") return null;
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+router.post("/storage/championships", async (req: Request, res: Response) => {
+  if (!isAdminRequest(req)) {
+    res.status(401).json({ error: "Invalid admin passcode" });
+    return;
+  }
+  if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "image/png") {
+    res.status(400).json({ error: "Championship artwork must be a PNG" });
+    return;
+  }
+
+  const maxBytes = 6 * 1024 * 1024;
+  let size = 0;
+  const chunks: Buffer[] = [];
+  req.on("data", (chunk: Buffer) => {
+    size += chunk.length;
+    if (size <= maxBytes) chunks.push(chunk);
+  });
+  req.on("error", () => {
+    if (!res.headersSent) res.status(400).json({ error: "Failed to read artwork" });
+  });
+  req.on("end", async () => {
+    if (size === 0) { res.status(400).json({ error: "Missing artwork" }); return; }
+    if (size > maxBytes) { res.status(413).json({ error: "Artwork must be 6 MB or smaller" }); return; }
+    const dimensions = getPngDimensions(Buffer.concat(chunks));
+    if (!dimensions) { res.status(400).json({ error: "Artwork is not a valid PNG" }); return; }
+    if (dimensions.width > 1600 || dimensions.height > 1200) {
+      res.status(400).json({ error: "Artwork dimensions must be 1600x1200 or smaller" });
+      return;
+    }
+    try {
+      const objectPath = await objectStorageService.uploadObjectEntity(Buffer.concat(chunks), "image/png");
+      res.json({ objectPath, width: dimensions.width, height: dimensions.height });
+    } catch (error) {
+      req.log.error({ err: error }, "Championship artwork upload failed");
+      res.status(500).json({ error: "Failed to store championship artwork" });
+    }
+  });
+});
+
 /**
  * POST /storage/uploads/request-url
  *

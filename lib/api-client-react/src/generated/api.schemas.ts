@@ -5,6 +5,18 @@
  * PB&J API
  * OpenAPI spec version: 0.1.0
  */
+export interface Championship {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  enabled: boolean;
+  /** @nullable */
+  currentPlayer1Id?: string | null;
+  /** @nullable */
+  currentPlayer2Id?: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -24,6 +36,8 @@ export interface Tournament {
   name: string;
   status: TournamentStatus;
   registrationLocked?: boolean;
+  /** @nullable */
+  championshipId?: string | null;
   createdAt: string;
 }
 
@@ -42,6 +56,8 @@ export interface TournamentWithToken {
   name: string;
   status: TournamentWithTokenStatus;
   registrationLocked?: boolean;
+  /** @nullable */
+  championshipId?: string | null;
   createdAt: string;
   hostToken: string;
 }
@@ -167,6 +183,7 @@ export interface TournamentFull {
   name: string;
   status: TournamentFullStatus;
   registrationLocked?: boolean;
+  championship?: Championship | null;
   createdAt: string;
   /** @nullable */
   startedAt?: string | null;
@@ -211,6 +228,27 @@ export interface PlayerWithToken {
   playerToken: string;
 }
 
+export type ProfileChampionshipLineageItem = {
+  /** @nullable */
+  tournamentId?: string | null;
+  player1Id: string;
+  player2Id: string;
+  eventType: string;
+  createdAt: string;
+};
+
+export interface ProfileChampionship {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  /** @nullable */
+  currentPlayer1Id?: string | null;
+  /** @nullable */
+  currentPlayer2Id?: string | null;
+  lineage: ProfileChampionshipLineageItem[];
+}
+
 export interface MatchHistoryEntry {
   matchId: string;
   tournamentId: string;
@@ -248,10 +286,11 @@ export interface ProfileStats {
   matchesPlayed: number;
   winPct: number;
   tournamentWins: number;
-  firstPlaceCount: number;
-  secondPlaceCount: number;
-  thirdPlaceCount: number;
   tournamentsPlayed: number;
+  firstPlaceCount?: number;
+  secondPlaceCount?: number;
+  thirdPlaceCount?: number;
+  championships?: ProfileChampionship[];
   recentMatches: MatchHistoryEntry[];
   partnerStats: PartnerStat[];
 }
@@ -263,9 +302,6 @@ export interface PlayerStats {
   matchesPlayed: number;
   winPct: number;
   tournamentWins: number;
-  firstPlaceCount: number;
-  secondPlaceCount: number;
-  thirdPlaceCount: number;
   recentMatches: MatchHistoryEntry[];
 }
 
@@ -318,6 +354,7 @@ export interface OpenPlayMatchInput {
 
 export interface TournamentInput {
   name?: string;
+  championshipId?: string;
 }
 
 export type TournamentUpdateStatus = typeof TournamentUpdateStatus[keyof typeof TournamentUpdateStatus];
@@ -335,6 +372,8 @@ export interface TournamentUpdate {
   registrationLocked?: boolean;
   status?: TournamentUpdateStatus;
   hostToken?: string;
+  /** @nullable */
+  championshipId?: string | null;
 }
 
 export interface KnownPlayer {

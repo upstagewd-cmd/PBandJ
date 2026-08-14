@@ -13,7 +13,8 @@ export const HealthCheckResponse = zod.object({
 
 
 export const CreateTournamentBody = zod.object({
-  "name": zod.string().optional()
+  "name": zod.string().optional(),
+  "championshipId": zod.string().optional()
 })
 
 export const CreateTournamentResponse = zod.object({
@@ -21,9 +22,22 @@ export const CreateTournamentResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championshipId": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "hostToken": zod.string()
 })
+
+
+export const ListChampionshipsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish()
+})
+export const ListChampionshipsResponse = zod.array(ListChampionshipsResponseItem)
 
 
 export const GetTournamentParams = zod.object({
@@ -35,6 +49,15 @@ export const GetTournamentResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championship": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
   "completedAt": zod.coerce.date().nullish(),
@@ -93,7 +116,8 @@ export const UpdateTournamentBody = zod.object({
   "name": zod.string().optional(),
   "registrationLocked": zod.boolean().optional(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']).optional(),
-  "hostToken": zod.string().optional()
+  "hostToken": zod.string().optional(),
+  "championshipId": zod.string().nullish()
 })
 
 export const UpdateTournamentResponse = zod.object({
@@ -101,6 +125,7 @@ export const UpdateTournamentResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championshipId": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -119,6 +144,15 @@ export const StartTournamentResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championship": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
   "completedAt": zod.coerce.date().nullish(),
@@ -355,6 +389,24 @@ export const GetMyProfileResponse = zod.object({
   "winPct": zod.number(),
   "tournamentWins": zod.number(),
   "tournamentsPlayed": zod.number(),
+  "firstPlaceCount": zod.number().optional(),
+  "secondPlaceCount": zod.number().optional(),
+  "thirdPlaceCount": zod.number().optional(),
+  "championships": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish(),
+  "lineage": zod.array(zod.object({
+  "tournamentId": zod.string().nullish(),
+  "player1Id": zod.string(),
+  "player2Id": zod.string(),
+  "eventType": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})).optional(),
   "recentMatches": zod.array(zod.object({
   "matchId": zod.string(),
   "tournamentId": zod.string(),
@@ -451,6 +503,15 @@ export const UpdateMatchResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championship": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
   "completedAt": zod.coerce.date().nullish(),
@@ -514,6 +575,15 @@ export const UndoLastMatchResponse = zod.object({
   "name": zod.string(),
   "status": zod.enum(['lobby', 'active', 'completed', 'cancelled']),
   "registrationLocked": zod.boolean().optional(),
+  "championship": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "currentPlayer1Id": zod.string().nullish(),
+  "currentPlayer2Id": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date(),
   "startedAt": zod.coerce.date().nullish(),
   "completedAt": zod.coerce.date().nullish(),

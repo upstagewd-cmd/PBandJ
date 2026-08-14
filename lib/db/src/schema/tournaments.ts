@@ -8,6 +8,7 @@ export const tournamentsTable = pgTable("tournaments", {
   status: text("status").notNull().default("lobby"), // lobby | active | completed
   registrationLocked: boolean("registration_locked").notNull().default(false),
   hostToken: text("host_token").notNull(),
+  championshipId: text("championship_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),

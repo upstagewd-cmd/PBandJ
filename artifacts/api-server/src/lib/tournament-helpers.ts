@@ -1,4 +1,4 @@
-import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
+import { db, tournamentsTable, playersTable, matchesTable, teamsTable, championshipsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getRank } from "./ranks";
 import { getNicknameMap, getClerkImageMap } from "./user-display";
@@ -36,6 +36,10 @@ export async function getTournamentFull(tournamentId: string) {
 
   if (!tournament) return null;
 
+  const championship = tournament.championshipId
+    ? (await db.select().from(championshipsTable).where(eq(championshipsTable.id, tournament.championshipId)))[0] ?? null
+    : null;
+
   const [players, teams, matches] = await Promise.all([
     db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId)).orderBy(playersTable.seed, playersTable.joinedAt),
     db.select().from(teamsTable).where(eq(teamsTable.tournamentId, tournamentId)).orderBy(teamsTable.seed, teamsTable.createdAt),
@@ -52,6 +56,15 @@ export async function getTournamentFull(tournamentId: string) {
     createdAt: tournament.createdAt.toISOString(),
     startedAt: tournament.startedAt?.toISOString() ?? null,
     completedAt: tournament.completedAt?.toISOString() ?? null,
+    championship: championship ? {
+      id: championship.id,
+      name: championship.name,
+      description: championship.description,
+      imageUrl: championship.imageUrl,
+      enabled: championship.enabled,
+      currentPlayer1Id: championship.currentPlayer1Id,
+      currentPlayer2Id: championship.currentPlayer2Id,
+    } : null,
     players: await Promise.all(
       players.map((player) =>
         serializePlayer(
