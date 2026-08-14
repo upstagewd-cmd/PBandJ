@@ -1,5 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
+import { getAuth } from "@clerk/express";
 import { db, tournamentsTable, playersTable, matchesTable, teamsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import {
@@ -28,10 +29,15 @@ function generateTournamentId(): string {
 // POST /api/tournaments
 tournamentsRouter.post("/", async (req, res) => {
   try {
+    const auth = getAuth(req);
     const creationEnabled = await getSystemSettingBoolean("tournament_creation_enabled", true);
     const adminCode = req.headers["x-admin-code"] as string | undefined;
     const passcode = process.env.ADMIN_PASSCODE ?? "pbj2024";
     const isAdminBypass = !!adminCode && adminCode === passcode;
+    if (!auth?.userId && !isAdminBypass) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     if (!creationEnabled && !isAdminBypass) {
       res.status(403).json({ error: "creation_locked", message: "Match creation is locked by the admin." });
       return;

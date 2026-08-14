@@ -170,8 +170,9 @@ export default function Home() {
   }, [adminCode]);
 
   const createLockedMessage = "Match creation is locked by the admin.";
-  const canCreateTournament = tournamentCreationEnabled || adminBypass;
-  const canCreateOpenPlay = openPlayCreationEnabled || adminBypass;
+  const canCreateTournament = (!!user || adminBypass) && (tournamentCreationEnabled || adminBypass);
+  const canCreateOpenPlay = (!!user || adminBypass) && (openPlayCreationEnabled || adminBypass);
+  const needsSignIn = !user && !adminBypass;
   const isCreating = creatingTournament || creatingSession;
 
   const handleCreateTournament = async () => {
@@ -193,6 +194,11 @@ export default function Home() {
         const body = await res.json().catch(() => ({} as { error?: string; message?: string }));
         if (res.status === 403 && body?.error === "creation_locked") {
           toast({ title: createLockedMessage, variant: "destructive" });
+          return;
+        }
+        if (res.status === 401) {
+          toast({ title: "Sign in required", description: "Please sign in to create a tournament.", variant: "destructive" });
+          setLocation("/sign-in");
           return;
         }
         throw new Error(body?.message || "Failed to create tournament");
@@ -227,6 +233,11 @@ export default function Home() {
         const body = await res.json().catch(() => ({} as { error?: string; message?: string }));
         if (res.status === 403 && body?.error === "creation_locked") {
           toast({ title: createLockedMessage, variant: "destructive" });
+          return;
+        }
+        if (res.status === 401) {
+          toast({ title: "Sign in required", description: "Please sign in to start open play.", variant: "destructive" });
+          setLocation("/sign-in");
           return;
         }
         throw new Error(body?.message || "Failed to create session");
@@ -337,6 +348,8 @@ export default function Home() {
         >
           {creatingTournament ? (
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+          ) : needsSignIn ? (
+            <><Lock className="mr-2.5 h-5 w-5" /> SIGN IN TO CREATE</>
           ) : !canCreateTournament ? (
             <><Lock className="mr-2.5 h-5 w-5" /> CREATE TOURNAMENT</>
           ) : (
@@ -344,7 +357,9 @@ export default function Home() {
           )}
         </Button>
         {!canCreateTournament && (
-          <p className="text-xs text-muted-foreground">Match creation is locked by the admin.</p>
+          <p className="text-xs text-muted-foreground">
+            {needsSignIn ? "Sign in to create a tournament." : "Match creation is locked by the admin."}
+          </p>
         )}
 
         {/* Divider */}
@@ -364,6 +379,8 @@ export default function Home() {
         >
           {creatingSession ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : needsSignIn ? (
+            <><Lock className="mr-2.5 h-5 w-5" /> SIGN IN TO PLAY</>
           ) : !canCreateOpenPlay ? (
             <><Lock className="mr-2.5 h-5 w-5" /> START OPEN PLAY</>
           ) : (
@@ -371,7 +388,9 @@ export default function Home() {
           )}
         </Button>
         {!canCreateOpenPlay && (
-          <p className="text-xs text-muted-foreground">Match creation is locked by the admin.</p>
+          <p className="text-xs text-muted-foreground">
+            {needsSignIn ? "Sign in to start open play." : "Match creation is locked by the admin."}
+          </p>
         )}
 
         <Show when="signed-out">

@@ -1,5 +1,6 @@
 import { Router, Request } from "express";
 import { randomUUID } from "crypto";
+import { getAuth } from "@clerk/express";
 import { db, sessionsTable, sessionPlayersTable, sessionMatchesTable, playersTable, userProfilesTable } from "@workspace/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { AddSessionPlayerBody, LogSessionMatchBody, CreateSessionBody, UpdateSessionBody, PairSessionPlayersBody, UnpairSessionPlayerBody, ReshuffleSessionBody, AutoPairSessionBody, RemoveSessionPlayerBody } from "@workspace/api-zod";
@@ -109,10 +110,15 @@ async function getSessionFull(sessionId: string) {
 
 sessionsRouter.post("/", async (req, res) => {
   try {
+    const auth = getAuth(req);
     const creationEnabled = await getSystemSettingBoolean("open_play_creation_enabled", true);
     const adminCode = req.headers["x-admin-code"] as string | undefined;
     const passcode = process.env.ADMIN_PASSCODE ?? "pbj2024";
     const isAdminBypass = !!adminCode && adminCode === passcode;
+    if (!auth?.userId && !isAdminBypass) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
     if (!creationEnabled && !isAdminBypass) {
       res.status(403).json({ error: "creation_locked", message: "Match creation is locked by the admin." });
       return;
