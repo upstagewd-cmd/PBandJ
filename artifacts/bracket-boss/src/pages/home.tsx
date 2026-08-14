@@ -8,6 +8,7 @@ import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from 
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
 import { useListChampionships } from "@workspace/api-client-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type LiveMatchItem = {
   id: string;
@@ -99,6 +100,7 @@ export default function Home() {
   const [creatingTournament, setCreatingTournament] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [selectedChampionshipId, setSelectedChampionshipId] = useState("");
+  const [tournamentSetupOpen, setTournamentSetupOpen] = useState(false);
   const [tournamentCreationEnabled, setTournamentCreationEnabled] = useState(true);
   const [openPlayCreationEnabled, setOpenPlayCreationEnabled] = useState(true);
   const [adminBypass, setAdminBypass] = useState(false);
@@ -212,6 +214,7 @@ export default function Home() {
 
       const data = await res.json() as { id: string; hostToken: string };
       localStorage.setItem(`hostToken_${data.id}`, data.hostToken);
+      setTournamentSetupOpen(false);
       setLocation(`/t/${data.id}`);
     } catch {
       toast({ title: "Error", description: "Failed to create tournament. Please try again.", variant: "destructive" });
@@ -346,30 +349,10 @@ export default function Home() {
         </div>
 
         {/* Primary: Create Tournament */}
-        {championships.length > 0 && !needsSignIn && (
-          <div className="space-y-2 text-left">
-            <label htmlFor="championship-select" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Championship on the line
-            </label>
-            <select
-              id="championship-select"
-              value={selectedChampionshipId}
-              onChange={(event) => setSelectedChampionshipId(event.target.value)}
-              className="w-full h-12 rounded-xl border border-border bg-background px-3 text-sm font-semibold"
-            >
-              <option value="">Regular tournament</option>
-              {championships.map((championship) => (
-                <option key={championship.id} value={championship.id}>
-                  {championship.name}{championship.currentPlayer1Id ? " (defended)" : " (unclaimed)"}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <Button
           size="lg"
           className="w-full h-16 text-xl font-bold rounded-2xl transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,100,50,0.3)] hover:shadow-[0_0_30px_rgba(255,100,50,0.4)]"
-          onClick={handleCreateTournament}
+          onClick={() => setTournamentSetupOpen(true)}
           disabled={isCreating || !canCreateTournament}
         >
           {creatingTournament ? (
@@ -382,6 +365,39 @@ export default function Home() {
             <><Trophy className="mr-2.5 h-5 w-5" /> CREATE TOURNAMENT</>
           )}
         </Button>
+        <Dialog open={tournamentSetupOpen} onOpenChange={setTournamentSetupOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set up your tournament</DialogTitle>
+              <DialogDescription>Choose whether this tournament is a regular event or a championship contest.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-left">
+              <label htmlFor="championship-select" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Championship on the line
+              </label>
+              <select
+                id="championship-select"
+                value={selectedChampionshipId}
+                onChange={(event) => setSelectedChampionshipId(event.target.value)}
+                className="w-full h-12 rounded-xl border border-border bg-background px-3 text-sm font-semibold"
+              >
+                <option value="">Regular tournament</option>
+                {championships.map((championship) => (
+                  <option key={championship.id} value={championship.id}>
+                    {championship.name}{championship.currentPlayer1Id ? " (defended)" : " (unclaimed)"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTournamentSetupOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateTournament} disabled={creatingTournament}>
+                {creatingTournament ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
+                Create Tournament
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {!canCreateTournament && (
           <p className="text-xs text-muted-foreground">
             {needsSignIn ? "Sign in to create a tournament." : "Match creation is locked by the admin."}
