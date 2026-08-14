@@ -9,6 +9,7 @@ import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
 import { useListChampionships } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type LiveMatchItem = {
   id: string;
@@ -19,6 +20,8 @@ type LiveMatchItem = {
   playerCount: number;
   createdAt: string;
 };
+
+const REGULAR_TOURNAMENT_VALUE = "__regular_tournament__";
 
 function RecentGames() {
   const [, setLocation] = useLocation();
@@ -99,7 +102,7 @@ export default function Home() {
   const { toast } = useToast();
   const [creatingTournament, setCreatingTournament] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
-  const [selectedChampionshipId, setSelectedChampionshipId] = useState("");
+  const [selectedChampionshipId, setSelectedChampionshipId] = useState(REGULAR_TOURNAMENT_VALUE);
   const [tournamentSetupOpen, setTournamentSetupOpen] = useState(false);
   const [tournamentCreationEnabled, setTournamentCreationEnabled] = useState(true);
   const [openPlayCreationEnabled, setOpenPlayCreationEnabled] = useState(true);
@@ -194,7 +197,7 @@ export default function Home() {
         credentials: "include",
         body: JSON.stringify({
           name: defaultGameName(),
-          ...(selectedChampionshipId ? { championshipId: selectedChampionshipId } : {}),
+          ...(selectedChampionshipId !== REGULAR_TOURNAMENT_VALUE ? { championshipId: selectedChampionshipId } : {}),
         }),
       });
 
@@ -366,30 +369,33 @@ export default function Home() {
           )}
         </Button>
         <Dialog open={tournamentSetupOpen} onOpenChange={setTournamentSetupOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-md rounded-2xl p-5 sm:p-6">
             <DialogHeader>
               <DialogTitle>Set up your tournament</DialogTitle>
               <DialogDescription>Choose whether this tournament is a regular event or a championship contest.</DialogDescription>
             </DialogHeader>
             <div className="space-y-2 text-left">
-              <label htmlFor="championship-select" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Championship on the line
               </label>
-              <select
-                id="championship-select"
+              <Select
                 value={selectedChampionshipId}
-                onChange={(event) => setSelectedChampionshipId(event.target.value)}
-                className="w-full h-12 rounded-xl border border-border bg-background px-3 text-sm font-semibold"
+                onValueChange={setSelectedChampionshipId}
               >
-                <option value="">Regular tournament</option>
-                {championships.map((championship) => (
-                  <option key={championship.id} value={championship.id}>
-                    {championship.name}{championship.currentPlayer1Id ? " (defended)" : " (unclaimed)"}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-12 rounded-xl bg-background text-sm font-semibold">
+                  <SelectValue placeholder="Regular tournament" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={REGULAR_TOURNAMENT_VALUE}>Regular tournament</SelectItem>
+                  {championships.map((championship) => (
+                    <SelectItem key={championship.id} value={championship.id}>
+                      {championship.name}{championship.currentPlayer1Id ? " (defended)" : " (unclaimed)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setTournamentSetupOpen(false)}>Cancel</Button>
               <Button onClick={handleCreateTournament} disabled={creatingTournament}>
                 {creatingTournament ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
