@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useGetOpenPlayPool, useLogOpenPlayMatch } from "@workspace/api-client-react";
+import { KnownPlayer, useGetOpenPlayPool, useLogOpenPlayMatch } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { KnownPlayerPicker } from "@/components/ui/known-player-picker";
 import { useToast } from "@/hooks/use-toast";
 import { getPlayerDisplayName, getPlayerDisplaySubtext } from "@/lib/display-name";
-import { Users, Plus, Trophy, Loader2, X } from "lucide-react";
+import { Users, Plus, Trophy, Loader2, X, Shuffle, Sparkles, UserPlus, Check } from "lucide-react";
 
 interface OpenPlayProps {
   tournamentId: string;
@@ -15,6 +16,7 @@ type PoolPlayer = {
   id: string;
   firstName: string;
   lastName: string;
+  clerkUserId?: string | null;
   nickname?: string | null;
   teamName?: string | null;
   avatarUrl?: string | null;
@@ -44,9 +46,16 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
   const [scoreOne, setScoreOne] = useState("");
   const [scoreTwo, setScoreTwo] = useState("");
   const [building, setBuilding] = useState(false);
+  const [addingPlayer, setAddingPlayer] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [teamName, setTeamName] = useState("");
+  const [selectedKnownPlayer, setSelectedKnownPlayer] = useState<KnownPlayer | null>(null);
 
   const pool: PoolPlayer[] = (data?.pool ?? []) as PoolPlayer[];
   const recentMatches = data?.recentMatches ?? [];
+  const [selecting, setSelecting] = useState<string | null>(null);
+  const [pairingBusy, setPairingBusy] = useState(false);
 
   // Group paired players; singletons remain separate
   const pairedIds = new Set<string>();
@@ -64,7 +73,87 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
     }
   }
 
+  const freeAgents = pool.filter((p) => !p.partnerId);
+  const poolClerkIds = new Set(pool.map((p) => p.clerkUserId).filter((id): id is string => !!id));
   const selectedIds = new Set([...teamOneIds, ...teamTwoIds]);
+  const pairingHint = selecting ? "Now tap a second player to complete the pair." : "Tap two players to pair them up.";
+
+  const runPairAction = async (url: string, method: string, payload: Record<string, unknown>) => {
+    if (!hostToken) return;
+    setPairingBusy(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/open-play${url}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err || "Request failed");
+      }
+      setSelecting(null);
+      await refetch();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed to update pairings", variant: "destructive" });
+    } finally {
+      setPairingBusy(false);
+    }
+  };
+
+  const handleTap = async (playerId: string) => {
+    if (!hostToken) return;
+    if (selecting === null) {
+      setSelecting(playerId);
+      return;
+    }
+    if (selecting === playerId) {
+      setSelecting(null);
+      return;
+    }
+    await runPairAction("/pair", "PATCH", { hostToken, player1Id: selecting, player2Id: playerId });
+  };
+
+  const handleUnpair = async (playerId: string) => {
+    await runPairAction("/pair", "DELETE", { hostToken, playerId });
+  };
+
+  const handleAutoPair = async () => {
+    await runPairAction("/auto-pair", "POST", { hostToken });
+  };
+
+  const handleAddPlayer = async () => {
+    if (!hostToken || !firstName.trim() || !lastName.trim()) return;
+    setPairingBusy(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/open-play/players`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hostToken,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          teamName: teamName.trim() || null,
+          clerkUserId: selectedKnownPlayer?.clerkUserId ?? null,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err || "Failed to add player");
+      }
+      setFirstName("");
+      setLastName("");
+      setTeamName("");
+      setSelectedKnownPlayer(null);
+      setAddingPlayer(false);
+      await refetch();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed to add player", variant: "destructive" });
+    } finally {
+      setPairingBusy(false);
+    }
+  };
 
   const togglePlayer = (id: string, team: 1 | 2) => {
     const setters = team === 1 ? [teamOneIds, setTeamOneIds] : [teamTwoIds, setTeamTwoIds];
@@ -120,12 +209,103 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
             <Users className="w-4 h-4" /> Open Play Pool
             <span className="text-xs font-normal normal-case tracking-normal">({pool.length} available)</span>
           </h3>
-          {isHost && pool.length >= 2 && !building && (
-            <Button size="sm" variant="outline" onClick={() => setBuilding(true)} className="gap-1.5 text-xs font-bold">
-              <Plus className="w-3.5 h-3.5" /> Log Match
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isHost && !building && (
+              <Button size="sm" variant="outline" onClick={() => setAddingPlayer((v) => !v)} className="gap-1.5 text-xs font-bold">
+                <UserPlus className="w-3.5 h-3.5" /> Add Player
+              </Button>
+            )}
+            {isHost && pool.length >= 2 && !building && (
+              <Button size="sm" variant="outline" onClick={() => setBuilding(true)} className="gap-1.5 text-xs font-bold">
+                <Plus className="w-3.5 h-3.5" /> Log Match
+              </Button>
+            )}
+            {isHost && pool.length >= 2 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAutoPair}
+                disabled={pairingBusy}
+                className="gap-1.5 text-xs font-bold"
+              >
+                {pairingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Balanced
+              </Button>
+            )}
+          </div>
         </div>
+
+        {isHost && !building && addingPlayer && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Add Open Play Player</p>
+              <button onClick={() => setAddingPlayer(false)} className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <KnownPlayerPicker
+              onSelect={(player) => {
+                setSelectedKnownPlayer(player);
+                setFirstName(player.firstName);
+                setLastName(player.lastName);
+                setTeamName(player.nickname ?? "");
+              }}
+              isPending={pairingBusy}
+              disabledClerkIds={poolClerkIds}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  setSelectedKnownPlayer(null);
+                }}
+                placeholder="First name"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary"
+              />
+              <input
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  setSelectedKnownPlayer(null);
+                }}
+                placeholder="Last name"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary"
+              />
+              <input
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                placeholder="Nickname (optional)"
+                className="sm:col-span-2 h-10 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleAddPlayer} disabled={pairingBusy || !firstName.trim() || !lastName.trim()} className="gap-1.5 text-xs font-bold">
+                {pairingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Add to Pool
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isHost && !building && freeAgents.length > 0 && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="rounded-full bg-primary/10 p-1.5 text-primary">
+                <UserPlus className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/80">Pairing</p>
+                <p className="text-xs text-muted-foreground truncate">{pairingHint}</p>
+              </div>
+            </div>
+            {selecting && (
+              <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                Selected
+              </span>
+            )}
+          </div>
+        )}
 
         {pool.length === 0 ? (
           <div className="bg-muted/20 border border-border/30 rounded-2xl p-8 text-center text-muted-foreground">
@@ -148,22 +328,36 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                 <div key={p1.id} className={`rounded-xl border p-2.5 transition-colors ${pairSelected ? "bg-primary/5 border-primary/30" : "bg-muted/20 border-border/40"}`}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pair {i + 1}</span>
-                    {building && isHost && (
-                      <div className="flex gap-1 ml-auto">
-                        <button
-                          onClick={() => usePair(1)}
-                          disabled={pairSelected && !onT1}
-                          className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
-                            onT1 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
-                          }`}
-                        >→ T1</button>
-                        <button
-                          onClick={() => usePair(2)}
-                          disabled={pairSelected && !onT2}
-                          className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
-                            onT2 ? "bg-blue-500 text-white border-blue-500" : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
-                          }`}
-                        >→ T2</button>
+                    {isHost && (
+                      <div className="flex gap-1 ml-auto items-center">
+                        {building && (
+                          <>
+                            <button
+                              onClick={() => usePair(1)}
+                              disabled={pairSelected && !onT1}
+                              className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
+                                onT1 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
+                              }`}
+                            >→ T1</button>
+                            <button
+                              onClick={() => usePair(2)}
+                              disabled={pairSelected && !onT2}
+                              className={`text-xs font-bold px-2 py-0.5 rounded-lg transition-colors border ${
+                                onT2 ? "bg-blue-500 text-white border-blue-500" : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
+                              }`}
+                            >→ T2</button>
+                          </>
+                        )}
+                        {!building && (
+                          <button
+                            onClick={() => handleUnpair(p1.id)}
+                            disabled={pairingBusy}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                            aria-label={`Unpair ${getPlayerDisplayName(p1)}`}
+                          >
+                            <X className="w-3 h-3" /> Unpair
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -199,26 +393,42 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
                     <p className="text-[10px] text-muted-foreground">{p.rankEmoji} {p.rankTitle} · {Math.round(p.eloRating ?? 1200)} ELO</p>
                   )}
                 </div>
-                {building && isHost && (
+                {isHost && (
                   <div className="flex gap-1.5 shrink-0">
-                    <button
-                      onClick={() => togglePlayer(p.id, 1)}
-                      disabled={!teamOneIds.includes(p.id) && (selectedIds.has(p.id) || teamOneIds.length >= 2)}
-                      className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
-                        teamOneIds.includes(p.id)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
-                      }`}
-                    >T1</button>
-                    <button
-                      onClick={() => togglePlayer(p.id, 2)}
-                      disabled={!teamTwoIds.includes(p.id) && (selectedIds.has(p.id) || teamTwoIds.length >= 2)}
-                      className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
-                        teamTwoIds.includes(p.id)
-                          ? "bg-blue-500 text-white border-blue-500"
-                          : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
-                      }`}
-                    >T2</button>
+                    {building ? (
+                      <>
+                        <button
+                          onClick={() => togglePlayer(p.id, 1)}
+                          disabled={!teamOneIds.includes(p.id) && (selectedIds.has(p.id) || teamOneIds.length >= 2)}
+                          className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
+                            teamOneIds.includes(p.id)
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
+                          }`}
+                        >T1</button>
+                        <button
+                          onClick={() => togglePlayer(p.id, 2)}
+                          disabled={!teamTwoIds.includes(p.id) && (selectedIds.has(p.id) || teamTwoIds.length >= 2)}
+                          className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
+                            teamTwoIds.includes(p.id)
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "border-border text-muted-foreground hover:border-blue-500 hover:text-blue-500 disabled:opacity-30"
+                          }`}
+                        >T2</button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleTap(p.id)}
+                        disabled={pairingBusy}
+                        className={`text-xs font-bold px-2 py-1 rounded-lg transition-colors border ${
+                          selecting === p.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-30"
+                        }`}
+                      >
+                        {selecting === p.id ? "Selected" : "Pair"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -226,6 +436,12 @@ export function OpenPlaySection({ tournamentId, hostToken }: OpenPlayProps) {
           </div>
         )}
       </div>
+
+      {isHost && freeAgents.length > 0 && !building && (
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
+          {pairingHint}
+        </div>
+      )}
 
       {/* Match builder */}
       {building && isHost && (

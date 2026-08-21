@@ -9,7 +9,7 @@ import { broadcastBadgeUnlocked, broadcastTournamentUpdate } from "../lib/ws";
 import { getTournamentFull } from "../lib/tournament-helpers";
 import { getNicknameMap, getClerkImageMap } from "../lib/user-display";
 import { autoAwardBadgesForPlayers } from "../lib/badge-awards";
-import { getEloKFactor } from "../lib/settings";
+import { getEloKFactor, getStartingEloForSkill } from "../lib/settings";
 
 export const openPlayRouter = Router({ mergeParams: true });
 
@@ -24,6 +24,7 @@ async function serializePlayer(
     tournamentId: p.tournamentId,
     firstName: p.firstName,
     lastName: p.lastName,
+    clerkUserId: p.clerkUserId ?? null,
     nickname: nickname ?? null,
     partnerName: p.partnerName ?? null,
     teamName: p.teamName ?? null,
@@ -124,6 +125,213 @@ openPlayRouter.get("/", async (req: Request<{ tournamentId: string }>, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to get open play pool");
     res.status(500).json({ error: "Failed to get open play pool" });
+  }
+});
+
+// POST /api/tournaments/:tournamentId/open-play/players
+openPlayRouter.post("/players", async (req: Request<{ tournamentId: string }>, res) => {
+  try {
+    const body = req.body as {
+      hostToken?: string;
+      firstName?: string;
+      lastName?: string;
+      teamName?: string | null;
+      skillLevel?: string | null;
+      clerkUserId?: string | null;
+    };
+
+    if (!body.hostToken || !body.firstName?.trim() || !body.lastName?.trim()) {
+      res.status(400).json({ error: "Invalid player payload" });
+      return;
+    }
+
+    const { tournamentId } = req.params;
+
+    const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
+    if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+    if (body.hostToken !== tournament.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const firstName = body.firstName.trim();
+    const lastName = body.lastName.trim();
+    const teamName = body.teamName?.trim() || null;
+    if (teamName && teamName.length > 15) {
+      res.status(400).json({ error: "nickname_too_long", message: "Nickname must be 15 characters or fewer." });
+      return;
+    }
+
+    const clerkUserId = body.clerkUserId ?? null;
+    if (clerkUserId) {
+      const [existingPlayer] = await db
+        .select({ id: playersTable.id })
+        .from(playersTable)
+        .where(and(eq(playersTable.tournamentId, tournamentId), eq(playersTable.clerkUserId, clerkUserId)));
+      if (existingPlayer) { res.status(409).json({ error: "already_added" }); return; }
+    }
+    const seedCount = await db.select().from(playersTable).where(eq(playersTable.tournamentId, tournamentId));
+    const startingElo = clerkUserId
+      ? await db.select({ eloRating: playersTable.eloRating }).from(playersTable).where(eq(playersTable.clerkUserId, clerkUserId)).then((rows) => {
+          if (rows.length === 0) return getStartingEloForSkill(body.skillLevel ?? null);
+          return Math.round(rows.reduce((sum, row) => sum + (row.eloRating ?? 1200), 0) / rows.length);
+        })
+      : await getStartingEloForSkill(body.skillLevel ?? null);
+
+    const id = randomUUID();
+    await db.insert(playersTable).values({
+      id,
+      tournamentId,
+      firstName,
+      lastName,
+      partnerName: null,
+      teamName,
+      playerToken: randomUUID(),
+      avatarUrl: null,
+      clerkUserId,
+      skillLevel: body.skillLevel ?? null,
+      eloRating: startingElo,
+      seed: seedCount.length + 1,
+    });
+
+    await db.insert(openPlayPoolTable).values({
+      id: randomUUID(),
+      tournamentId,
+      playerId: id,
+      partnerId: null,
+      status: "available",
+    });
+
+    const state = await getOpenPlayState(tournamentId);
+    res.status(201).json(state);
+  } catch (err) {
+    req.log.error({ err }, "Failed to add player to open play pool");
+    res.status(500).json({ error: "Failed to add player" });
+  }
+});
+
+// PATCH /api/tournaments/:tournamentId/open-play/pair
+openPlayRouter.patch("/pair", async (req: Request<{ tournamentId: string }>, res) => {
+  try {
+    const body = req.body as { hostToken?: string; player1Id?: string; player2Id?: string };
+    if (!body.hostToken || !body.player1Id || !body.player2Id) {
+      res.status(400).json({ error: "Invalid pair payload" });
+      return;
+    }
+    const { tournamentId } = req.params;
+
+    const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
+    if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+    if (body.hostToken !== tournament.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const [p1] = await db.select().from(openPlayPoolTable).where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.player1Id)));
+    const [p2] = await db.select().from(openPlayPoolTable).where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.player2Id)));
+    if (!p1 || !p2) { res.status(404).json({ error: "Player not found in open play pool" }); return; }
+
+    if (p1.partnerId) {
+      await db.update(openPlayPoolTable)
+        .set({ partnerId: null })
+        .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, p1.partnerId)));
+    }
+    if (p2.partnerId) {
+      await db.update(openPlayPoolTable)
+        .set({ partnerId: null })
+        .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, p2.partnerId)));
+    }
+
+    await db.update(openPlayPoolTable)
+      .set({ partnerId: body.player2Id })
+      .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.player1Id)));
+    await db.update(openPlayPoolTable)
+      .set({ partnerId: body.player1Id })
+      .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.player2Id)));
+
+    const state = await getOpenPlayState(tournamentId);
+    res.json(state);
+  } catch (err) {
+    req.log.error({ err }, "Failed to pair open play players");
+    res.status(500).json({ error: "Failed to pair players" });
+  }
+});
+
+// DELETE /api/tournaments/:tournamentId/open-play/pair
+openPlayRouter.delete("/pair", async (req: Request<{ tournamentId: string }>, res) => {
+  try {
+    const body = req.body as { hostToken?: string; playerId?: string };
+    if (!body.hostToken || !body.playerId) {
+      res.status(400).json({ error: "Invalid unpair payload" });
+      return;
+    }
+    const { tournamentId } = req.params;
+
+    const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
+    if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+    if (body.hostToken !== tournament.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    const [player] = await db.select().from(openPlayPoolTable).where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.playerId)));
+    if (!player) { res.status(404).json({ error: "Player not found in open play pool" }); return; }
+
+    if (player.partnerId) {
+      await db.update(openPlayPoolTable)
+        .set({ partnerId: null })
+        .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, player.partnerId)));
+    }
+    await db.update(openPlayPoolTable)
+      .set({ partnerId: null })
+      .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, body.playerId)));
+
+    const state = await getOpenPlayState(tournamentId);
+    res.json(state);
+  } catch (err) {
+    req.log.error({ err }, "Failed to unpair open play player");
+    res.status(500).json({ error: "Failed to unpair player" });
+  }
+});
+
+// POST /api/tournaments/:tournamentId/open-play/auto-pair
+openPlayRouter.post("/auto-pair", async (req: Request<{ tournamentId: string }>, res) => {
+  try {
+    const body = req.body as { hostToken?: string };
+    if (!body.hostToken) {
+      res.status(400).json({ error: "Missing host token" });
+      return;
+    }
+    const { tournamentId } = req.params;
+
+    const [tournament] = await db.select().from(tournamentsTable).where(eq(tournamentsTable.id, tournamentId));
+    if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+    if (body.hostToken !== tournament.hostToken) { res.status(403).json({ error: "Invalid host token" }); return; }
+
+    await db.update(openPlayPoolTable).set({ partnerId: null }).where(eq(openPlayPoolTable.tournamentId, tournamentId));
+
+    const players = await db.select().from(openPlayPoolTable).where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.status, "available")));
+    const playerIds = [...new Set(players.map((entry) => entry.playerId))];
+    const playerMap = new Map<string, typeof playersTable.$inferSelect>();
+    if (playerIds.length) {
+      const rows = await db.select().from(playersTable).where(inArray(playersTable.id, playerIds));
+      rows.forEach((row) => playerMap.set(row.id, row));
+    }
+
+    const sorted = [...players].sort((a, b) => {
+      const aRating = playerMap.get(a.playerId)?.eloRating ?? 1200;
+      const bRating = playerMap.get(b.playerId)?.eloRating ?? 1200;
+      return bRating - aRating;
+    });
+
+    const numPairs = Math.floor(sorted.length / 2);
+    for (let i = 0; i < numPairs; i++) {
+      const p1 = sorted[i];
+      const p2 = sorted[sorted.length - 1 - i];
+      await db.update(openPlayPoolTable)
+        .set({ partnerId: p2.playerId })
+        .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, p1.playerId)));
+      await db.update(openPlayPoolTable)
+        .set({ partnerId: p1.playerId })
+        .where(and(eq(openPlayPoolTable.tournamentId, tournamentId), eq(openPlayPoolTable.playerId, p2.playerId)));
+    }
+
+    const state = await getOpenPlayState(tournamentId);
+    res.json(state);
+  } catch (err) {
+    req.log.error({ err }, "Failed to auto-pair open play pool");
+    res.status(500).json({ error: "Failed to auto-pair players" });
   }
 });
 
