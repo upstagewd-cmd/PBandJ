@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { Show, useUser } from "@clerk/react";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
@@ -6,10 +6,11 @@ import { useTournamentSocket } from "@/hooks/use-tournament-socket";
 import { TournamentLobby } from "@/components/tournament/lobby";
 import { TournamentBracket } from "@/components/tournament/bracket";
 import { TournamentChampionship } from "@/components/tournament/championship";
-import { Loader2, User, RefreshCw } from "lucide-react";
+import { Check, Copy, Loader2, User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { upsertHistory, removeHistory } from "@/lib/history";
+import { useToast } from "@/hooks/use-toast";
 
 function UserBadge() {
   const { user } = useUser();
@@ -37,6 +38,8 @@ export default function TournamentPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const { toast } = useToast();
+  const [hostLinkCopied, setHostLinkCopied] = useState(false);
   const tournamentId = params.tournamentId!;
 
   const urlParams = new URLSearchParams(search);
@@ -53,6 +56,22 @@ export default function TournamentPage() {
     (typeof window !== "undefined"
       ? localStorage.getItem(`hostToken_${tournamentId}`)
       : null);
+  const hostUrl = hostToken
+    ? `${window.location.origin}/t/${tournamentId}?token=${hostToken}`
+    : null;
+
+  const copyHostLink = async () => {
+    if (!hostUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(hostUrl);
+      setHostLinkCopied(true);
+      toast({ title: "Host link copied" });
+      window.setTimeout(() => setHostLinkCopied(false), 2000);
+    } catch {
+      toast({ title: "Could not copy host link", variant: "destructive" });
+    }
+  };
 
   const { data: tournament, isLoading, isError } = useGetTournament(tournamentId, {
     query: {
@@ -121,9 +140,16 @@ export default function TournamentPage() {
             <UserBadge />
           </Show>
           {hostToken && (
-            <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">
-              Host
-            </span>
+            <button
+              type="button"
+              onClick={copyHostLink}
+              title="Copy host link"
+              aria-label="Copy host link"
+              className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+            >
+              {hostLinkCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {hostLinkCopied ? "Copied" : "Host"}
+            </button>
           )}
           <button
             onClick={handleRefresh}

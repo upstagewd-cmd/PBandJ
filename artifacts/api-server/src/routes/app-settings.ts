@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db, tournamentsTable, sessionsTable, playersTable, sessionPlayersTable } from "@workspace/db";
 import { getSystemSettingBoolean, getSystemSettingString } from "../lib/settings";
 
@@ -28,7 +28,7 @@ appSettingsRouter.get("/live", async (_req, res) => {
       db
         .select()
         .from(tournamentsTable)
-        .where(eq(tournamentsTable.status, "lobby"))
+        .where(inArray(tournamentsTable.status, ["lobby", "active"]))
         .orderBy(desc(tournamentsTable.createdAt)),
       db
         .select()
@@ -70,7 +70,7 @@ appSettingsRouter.get("/live", async (_req, res) => {
         type: "tournament" as const,
         name: tournament.name,
         href: `/t/${tournament.id}`,
-        statusLabel: "Lobby",
+        statusLabel: tournament.status === "active" ? "In Progress" : "Lobby",
         playerCount: tournamentCountsMap.get(tournament.id) ?? 0,
         createdAt: tournament.createdAt.toISOString(),
       })),
