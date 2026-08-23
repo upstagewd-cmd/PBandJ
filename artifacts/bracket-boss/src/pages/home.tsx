@@ -4,7 +4,7 @@ import { Show, useUser, useClerk } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trophy, Activity, LogOut, User, ChevronRight, Clock, Shield, Download, Lock } from "lucide-react";
-import { getHistory, formatVisitedAt, defaultGameName, type HistoryEntry } from "@/lib/history";
+import { formatVisitedAt, defaultGameName } from "@/lib/history";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { InstallBanner } from "@/components/ui/install-banner";
 import { useListChampionships } from "@workspace/api-client-react";
@@ -22,35 +22,63 @@ type LiveMatchItem = {
 };
 
 const REGULAR_TOURNAMENT_VALUE = "__regular_tournament__";
+const ACTIVITY_PAGE_SIZE = 15;
 
-function RecentGames() {
-  const [, setLocation] = useLocation();
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+type ActivityPlayer = { id: string; firstName: string; lastName: string; nickname: string | null; avatarUrl: string | null };
+type ActivitySide = { name: string; players: ActivityPlayer[] };
+type ActivityItem = {
+  id: string;
+  type: "tournament" | "open_play" | "session";
+  contextName: string;
+  bracket: string;
+  round: number;
+  playedAt: string;
+  teamOne: ActivitySide;
+  teamTwo: ActivitySide;
+  scoreOne: number | null;
+  scoreTwo: number | null;
+  winnerTeam: 1 | 2;
+};
 
-  useEffect(() => {
-    setEntries(getHistory());
-  }, []);
+function bracketLabel(item: ActivityItem): string {
+  if (item.type !== "tournament") return "Open Play";
+  switch (item.bracket) {
+    case "winner": return `WB R${item.round}`;
+    case "loser": return `LB R${item.round}`;
+    case "grand_finals": return "Grand Finals";
+    case "grand_finals_reset": return "GF Reset";
+    default: return `R${item.round}`;
+  }
+}
 
-  if (entries.length === 0) return null;
+function RecentActivity() {
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const statusLabel = (e: HistoryEntry) => {
-    if (e.type === "tournament") {
-      if (e.status === "completed") return "Finished";
-      if (e.status === "active") return "In Progress";
-      if (e.status === "cancelled") return "Cancelled";
-      return "Lobby";
+  const loadPage = async (nextOffset: number, append: boolean) => {
+    try {
+      const res = await fetch(`/api/activity?limit=${ACTIVITY_PAGE_SIZE}&offset=${nextOffset}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load activity");
+      const data = await res.json() as { items: ActivityItem[]; hasMore: boolean };
+      setItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      setHasMore(data.hasMore);
+      setOffset(nextOffset + data.items.length);
+    } catch {
+      if (!append) setItems([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    if (e.status === "completed") return "Finished";
-    if (e.status === "closed") return "Closed";
-    return "Active";
   };
 
-  const statusColor = (e: HistoryEntry) =>
-    e.status === "completed" || e.status === "closed" || e.status === "cancelled"
-      ? "text-muted-foreground/60"
-      : e.status === "active"
-      ? "text-green-600"
-      : "text-primary";
+  useEffect(() => {
+    void loadPage(0, false);
+  }, []);
+
+  if (!loading && items.length === 0) return null;
 
   return (
     <div className="w-full">
@@ -61,37 +89,56 @@ function RecentGames() {
             Recent Games
           </span>
         </div>
-        <div className="space-y-2">
-          {entries.slice(0, 5).map((entry) => (
-            <button
-              key={entry.id}
-              onClick={() => setLocation(entry.type === "tournament" ? `/t/${entry.id}` : `/s/${entry.id}`)}
-              className="w-full flex items-center justify-between gap-3 bg-background hover:bg-background/80 border border-border rounded-xl px-4 py-3 transition-all group shadow-sm"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-                  {entry.type === "tournament" ? (
-                    <Trophy className="w-3.5 h-3.5 text-primary" />
-                  ) : (
-                    <Activity className="w-3.5 h-3.5 text-primary" />
-                  )}
-                </div>
-                <div className="min-w-0 text-left">
-                  <p className="text-sm font-bold text-foreground truncate">{entry.name}</p>
-                  <p className={`text-xs font-semibold ${statusColor(entry)}`}>
-                    {statusLabel(entry)}
+
+        {loading ? (
+          <p className="text-xs text-muted-foreground">Loading recent matches…</p>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item) => {
+              const teamOneWon = item.winnerTeam === 1;
+              return (
+                <div key={item.id} className="bg-background border border-border rounded-xl px-4 py-3 shadow-sm space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-muted-foreground truncate">
+                      {item.contextName} · {bracketLabel(item)}
+                    </p>
+                    <span className="text-xs text-muted-foreground shrink-0">{formatVisitedAt(item.playedAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className={`text-sm font-bold truncate ${teamOneWon ? "text-foreground" : "text-muted-foreground"}`}>
+                      {teamOneWon && <Trophy className="inline w-3 h-3 mr-1 mb-0.5 text-gold" />}
+                      {item.teamOne.name}
+                    </p>
+                    {(item.scoreOne !== null || item.scoreTwo !== null) && (
+                      <span className="font-mono text-sm text-muted-foreground shrink-0">
+                        {item.scoreOne ?? "–"}–{item.scoreTwo ?? "–"}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-sm font-bold truncate ${!teamOneWon ? "text-foreground" : "text-muted-foreground"}`}>
+                    {!teamOneWon && <Trophy className="inline w-3 h-3 mr-1 mb-0.5 text-gold" />}
+                    {item.teamTwo.name}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {formatVisitedAt(entry.visitedAt)}
-                </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
-              </div>
-            </button>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
+
+        {hasMore && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={loadingMore}
+            onClick={() => {
+              setLoadingMore(true);
+              void loadPage(offset, true);
+            }}
+          >
+            {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load More"}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -507,7 +554,7 @@ export default function Home() {
         )}
 
         {/* Recent Games */}
-        <RecentGames />
+        <RecentActivity />
       </div>
 
       {/* Footer */}
