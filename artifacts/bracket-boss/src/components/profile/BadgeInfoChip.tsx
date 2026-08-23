@@ -8,7 +8,10 @@ type BadgeInfo = {
 };
 
 export function BadgeInfoChip({ badge }: { badge: BadgeInfo }) {
-  const isImageBadge = /^https?:\/\//i.test(badge.icon) || /\.png(?:$|[?#])/i.test(badge.icon);
+  const isImageBadge =
+    /^https?:\/\//i.test(badge.icon) ||
+    /\.png(?:$|[?#])/i.test(badge.icon) ||
+    /^\/api\/storage\//i.test(badge.icon);
   const badgeIcon = isImageBadge ? (
     <img src={badge.icon} alt="" className="h-6 w-8 rounded object-contain" />
   ) : (
