@@ -284,7 +284,14 @@ playerStatsRouter.get("/:playerId", async (req: Request<{ playerId: string }>, r
 
     const podiumCounts = await getTournamentPodiumPlayerCounts([...identityPlayerIds]);
     const tournamentWinsDisplay = podiumCounts.firstPlaceCount;
-    const tournamentsPlayed = new Set(competitiveIdentityPlayers.map((candidate) => candidate.tournamentId)).size;
+    const candidateTournamentIds = [...new Set(competitiveIdentityPlayers.map((candidate) => candidate.tournamentId))];
+    const tournamentsForCount = candidateTournamentIds.length
+      ? await db
+          .select({ id: tournamentsTable.id, status: tournamentsTable.status })
+          .from(tournamentsTable)
+          .where(or(...candidateTournamentIds.map((id) => eq(tournamentsTable.id, id))))
+      : [];
+    const tournamentsPlayed = tournamentsForCount.filter((t) => t.status === "completed").length;
 
     const recentCompleted = completedMatches
       .filter((m) => m.completedAt)

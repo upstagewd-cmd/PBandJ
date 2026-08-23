@@ -276,7 +276,14 @@ profileRouter.get("/me", async (req, res) => {
 
     const eloRating = Math.max(...competitivePlayers.map((p) => p.eloRating ?? 1200));
     const rank = await getRank(eloRating);
-    const tournamentsPlayed = new Set(competitivePlayers.map((p) => p.tournamentId)).size;
+    const candidateTournamentIds = [...new Set(competitivePlayers.map((p) => p.tournamentId))];
+    const tournamentsForCount = candidateTournamentIds.length
+      ? await db
+          .select({ id: tournamentsTable.id, status: tournamentsTable.status })
+          .from(tournamentsTable)
+          .where(inArray(tournamentsTable.id, candidateTournamentIds))
+      : [];
+    const tournamentsPlayed = tournamentsForCount.filter((t) => t.status === "completed").length;
 
     // Re-use the teams fetched earlier
     const userTeams = userTeamsEarly;
