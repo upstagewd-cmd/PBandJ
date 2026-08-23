@@ -11,9 +11,10 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "^8.20.0",
     "tsx": "catalog:"
   },
   "dependencies": {
-    "@workspace/db": "workspace:*"
+    "pg": "^8.22.0"
   }
 }
