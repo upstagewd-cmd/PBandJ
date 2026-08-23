@@ -42,12 +42,19 @@ function winnerIdsForOpenPlayMatch(match: OpenPlayMatchRow) {
   return [match.teamTwoPOneId, match.teamTwoPTwoId].filter(Boolean) as string[];
 }
 
+const THRESHOLD_RULE_TYPES = new Set(["wins", "matches", "tournaments", "streaks", "partners"]);
+
 function normalizeRuleType(ruleType: string) {
   const normalized = ruleType.trim().toLowerCase();
   if (normalized === "streak" || normalized === "win_streak" || normalized === "win_streaks") {
     return "streaks";
   }
   return normalized;
+}
+
+// Badges like championship_holder are granted directly elsewhere, not via metric thresholds.
+function isThresholdBadge(badge: BadgeRow) {
+  return THRESHOLD_RULE_TYPES.has(normalizeRuleType(badge.ruleType));
 }
 
 function badgeMetric(
@@ -192,6 +199,7 @@ export async function autoAwardBadgesForPlayers(playerIds: string[]): Promise<Ba
 
     const primary = identityPlayers[0] ?? target;
     const newlyEarnedBadges = enabledBadges
+      .filter(isThresholdBadge)
       .filter((badge) => badgeMetric(badge, context) >= badge.threshold)
       .filter((badge) => !existingBadgeIds.has(badge.id));
 

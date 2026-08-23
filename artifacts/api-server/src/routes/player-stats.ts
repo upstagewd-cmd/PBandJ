@@ -169,7 +169,7 @@ playerStatsRouter.get("/", async (_req, res) => {
 
       const identityMatches = getMatchesForIdentity(allMatches, identityIds);
       const completedMatches = identityMatches.filter((m) => m.status === "completed" && !m.isBye);
-        const tournamentWins = countTournamentTitles(completedMatches, identityIds);
+      const tournamentWins = completedMatches.filter((m) => identityIds.has(m.winnerId ?? "")).length;
       const openPlayWins = openPlayIdentityMatches.filter((m) =>
         (m.winnerTeam === 1
           ? [m.teamOnePOneId, m.teamOnePTwoId]
